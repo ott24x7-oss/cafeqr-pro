@@ -66,7 +66,7 @@ export function CouponsManager({ initial }: { initial: any[] }) {
         ))}
       </div>
 
-      {showAdd && <AddCouponModal onClose={() => setShowAdd(false)} onSaved={(c) => { setCoupons((x) => [c, ...x]); setShowAdd(false); }} />}
+      {showAdd && <AddCouponModal onClose={() => setShowAdd(false)} onSaved={(c: any) => { setCoupons((x) => [c, ...x]); setShowAdd(false); }} />}
     </div>
   );
 }

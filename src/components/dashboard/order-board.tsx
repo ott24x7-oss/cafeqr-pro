@@ -113,7 +113,7 @@ export function OrderBoard({ initialOrders, cafe }: { initialOrders: any[]; cafe
           order={selected}
           cafe={cafe}
           onClose={() => setSelected(null)}
-          onUpdate={(s) => { updateStatus(selected.id, s); setSelected(null); }}
+          onUpdate={(s: string) => { updateStatus(selected.id, s); setSelected(null); }}
         />
       )}
     </div>

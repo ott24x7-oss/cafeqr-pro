@@ -134,7 +134,7 @@ export function MenuManager({ categories: initialCats, items: initialItems }: { 
         <CategoryModal
           cat={editCat}
           onClose={() => setShowCatModal(false)}
-          onSaved={(c) => {
+          onSaved={(c: any) => {
             setCats((cur) => editCat ? cur.map((x) => (x.id === c.id ? c : x)) : [...cur, c]);
             setShowCatModal(false);
           }}
@@ -145,7 +145,7 @@ export function MenuManager({ categories: initialCats, items: initialItems }: { 
           cats={cats}
           item={editItem}
           onClose={() => setShowItemModal(false)}
-          onSaved={(i) => {
+          onSaved={(i: any) => {
             setItems((cur) => editItem ? cur.map((x) => (x.id === i.id ? i : x)) : [...cur, i]);
             setShowItemModal(false);
           }}
