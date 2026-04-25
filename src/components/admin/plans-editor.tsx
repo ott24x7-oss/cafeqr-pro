@@ -92,19 +92,19 @@ function PlanEditor({ plan, onClose, onSave }: any) {
         <h3 className="font-display text-xl font-bold text-coffee-900 mb-4">{plan.id ? 'Edit plan' : 'New plan'}</h3>
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <Field l="Name" v={form.name} on={(v) => set('name', v)} />
-            <Field l="Slug" v={form.slug} on={(v) => set('slug', v)} />
-            <Field l="Price /mo (₹)" v={form.priceMonthly} on={(v) => set('priceMonthly', Number(v))} type="number" />
-            <Field l="Price /year (₹)" v={form.priceYearly} on={(v) => set('priceYearly', Number(v))} type="number" />
+            <Field l="Name" v={form.name} on={(v: string) => set('name', v)} />
+            <Field l="Slug" v={form.slug} on={(v: string) => set('slug', v)} />
+            <Field l="Price /mo (₹)" v={form.priceMonthly} on={(v: string) => set('priceMonthly', Number(v))} type="number" />
+            <Field l="Price /year (₹)" v={form.priceYearly} on={(v: string) => set('priceYearly', Number(v))} type="number" />
           </div>
           <div>
             <label className="label">Description</label>
             <Textarea value={form.description ?? ''} onChange={(e) => set('description', e.target.value)} placeholder="Short tagline" />
           </div>
           <div className="grid grid-cols-3 gap-3">
-            <Field l="Max tables" v={form.maxTables} on={(v) => set('maxTables', Number(v))} type="number" />
-            <Field l="Max items" v={form.maxMenuItems} on={(v) => set('maxMenuItems', Number(v))} type="number" />
-            <Field l="Max staff" v={form.maxStaff} on={(v) => set('maxStaff', Number(v))} type="number" />
+            <Field l="Max tables" v={form.maxTables} on={(v: string) => set('maxTables', Number(v))} type="number" />
+            <Field l="Max items" v={form.maxMenuItems} on={(v: string) => set('maxMenuItems', Number(v))} type="number" />
+            <Field l="Max staff" v={form.maxStaff} on={(v: string) => set('maxStaff', Number(v))} type="number" />
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
             {[
