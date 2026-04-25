@@ -85,26 +85,26 @@ export function SettingsClient({ cafe }: { cafe: any }) {
 
         {tab === 'profile' && (
           <div className="grid md:grid-cols-2 gap-4">
-            <Field l="Cafe name" v={form.name} on={(v) => setForm({ ...form, name: v })} />
-            <Field l="Email" v={form.email} on={(v) => setForm({ ...form, email: v })} />
-            <Field l="Phone" v={form.phone} on={(v) => setForm({ ...form, phone: v })} />
-            <Field l="WhatsApp number" v={form.whatsappNo} on={(v) => setForm({ ...form, whatsappNo: v })} />
-            <Field l="GST number" v={form.gstNumber} on={(v) => setForm({ ...form, gstNumber: v })} />
-            <Field l="FSSAI number" v={form.fssaiNumber} on={(v) => setForm({ ...form, fssaiNumber: v })} />
-            <Field l="City" v={form.city} on={(v) => setForm({ ...form, city: v })} />
-            <Field l="Address" v={form.address} on={(v) => setForm({ ...form, address: v })} className="md:col-span-2" />
-            <Field l="Description" v={form.description} on={(v) => setForm({ ...form, description: v })} multiline className="md:col-span-2" />
-            <Field l="Logo URL" v={form.logoUrl} on={(v) => setForm({ ...form, logoUrl: v })} />
-            <Field l="Cover image URL" v={form.coverUrl} on={(v) => setForm({ ...form, coverUrl: v })} />
+            <Field l="Cafe name" v={form.name} on={(v: string) => setForm({ ...form, name: v })} />
+            <Field l="Email" v={form.email} on={(v: string) => setForm({ ...form, email: v })} />
+            <Field l="Phone" v={form.phone} on={(v: string) => setForm({ ...form, phone: v })} />
+            <Field l="WhatsApp number" v={form.whatsappNo} on={(v: string) => setForm({ ...form, whatsappNo: v })} />
+            <Field l="GST number" v={form.gstNumber} on={(v: string) => setForm({ ...form, gstNumber: v })} />
+            <Field l="FSSAI number" v={form.fssaiNumber} on={(v: string) => setForm({ ...form, fssaiNumber: v })} />
+            <Field l="City" v={form.city} on={(v: string) => setForm({ ...form, city: v })} />
+            <Field l="Address" v={form.address} on={(v: string) => setForm({ ...form, address: v })} className="md:col-span-2" />
+            <Field l="Description" v={form.description} on={(v: string) => setForm({ ...form, description: v })} multiline className="md:col-span-2" />
+            <Field l="Logo URL" v={form.logoUrl} on={(v: string) => setForm({ ...form, logoUrl: v })} />
+            <Field l="Cover image URL" v={form.coverUrl} on={(v: string) => setForm({ ...form, coverUrl: v })} />
           </div>
         )}
 
         {tab === 'tax' && (
           <div className="grid md:grid-cols-2 gap-4">
-            <Field l="Tax / GST %" v={settings.taxPercent} on={(v) => setSettings({ ...settings, taxPercent: Number(v) })} type="number" />
-            <Field l="Service charge %" v={settings.serviceCharge} on={(v) => setSettings({ ...settings, serviceCharge: Number(v) })} type="number" />
-            <Field l="Packing charge ₹ (takeaway)" v={settings.packingCharge} on={(v) => setSettings({ ...settings, packingCharge: Number(v) })} type="number" />
-            <Field l="Delivery charge ₹" v={settings.deliveryCharge} on={(v) => setSettings({ ...settings, deliveryCharge: Number(v) })} type="number" />
+            <Field l="Tax / GST %" v={settings.taxPercent} on={(v: string) => setSettings({ ...settings, taxPercent: Number(v) })} type="number" />
+            <Field l="Service charge %" v={settings.serviceCharge} on={(v: string) => setSettings({ ...settings, serviceCharge: Number(v) })} type="number" />
+            <Field l="Packing charge ₹ (takeaway)" v={settings.packingCharge} on={(v: string) => setSettings({ ...settings, packingCharge: Number(v) })} type="number" />
+            <Field l="Delivery charge ₹" v={settings.deliveryCharge} on={(v: string) => setSettings({ ...settings, deliveryCharge: Number(v) })} type="number" />
             <div className="md:col-span-2 flex flex-wrap gap-3 text-sm">
               {[
                 ['acceptDineIn', 'Dine in'],
@@ -163,10 +163,10 @@ export function SettingsClient({ cafe }: { cafe: any }) {
               <input type="checkbox" checked={settings.paymentEnabled} onChange={(e) => setSettings({ ...settings, paymentEnabled: e.target.checked })} className="accent-coffee-700" />
               Show "Pay Now" button to customers
             </div>
-            <Field l="UPI ID" v={settings.upiId} on={(v) => setSettings({ ...settings, upiId: v })} placeholder="cafe@hdfc" />
-            <Field l="UPI QR image URL" v={settings.upiQrUrl} on={(v) => setSettings({ ...settings, upiQrUrl: v })} placeholder="https://…" />
-            <Field l="Note shown to customer" v={settings.paymentNote} on={(v) => setSettings({ ...settings, paymentNote: v })} multiline className="md:col-span-2" placeholder="Pay using any UPI app and submit txn ID" />
-            <Field l="Google review URL" v={settings.googleReviewUrl} on={(v) => setSettings({ ...settings, googleReviewUrl: v })} placeholder="https://g.page/your-cafe/review" className="md:col-span-2" />
+            <Field l="UPI ID" v={settings.upiId} on={(v: string) => setSettings({ ...settings, upiId: v })} placeholder="cafe@hdfc" />
+            <Field l="UPI QR image URL" v={settings.upiQrUrl} on={(v: string) => setSettings({ ...settings, upiQrUrl: v })} placeholder="https://…" />
+            <Field l="Note shown to customer" v={settings.paymentNote} on={(v: string) => setSettings({ ...settings, paymentNote: v })} multiline className="md:col-span-2" placeholder="Pay using any UPI app and submit txn ID" />
+            <Field l="Google review URL" v={settings.googleReviewUrl} on={(v: string) => setSettings({ ...settings, googleReviewUrl: v })} placeholder="https://g.page/your-cafe/review" className="md:col-span-2" />
           </div>
         )}
 
