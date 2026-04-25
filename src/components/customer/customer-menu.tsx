@@ -184,7 +184,7 @@ export function CustomerMenu({ cafe, table }: { cafe: CafeWithMenu; table: any }
         <ItemDetail
           item={selectedItem}
           onClose={() => setSelectedItem(null)}
-          onAdd={(variant, addons, note, qty) => {
+          onAdd={(variant: any, addons: any[], note: string, qty: number) => {
             addToCart(selectedItem, variant, addons, note, qty);
             setSelectedItem(null);
           }}
