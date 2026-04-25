@@ -76,7 +76,7 @@ export function StaffManager({ initialStaff }: { initialStaff: any[] }) {
       {showAdd && (
         <AddStaffModal
           onClose={() => setShowAdd(false)}
-          onAdded={(s) => { setStaff((c) => [s, ...c]); setShowAdd(false); }}
+          onAdded={(s: any) => { setStaff((c) => [s, ...c]); setShowAdd(false); }}
         />
       )}
     </div>
