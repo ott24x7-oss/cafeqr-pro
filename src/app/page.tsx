@@ -289,7 +289,7 @@ export default async function LandingPage() {
       <section className="container py-16">
         <div className="grid md:grid-cols-3 gap-4 max-w-5xl mx-auto">
           {testimonials.map((t) => (
-            <figure key={t.name} className="card-warm">
+            <figure key={t.n} className="card-warm">
               <div className="flex gap-0.5">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <Star key={i} className="h-4 w-4 fill-caramel text-caramel" />
