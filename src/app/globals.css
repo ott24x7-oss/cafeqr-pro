@@ -1,0 +1,113 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 38 60% 98%;
+    --foreground: 24 35% 18%;
+    --primary: 23 32% 30%;
+    --primary-foreground: 38 60% 98%;
+    --secondary: 32 38% 90%;
+    --secondary-foreground: 24 35% 18%;
+    --muted: 32 30% 94%;
+    --muted-foreground: 24 12% 45%;
+    --accent: 30 50% 65%;
+    --accent-foreground: 24 35% 18%;
+    --destructive: 0 70% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 32 30% 86%;
+    --input: 32 30% 88%;
+    --ring: 23 32% 30%;
+    --radius: 0.85rem;
+  }
+  .dark {
+    --background: 24 30% 8%;
+    --foreground: 38 50% 95%;
+    --primary: 30 50% 65%;
+    --primary-foreground: 24 30% 8%;
+    --secondary: 24 18% 18%;
+    --secondary-foreground: 38 50% 95%;
+    --muted: 24 18% 14%;
+    --muted-foreground: 32 18% 65%;
+    --accent: 30 50% 60%;
+    --accent-foreground: 24 30% 8%;
+    --border: 24 18% 22%;
+    --input: 24 18% 22%;
+    --ring: 30 50% 65%;
+  }
+
+  * { @apply border-border; }
+  html, body { @apply bg-background text-foreground; }
+  body {
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+    -webkit-font-smoothing: antialiased;
+    background-image:
+      radial-gradient(circle at 0% 0%, rgba(212, 165, 116, 0.07), transparent 50%),
+      radial-gradient(circle at 100% 100%, rgba(110, 78, 61, 0.04), transparent 50%);
+    background-attachment: fixed;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: rgba(110, 78, 61, 0.25); border-radius: 8px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(110, 78, 61, 0.4); }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold
+           transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
+           disabled:pointer-events-none disabled:opacity-50;
+  }
+  .btn-primary { @apply bg-coffee-700 text-cream-50 hover:bg-coffee-800 shadow-soft; }
+  .btn-secondary { @apply bg-cream-200 text-coffee-800 hover:bg-cream-300; }
+  .btn-outline { @apply border border-coffee-300 text-coffee-800 hover:bg-cream-100; }
+  .btn-ghost { @apply text-coffee-700 hover:bg-cream-100; }
+  .btn-wa { @apply bg-wagreen text-white hover:bg-wagreen-dark shadow-soft; }
+  .btn-destructive { @apply bg-rose-500 text-white hover:bg-rose-600; }
+
+  .card-warm {
+    @apply rounded-2xl border border-coffee-100 bg-white p-5 shadow-soft transition-shadow
+           hover:shadow-coffee/40;
+  }
+
+  .input {
+    @apply w-full rounded-xl border border-coffee-200 bg-white px-3.5 py-2.5 text-sm
+           placeholder:text-coffee-400 focus:border-coffee-500 focus:outline-none focus:ring-2 focus:ring-coffee-300;
+  }
+  .label { @apply mb-1.5 block text-sm font-medium text-coffee-800; }
+  .helper { @apply mt-1 text-xs text-coffee-500; }
+
+  .pill { @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium; }
+  .pill-coffee { @apply pill bg-coffee-100 text-coffee-800; }
+  .pill-wa { @apply pill bg-emerald-100 text-emerald-800; }
+  .pill-amber { @apply pill bg-amber-100 text-amber-800; }
+  .pill-rose { @apply pill bg-rose-100 text-rose-700; }
+
+  .veg-dot { @apply inline-block h-3 w-3 rounded-sm border-2 border-emerald-600; }
+  .veg-dot::after { content:''; @apply block h-1.5 w-1.5 rounded-full bg-emerald-600 m-auto translate-y-[1px]; }
+  .nonveg-dot { @apply inline-block h-3 w-3 rounded-sm border-2 border-rose-600; }
+  .nonveg-dot::after { content:''; @apply block h-1.5 w-1.5 rounded-full bg-rose-600 m-auto translate-y-[1px]; }
+
+  .bg-pattern {
+    background-image:
+      radial-gradient(rgba(212, 165, 116, 0.18) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+
+  .glass { @apply bg-white/70 backdrop-blur-md border border-white/40; }
+}
+
+@layer utilities {
+  .text-gradient-coffee {
+    @apply bg-gradient-to-r from-coffee-800 via-coffee-600 to-caramel bg-clip-text text-transparent;
+  }
+  .scroll-snap-x { scroll-snap-type: x mandatory; }
+  .snap-start { scroll-snap-align: start; }
+}
+
+@media print {
+  body { background: white; }
+  .no-print { display: none !important; }
+}

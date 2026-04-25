@@ -1,0 +1,39 @@
+{
+  "name": "CafeQR Pro",
+  "short_name": "CafeQR",
+  "description": "Smart QR ordering & management for cafes and restaurants",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFFBF5",
+  "theme_color": "#6B4E3D",
+  "scope": "/",
+  "categories": ["food", "business", "productivity"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Live Orders",
+      "url": "/dashboard/orders",
+      "description": "Open live order board"
+    },
+    {
+      "name": "Add Menu Item",
+      "url": "/dashboard/menu",
+      "description": "Quickly add a menu item"
+    }
+  ],
+  "screenshots": []
+}

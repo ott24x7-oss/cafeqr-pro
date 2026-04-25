@@ -1,0 +1,499 @@
+// CafeQR Pro - Production Schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ────────────────────────────────────────────────────────────────
+enum UserRole {
+  SUPER_ADMIN
+  CAFE_OWNER
+  STAFF
+  CUSTOMER
+}
+
+enum StaffRole {
+  OWNER
+  MANAGER
+  CASHIER
+  KITCHEN
+  WAITER
+}
+
+enum OrderStatus {
+  NEW
+  ACCEPTED
+  PREPARING
+  READY
+  SERVED
+  COMPLETED
+  CANCELLED
+}
+
+enum OrderType {
+  DINE_IN
+  TAKEAWAY
+  DELIVERY
+}
+
+enum PaymentStatus {
+  UNPAID
+  PENDING_VERIFICATION
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum SpicyLevel {
+  NONE
+  MILD
+  MEDIUM
+  HOT
+  EXTRA_HOT
+}
+
+enum DietType {
+  VEG
+  NON_VEG
+  EGG
+  VEGAN
+}
+
+enum WAProvider {
+  manual
+  cloud_api
+  baileys
+}
+
+enum CafeStatus {
+  TRIAL
+  ACTIVE
+  SUSPENDED
+  EXPIRED
+}
+
+enum NotifKind {
+  ORDER_NEW
+  ORDER_STATUS
+  PAYMENT
+  REVIEW
+  SYSTEM
+}
+
+// ─── 1. USERS ─────────────────────────────────────────────────────────────
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  password      String?
+  name          String?
+  phone         String?
+  image         String?
+  role          UserRole  @default(CAFE_OWNER)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  ownedCafes    Cafe[]    @relation("CafeOwner")
+  staffOf       Staff[]
+  resetTokens   PasswordReset[]
+  notifications Notification[]
+}
+
+model PasswordReset {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ─── 2. CAFE ──────────────────────────────────────────────────────────────
+model Cafe {
+  id           String     @id @default(cuid())
+  slug         String     @unique
+  name         String
+  logoUrl      String?
+  coverUrl     String?
+  description  String?
+  address      String?
+  city         String?
+  phone        String?
+  whatsappNo   String?
+  email        String?
+  gstNumber    String?
+  fssaiNumber  String?
+  currency     String     @default("INR")
+  timezone     String     @default("Asia/Kolkata")
+  status       CafeStatus @default(TRIAL)
+  ownerId      String
+  planId       String?
+  trialEndsAt  DateTime?
+  planEndsAt   DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  owner        User           @relation("CafeOwner", fields: [ownerId], references: [id])
+  plan         Plan?          @relation(fields: [planId], references: [id])
+  settings     CafeSettings?
+  staff        Staff[]
+  tables       Table[]
+  categories   Category[]
+  menuItems    MenuItem[]
+  orders       Order[]
+  reviews      Review[]
+  coupons      Coupon[]
+  subscriptions Subscription[]
+
+  @@index([ownerId])
+}
+
+// ─── 3. CAFE SETTINGS ─────────────────────────────────────────────────────
+model CafeSettings {
+  id              String   @id @default(cuid())
+  cafeId          String   @unique
+  taxPercent      Float    @default(5.0)
+  serviceCharge   Float    @default(0.0)
+  packingCharge   Float    @default(0.0)
+  deliveryCharge  Float    @default(0.0)
+  minOrderAmount  Float    @default(0.0)
+  acceptDineIn    Boolean  @default(true)
+  acceptTakeaway  Boolean  @default(true)
+  acceptDelivery  Boolean  @default(false)
+  openingHours    Json?    // { mon: {open: "09:00", close: "22:00", closed: false}, ... }
+  primaryColor    String   @default("#6B4E3D")
+  accentColor     String   @default("#D4A574")
+  whatsappProvider WAProvider @default(manual)
+  notifyOwnerWA   Boolean  @default(true)
+  notifyCustomerWA Boolean @default(true)
+  upiId           String?
+  upiQrUrl        String?
+  paymentEnabled  Boolean  @default(true)
+  paymentNote     String?
+  reviewEnabled   Boolean  @default(true)
+  googleReviewUrl String?
+  customSubdomain String?  @unique
+  language        String   @default("en")
+  enableSound     Boolean  @default(true)
+  smtpHost        String?
+  smtpPort        Int?
+  smtpUser        String?
+  smtpPass        String?  // encrypted
+  smtpFrom        String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  cafe            Cafe     @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+}
+
+// ─── 4. STAFF ─────────────────────────────────────────────────────────────
+model Staff {
+  id        String    @id @default(cuid())
+  cafeId    String
+  userId    String
+  role      StaffRole @default(WAITER)
+  isActive  Boolean   @default(true)
+  invitedAt DateTime  @default(now())
+  joinedAt  DateTime?
+
+  cafe      Cafe      @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([cafeId, userId])
+  @@index([cafeId])
+}
+
+// ─── 5. TABLES ────────────────────────────────────────────────────────────
+model Table {
+  id         String   @id @default(cuid())
+  cafeId     String
+  number     String
+  code       String   @unique
+  name       String?
+  capacity   Int      @default(4)
+  qrUrl      String?
+  isOccupied Boolean  @default(false)
+  area       String?  // e.g. "Outdoor", "Rooftop"
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  cafe       Cafe     @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  orders     Order[]
+
+  @@unique([cafeId, number])
+  @@index([cafeId])
+}
+
+// ─── 6. CATEGORY ──────────────────────────────────────────────────────────
+model Category {
+  id        String     @id @default(cuid())
+  cafeId    String
+  name      String
+  slug      String
+  imageUrl  String?
+  sortOrder Int        @default(0)
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  cafe      Cafe       @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  items     MenuItem[]
+
+  @@unique([cafeId, slug])
+  @@index([cafeId])
+}
+
+// ─── 7. MENU ITEM ─────────────────────────────────────────────────────────
+model MenuItem {
+  id              String      @id @default(cuid())
+  cafeId          String
+  categoryId      String
+  name            String
+  description     String?
+  imageUrl        String?
+  price           Float
+  discountedPrice Float?
+  diet            DietType    @default(VEG)
+  spicy           SpicyLevel  @default(NONE)
+  prepMinutes     Int         @default(15)
+  isAvailable     Boolean     @default(true)
+  inStock         Boolean     @default(true)
+  isPopular       Boolean     @default(false)
+  isFeatured      Boolean     @default(false)
+  isHappyHour     Boolean     @default(false)
+  happyHourPrice  Float?
+  sortOrder       Int         @default(0)
+  tags            String[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  cafe            Cafe        @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  category        Category    @relation(fields: [categoryId], references: [id])
+  variants        MenuVariant[]
+  addons          Addon[]
+  orderItems      OrderItem[]
+
+  @@index([cafeId, categoryId])
+}
+
+// ─── 8. MENU VARIANT ──────────────────────────────────────────────────────
+model MenuVariant {
+  id         String   @id @default(cuid())
+  menuItemId String
+  name       String   // e.g. "Half", "Full", "Small", "Large"
+  price      Float
+  isDefault  Boolean  @default(false)
+  sortOrder  Int      @default(0)
+
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  @@index([menuItemId])
+}
+
+// ─── 9. ADDON ─────────────────────────────────────────────────────────────
+model Addon {
+  id         String   @id @default(cuid())
+  menuItemId String
+  name       String
+  price      Float    @default(0)
+  isRequired Boolean  @default(false)
+  sortOrder  Int      @default(0)
+
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  @@index([menuItemId])
+}
+
+// ─── 10. ORDER ────────────────────────────────────────────────────────────
+model Order {
+  id             String        @id @default(cuid())
+  orderNumber    String        @unique
+  cafeId         String
+  tableId        String?
+  customerName   String?
+  customerPhone  String?
+  customerNote   String?
+  internalNote   String?
+  type           OrderType     @default(DINE_IN)
+  status         OrderStatus   @default(NEW)
+  subtotal       Float         @default(0)
+  taxAmount      Float         @default(0)
+  serviceAmount  Float         @default(0)
+  packingAmount  Float         @default(0)
+  deliveryAmount Float         @default(0)
+  discountAmount Float         @default(0)
+  totalAmount    Float         @default(0)
+  couponCode     String?
+  paymentStatus  PaymentStatus @default(UNPAID)
+  assignedTo     String?
+  statusHistory  Json?         // array: [{status, at, by}]
+  acceptedAt     DateTime?
+  preparingAt    DateTime?
+  readyAt        DateTime?
+  servedAt       DateTime?
+  completedAt    DateTime?
+  cancelledAt    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  cafe           Cafe          @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  table          Table?        @relation(fields: [tableId], references: [id])
+  items          OrderItem[]
+  payment        Payment?
+  review         Review?
+
+  @@index([cafeId, status])
+  @@index([customerPhone])
+  @@index([createdAt])
+}
+
+// ─── 11. ORDER ITEM ───────────────────────────────────────────────────────
+model OrderItem {
+  id          String   @id @default(cuid())
+  orderId     String
+  menuItemId  String
+  name        String   // snapshot at order time
+  variantName String?
+  addonNames  String[]
+  unitPrice   Float
+  quantity    Int      @default(1)
+  totalPrice  Float
+  note        String?
+  createdAt   DateTime @default(now())
+
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem    MenuItem @relation(fields: [menuItemId], references: [id])
+
+  @@index([orderId])
+}
+
+// ─── 12. PAYMENT ──────────────────────────────────────────────────────────
+model Payment {
+  id            String        @id @default(cuid())
+  orderId       String        @unique
+  amount        Float
+  method        String        @default("upi") // upi | cash | card
+  status        PaymentStatus @default(UNPAID)
+  upiId         String?
+  transactionId String?
+  screenshotUrl String?
+  paidAt        DateTime?
+  verifiedAt    DateTime?
+  verifiedBy    String?
+  notes         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+// ─── 13. REVIEW ───────────────────────────────────────────────────────────
+model Review {
+  id         String   @id @default(cuid())
+  cafeId     String
+  orderId    String?  @unique
+  rating     Int      // 1..5
+  comment    String?
+  customerName String?
+  customerPhone String?
+  isVisible  Boolean  @default(true)
+  reply      String?
+  createdAt  DateTime @default(now())
+
+  cafe       Cafe     @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  order      Order?   @relation(fields: [orderId], references: [id])
+
+  @@index([cafeId])
+}
+
+// ─── 14. PLAN (managed from super admin) ──────────────────────────────────
+model Plan {
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  priceMonthly    Float
+  priceYearly     Float
+  description     String?
+  maxTables       Int      @default(10)
+  maxMenuItems    Int      @default(50)
+  maxStaff        Int      @default(3)
+  whatsappEnabled Boolean  @default(true)
+  customBranding  Boolean  @default(false)
+  customSubdomain Boolean  @default(false)
+  prioritySupport Boolean  @default(false)
+  analytics       Boolean  @default(true)
+  multiLanguage   Boolean  @default(false)
+  features        String[]
+  isActive        Boolean  @default(true)
+  isPopular       Boolean  @default(false)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  cafes           Cafe[]
+  subscriptions   Subscription[]
+}
+
+// ─── 15. SUBSCRIPTION ─────────────────────────────────────────────────────
+model Subscription {
+  id         String   @id @default(cuid())
+  cafeId     String
+  planId     String
+  amount     Float
+  billing    String   @default("monthly") // monthly | yearly
+  startsAt   DateTime @default(now())
+  endsAt     DateTime
+  status     String   @default("active")  // active | cancelled | expired
+  createdAt  DateTime @default(now())
+
+  cafe       Cafe     @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  plan       Plan     @relation(fields: [planId], references: [id])
+
+  @@index([cafeId])
+}
+
+// ─── 16. NOTIFICATION ─────────────────────────────────────────────────────
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String?
+  cafeId    String?
+  kind      NotifKind @default(SYSTEM)
+  title     String
+  body      String?
+  link      String?
+  isRead    Boolean   @default(false)
+  createdAt DateTime  @default(now())
+
+  user      User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([cafeId])
+}
+
+// ─── 17. COUPON ───────────────────────────────────────────────────────────
+model Coupon {
+  id            String   @id @default(cuid())
+  cafeId        String
+  code          String
+  description   String?
+  discountType  String   @default("percent") // percent | flat
+  discountValue Float
+  minOrder      Float    @default(0)
+  maxDiscount   Float?
+  usageLimit    Int?
+  usedCount     Int      @default(0)
+  validFrom     DateTime?
+  validUntil    DateTime?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  cafe          Cafe     @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+
+  @@unique([cafeId, code])
+}
