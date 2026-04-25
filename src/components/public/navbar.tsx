@@ -9,8 +9,9 @@ import { ThemeToggle } from '@/components/theme-toggle';
 export function PublicNavbar() {
   const [open, setOpen] = useState(false);
   const links = [
-    { href: '/', label: 'Home' },
     { href: '/how-it-works', label: 'How it works' },
+    { href: '/for-customers', label: 'For customers' },
+    { href: '/for-owners', label: 'For owners' },
     { href: '/pricing', label: 'Pricing' },
   ];
   return (

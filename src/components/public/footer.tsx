@@ -23,6 +23,8 @@ export function PublicFooter() {
           <h4 className="font-semibold text-coffee-900 mb-3">Product</h4>
           <ul className="space-y-2 text-sm text-coffee-600">
             <li><Link href="/how-it-works" className="hover:text-coffee-900">How it works</Link></li>
+            <li><Link href="/for-customers" className="hover:text-coffee-900">For customers</Link></li>
+            <li><Link href="/for-owners" className="hover:text-coffee-900">For cafe owners</Link></li>
             <li><Link href="/pricing" className="hover:text-coffee-900">Pricing</Link></li>
             <li><Link href="/signup" className="hover:text-coffee-900">Free trial</Link></li>
           </ul>
