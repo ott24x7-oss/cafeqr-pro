@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { getOwnerCafe } from '@/lib/guards';
+import { onPaymentConfirmed } from '@/lib/post-payment';
 
 const schema = z.object({
   status: z.enum(['UNPAID', 'PENDING_VERIFICATION', 'PAID', 'FAILED', 'REFUNDED']),
@@ -23,5 +24,12 @@ export async function POST(req: Request, { params }: { params: { orderId: string
     create: { orderId: order.id, amount: order.totalAmount, method: 'manual', status, paidAt: status === 'PAID' ? new Date() : null, verifiedBy: session.user.email },
     update: { status, paidAt: status === 'PAID' ? new Date() : null, verifiedAt: new Date(), verifiedBy: session.user.email },
   });
+
+  // Fire-and-forget: deliver invoice PDF to customer over WhatsApp when the
+  // order flips to PAID. Idempotent — safe to re-run.
+  if (status === 'PAID') {
+    onPaymentConfirmed(order.id).catch(() => {});
+  }
+
   return NextResponse.json({ ok: true });
 }
