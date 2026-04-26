@@ -469,8 +469,8 @@ export function SettingsClient({ cafe }: { cafe: any }) {
               <p className="helper">
                 Add the cafe's Gmail address + an{' '}
                 <a className="underline" href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer">app password</a>{' '}
-                that can read incoming bank emails (HDFC/SBI/ICICI etc). The payments page gets a "Verify from email" button
-                that pulls the latest emails on demand and auto-marks paid orders.
+                that receives credit alerts from your bank/UPI app. The matcher already knows about Paytm,
+                PhonePe, GPay, HDFC, Axis, SBI and ICICI — just paste the credentials and we'll handle the rest.
               </p>
               <div className="grid md:grid-cols-2 gap-3">
                 <Field l="Gmail address" v={settings.gmailUser} on={(v: string) => setSettings({ ...settings, gmailUser: v })} placeholder="cafe.upi@gmail.com" />
@@ -493,18 +493,6 @@ export function SettingsClient({ cafe }: { cafe: any }) {
                     </button>
                   </div>
                 </div>
-                <Field
-                  l="Sender filter (email or domain)"
-                  v={settings.gmailSenderFilter}
-                  on={(v: string) => setSettings({ ...settings, gmailSenderFilter: v })}
-                  placeholder="alerts@hdfcbank.net"
-                />
-                <Field
-                  l="Subject contains"
-                  v={settings.gmailSubjectFilter}
-                  on={(v: string) => setSettings({ ...settings, gmailSubjectFilter: v })}
-                  placeholder="received UPI"
-                />
                 <Field
                   l="Match window (minutes)"
                   v={settings.paymentMatchWindowMinutes}
@@ -538,21 +526,31 @@ export function SettingsClient({ cafe }: { cafe: any }) {
                     <div className="space-y-3 text-coffee-800">
                       <div className="flex flex-wrap gap-3 items-center">
                         <span className="pill bg-emerald-100 text-emerald-800">Connected</span>
-                        <span className="text-coffee-600">INBOX: <b>{imapResult.inboxCount}</b></span>
-                        <span className="text-coffee-600">Last 24h: <b>{imapResult.last24hCount}</b></span>
-                        {(imapResult.filter?.sender || imapResult.filter?.subject) && (
-                          <span className={`text-coffee-700 ${imapResult.filteredCount === 0 ? 'text-rose-700 font-semibold' : ''}`}>
-                            Matched filter: <b>{imapResult.filteredCount}</b>
-                          </span>
+                        <span className={`pill text-[10px] ${imapResult.transport === 'relay' ? 'bg-amber-100 text-amber-800' : 'bg-coffee-100 text-coffee-700'}`}>
+                          via {imapResult.transport === 'relay' ? 'PHP relay' : 'direct IMAP'}
+                        </span>
+                        {imapResult.inboxCount != null && (
+                          <span className="text-coffee-600">INBOX: <b>{imapResult.inboxCount}</b></span>
                         )}
+                        {imapResult.last24hCount != null && (
+                          <span className="text-coffee-600">Last 24h: <b>{imapResult.last24hCount}</b></span>
+                        )}
+                        <span className={`text-coffee-700 ${imapResult.filteredCount === 0 ? 'text-rose-700 font-semibold' : ''}`}>
+                          Credit alerts matched: <b>{imapResult.filteredCount}</b>
+                        </span>
                       </div>
+                      {imapResult.note && (
+                        <div className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-2 py-1">
+                          {imapResult.note}
+                        </div>
+                      )}
 
-                      {(imapResult.filter?.sender || imapResult.filter?.subject) && imapResult.filteredCount === 0 && (
+                      {imapResult.filteredCount === 0 && (
                         <div className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-amber-900">
-                          Your filter (<b>{imapResult.filter.sender || 'any sender'}</b>
-                          {imapResult.filter.subject ? ` + subject contains "${imapResult.filter.subject}"` : ''})
-                          matched 0 emails in the last 24h. Pick a sender from the list below — or clear both filters
-                          to let the matcher scan every recent email and rely on amount + UTR matching.
+                          The built-in matcher (Paytm / PhonePe / GPay / HDFC / Axis / SBI / ICICI + subjects:
+                          paid · received · deposit · credit) found 0 hits in the last 24 hours. That's normal
+                          if you haven't received a payment yet — once a customer pays, the next bank credit
+                          alert in this inbox will be auto-matched.
                         </div>
                       )}
 
@@ -561,21 +559,12 @@ export function SettingsClient({ cafe }: { cafe: any }) {
                           <div className="font-semibold text-coffee-900 mb-1">Recent senders (last 24h):</div>
                           <div className="space-y-1 max-h-48 overflow-y-auto">
                             {imapResult.recent.map((r: any, i: number) => (
-                              <button
-                                key={i}
-                                type="button"
-                                onClick={() => setSettings((s) => ({ ...s, gmailSenderFilter: r.from }))}
-                                className="w-full text-left rounded-md border border-coffee-100 bg-cream-50 px-2 py-1.5 hover:bg-cream-100 transition"
-                                title="Click to use this sender as the filter"
-                              >
+                              <div key={i} className="rounded-md border border-coffee-100 bg-cream-50 px-2 py-1.5">
                                 <div className="font-mono text-[11px] text-coffee-900 truncate">{r.from || '(no sender)'}</div>
                                 <div className="text-[11px] text-coffee-600 truncate">{r.subject || '(no subject)'}</div>
-                              </button>
+                              </div>
                             ))}
                           </div>
-                          <p className="text-[10px] text-coffee-500 mt-1">
-                            Click a row to copy that sender into the Sender filter, then Save changes.
-                          </p>
                         </div>
                       )}
                     </div>

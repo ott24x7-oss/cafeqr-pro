@@ -1,18 +1,20 @@
 /**
  * Diagnostic IMAP test for the cafe's Gmail credentials.
  *
- * Returns:
- *   - connection ok / error
- *   - INBOX message count
- *   - count and samples of messages matching the cafe's sender + subject filters
- *   - sample senders + subjects from the last 24h (no filter) so the cafe owner
- *     can see what the bank actually sends from and pick the right filter
- *   - total time taken
+ * Tries direct IMAP for full diagnostics (inbox count, filter match count,
+ * recent senders). When the direct connect fails with a network-level
+ * error (Railway blocking outbound 993, etc.), falls back to the PHP relay
+ * for a matched-count check so the cafe still sees something useful.
  */
 import { NextResponse } from 'next/server';
 import { getOwnerCafe } from '@/lib/guards';
 import { prisma } from '@/lib/prisma';
 import { decrypt } from '@/lib/crypto';
+import {
+  DEFAULT_SENDERS,
+  DEFAULT_SUBJECT_KEYWORDS,
+  searchInboxForCreditAlerts,
+} from '@/lib/payment-verify';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -32,6 +34,17 @@ interface SampleEnvelope {
   subject: string;
 }
 
+const RELAY_URL = process.env.IMAP_RELAY_URL || (
+  process.env.PHP_MAILER_URL
+    ? process.env.PHP_MAILER_URL.replace(/\/send\.php(?:[?#].*)?$/, '/imap.php')
+    : 'https://ott24x7.com/mailer/imap.php'
+);
+const RELAY_KEY = process.env.IMAP_RELAY_KEY || '';
+
+function isNetworkError(msg: string) {
+  return /ETIMEDOUT|ECONNREFUSED|ENETUNREACH|EHOSTUNREACH|getaddrinfo|self.signed|Connection.*timed/i.test(msg);
+}
+
 export async function POST() {
   const { cafe } = await getOwnerCafe();
   if (!cafe) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
@@ -46,37 +59,36 @@ export async function POST() {
     return NextResponse.json({ ok: false, error: 'Gmail user / app password not set' }, { status: 400 });
   }
 
-  const senderFilter = fresh?.settings?.gmailSenderFilter?.trim() || null;
-  const subjectFilter = fresh?.settings?.gmailSubjectFilter?.trim() || null;
-
-  const { ImapFlow } = await import('imapflow');
-  const client = new ImapFlow({
-    host: 'imap.gmail.com',
-    port: 993,
-    secure: true,
-    auth: { user, pass },
-    logger: false,
-  });
+  const customSender = fresh?.settings?.gmailSenderFilter?.trim() || null;
+  const customSubject = fresh?.settings?.gmailSubjectFilter?.trim() || null;
 
   const t0 = Date.now();
+
+  // ── Try direct IMAP for the full diagnostic.
   try {
-    await client.connect();
-    const mailbox: any = await client.mailboxOpen('INBOX', { readOnly: true });
-    const inboxCount = mailbox?.exists ?? 0;
+    const { ImapFlow } = await import('imapflow');
+    const client = new ImapFlow({
+      host: 'imap.gmail.com',
+      port: 993,
+      secure: true,
+      auth: { user, pass },
+      logger: false,
+    });
 
-    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    try {
+      await client.connect();
+      const mailbox: any = await client.mailboxOpen('INBOX', { readOnly: true });
+      const inboxCount = mailbox?.exists ?? 0;
+      const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-    // 1. Filtered scan — what the verifier actually sees.
-    let filteredCount = 0;
-    const filteredSamples: SampleEnvelope[] = [];
-    if (senderFilter || subjectFilter) {
-      const search: any = { since: since24h };
-      if (senderFilter) search.from = senderFilter;
-      if (subjectFilter) search.subject = subjectFilter;
-      const uids = (await client.search(search)) || [];
-      filteredCount = uids.length;
-      const lastFew = uids.slice(-5);
-      for (const uid of lastFew) {
+      const matchedUids = await searchInboxForCreditAlerts(client, {
+        since: since24h,
+        senders: customSender ? [customSender] : undefined,
+        subjects: customSubject ? [customSubject] : undefined,
+      });
+      const filteredCount = matchedUids.length;
+      const filteredSamples: SampleEnvelope[] = [];
+      for (const uid of matchedUids.slice(-5)) {
         try {
           const msg = await client.fetchOne(uid as any, { envelope: true });
           if (!msg || !msg.envelope) continue;
@@ -87,42 +99,112 @@ export async function POST() {
           });
         } catch {/* ignore */}
       }
-    }
 
-    // 2. Unfiltered last-24h sample so the owner can see who's sending.
-    const allUids = (await client.search({ since: since24h })) || [];
-    const recent: SampleEnvelope[] = [];
-    for (const uid of allUids.slice(-12)) {
-      try {
-        const msg = await client.fetchOne(uid as any, { envelope: true });
-        if (!msg || !msg.envelope) continue;
-        recent.push({
-          date: msg.envelope.date ? new Date(msg.envelope.date as any).toISOString() : null,
-          from: (msg.envelope.from?.[0]?.address ?? '') || '',
-          subject: msg.envelope.subject ?? '',
-        });
-      } catch {/* ignore */}
-    }
+      const allUids = (await client.search({ since: since24h })) || [];
+      const recent: SampleEnvelope[] = [];
+      for (const uid of allUids.slice(-12)) {
+        try {
+          const msg = await client.fetchOne(uid as any, { envelope: true });
+          if (!msg || !msg.envelope) continue;
+          recent.push({
+            date: msg.envelope.date ? new Date(msg.envelope.date as any).toISOString() : null,
+            from: (msg.envelope.from?.[0]?.address ?? '') || '',
+            subject: msg.envelope.subject ?? '',
+          });
+        } catch {/* ignore */}
+      }
 
-    return NextResponse.json({
-      ok: true,
-      user,
-      inboxCount,
-      filter: { sender: senderFilter, subject: subjectFilter },
-      filteredCount,
-      filteredSamples,
-      last24hCount: allUids.length,
-      recent,
-      latencyMs: Date.now() - t0,
-    });
+      return NextResponse.json({
+        ok: true,
+        transport: 'direct',
+        user,
+        inboxCount,
+        filter: {
+          sender: customSender,
+          subject: customSubject,
+          usingDefaults: !customSender && !customSubject,
+          defaultSenders: DEFAULT_SENDERS,
+          defaultSubjects: DEFAULT_SUBJECT_KEYWORDS,
+        },
+        filteredCount,
+        filteredSamples,
+        last24hCount: allUids.length,
+        recent,
+        latencyMs: Date.now() - t0,
+      });
+    } finally {
+      try { await client.logout(); } catch {}
+    }
   } catch (e: any) {
+    const msg = e?.message ?? String(e);
+
+    // Network error → try the PHP relay for a basic matched-count diagnostic.
+    if (isNetworkError(msg)) {
+      try {
+        const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const res = await fetch(RELAY_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(RELAY_KEY ? { 'X-Api-Key': RELAY_KEY } : {}),
+          },
+          body: JSON.stringify({
+            user, pass,
+            since: since24h.toISOString(),
+            senders: customSender ? [customSender] : undefined,
+            subjects: customSubject ? [customSubject] : undefined,
+            limit: 50,
+          }),
+        });
+        const data = await res.json().catch(() => ({} as any));
+        if (res.ok && data?.ok) {
+          return NextResponse.json({
+            ok: true,
+            transport: 'relay',
+            user,
+            inboxCount: data.inboxCount ?? null,
+            filter: {
+              sender: customSender,
+              subject: customSubject,
+              usingDefaults: !customSender && !customSubject,
+              defaultSenders: DEFAULT_SENDERS,
+              defaultSubjects: DEFAULT_SUBJECT_KEYWORDS,
+            },
+            filteredCount: data.matchedCount ?? 0,
+            filteredSamples: (data.messages ?? []).slice(-5).map((m: any) => ({
+              date: m.date, from: m.from, subject: m.subject,
+            })),
+            last24hCount: null,
+            recent: (data.messages ?? []).slice(-12).map((m: any) => ({
+              date: m.date, from: m.from, subject: m.subject,
+            })),
+            note: `Direct IMAP blocked from this server — used PHP relay at ${RELAY_URL} as fallback.`,
+            latencyMs: Date.now() - t0,
+          });
+        }
+        return NextResponse.json({
+          ok: false,
+          user,
+          error: `Direct IMAP failed (${msg}); relay also failed: ${data?.error ?? res.status}`,
+          relayUrl: RELAY_URL,
+          latencyMs: Date.now() - t0,
+        });
+      } catch (e2: any) {
+        return NextResponse.json({
+          ok: false,
+          user,
+          error: `Direct IMAP failed (${msg}); relay error: ${e2?.message ?? e2}`,
+          relayUrl: RELAY_URL,
+          latencyMs: Date.now() - t0,
+        });
+      }
+    }
+
     return NextResponse.json({
       ok: false,
       user,
-      error: e?.message ?? String(e),
+      error: msg,
       latencyMs: Date.now() - t0,
     });
-  } finally {
-    try { await client.logout(); } catch {}
   }
 }
