@@ -1,5 +1,6 @@
 import {
   Coffee, Users, ListOrdered, IndianRupee, Mail, Wifi, Bell, AlertCircle, ChevronRight,
+  CreditCard, FileText, Globe, Shield,
 } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { formatCurrency, formatDate, timeAgo } from '@/lib/utils';
@@ -55,6 +56,43 @@ export default async function AdminOverview() {
       <div>
         <h1 className="font-display text-2xl md:text-3xl font-bold text-coffee-900">Super Admin</h1>
         <p className="text-coffee-600 text-sm">Platform overview · all cafes</p>
+      </div>
+
+      {/* Quick admin shortcuts — direct deep-links to the most-used config screens */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+        {[
+          { l: 'Platform Payment', s: 'UPI + IMAP for subscriptions', href: '/admin/site?tab=payment', i: IndianRupee, hot: !site.platformUpiId },
+          { l: 'Email / SMTP',     s: 'Outbound mail config',         href: '/admin/site?tab=email',   i: Mail,        hot: !site.smtpHost },
+          { l: 'Branding',         s: 'Site name, tagline, support',   href: '/admin/site?tab=branding', i: Globe,       hot: false },
+          { l: 'Plans',            s: 'Pricing & feature limits',      href: '/admin/plans',             i: CreditCard,  hot: false },
+          { l: 'Cafes',            s: 'Suspend, reassign, manage',     href: '/admin/cafes',             i: Coffee,      hot: false },
+          { l: 'Site content',     s: 'Marketing copy JSON',           href: '/admin/site?tab=content',  i: FileText,    hot: false },
+        ].map((c) => (
+          <Link
+            key={c.l}
+            href={c.href}
+            className={`card-warm !p-3 hover:-translate-y-0.5 transition relative ${
+              c.hot ? 'ring-2 ring-amber-300 bg-amber-50/40' : ''
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              <div className={`h-9 w-9 grid place-items-center rounded-xl shrink-0 ${
+                c.hot ? 'bg-amber-100 text-amber-800' : 'bg-coffee-gradient text-cream-50'
+              }`}>
+                <c.i className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="font-semibold text-coffee-900 text-sm truncate">{c.l}</div>
+                <div className="text-[11px] text-coffee-500 truncate">{c.s}</div>
+              </div>
+            </div>
+            {c.hot && (
+              <span className="absolute top-1.5 right-1.5 pill text-[9px] bg-amber-100 text-amber-800">
+                <AlertCircle className="h-2.5 w-2.5" /> Set up
+              </span>
+            )}
+          </Link>
+        ))}
       </div>
 
       {/* Top KPI row */}

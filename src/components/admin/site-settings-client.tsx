@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   Save, Loader2, Eye, EyeOff, Send, Globe, Mail, FileText, Lock, ShieldCheck, IndianRupee,
 } from 'lucide-react';
@@ -18,8 +19,23 @@ interface InfraInfo {
   imapRelayUrl: string;
 }
 
+const VALID_TABS: Tab[] = ['branding', 'email', 'payment', 'content'];
+
 export function SiteSettingsClient({ initial, infra }: { initial: any; infra?: InfraInfo }) {
-  const [tab, setTab] = useState<Tab>('branding');
+  const search = useSearchParams();
+  const queryTab = search.get('tab') as Tab | null;
+  const [tab, setTab] = useState<Tab>(
+    queryTab && VALID_TABS.includes(queryTab) ? queryTab : 'branding'
+  );
+
+  // If the URL changes (deep-linked from the Overview cards), keep the tab
+  // in sync.
+  useEffect(() => {
+    if (queryTab && VALID_TABS.includes(queryTab) && queryTab !== tab) {
+      setTab(queryTab);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryTab]);
   const [form, setForm] = useState({
     siteName: initial.siteName ?? 'CafeQR Pro',
     tagline: initial.tagline ?? '',
