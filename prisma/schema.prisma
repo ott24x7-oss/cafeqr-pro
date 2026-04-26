@@ -172,6 +172,10 @@ model CafeSettings {
   whatsappProvider WAProvider @default(manual)
   notifyOwnerWA   Boolean  @default(true)
   notifyCustomerWA Boolean @default(true)
+  // Which moments fire a customer WhatsApp ping. Pseudo-status `PLACED` ↔
+  // order receipt; `PAID` ↔ combined payment-received + invoice + review
+  // message. The remaining values are the OrderStatus enum.
+  notifyOnStatuses String[] @default(["PLACED", "ACCEPTED", "SERVED", "PAID"])
   // Per-cafe WhatsApp Cloud API credentials (encrypted at rest)
   waCloudToken         String?
   waCloudPhoneId       String?

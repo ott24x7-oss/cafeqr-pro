@@ -11,6 +11,7 @@ import { prisma } from './prisma';
 import { renderInvoicePdf, invoiceDataFromOrder } from './invoice-pdf';
 import { configFromCafe, type WACafe } from './whatsapp';
 import { sendMessage } from './whatsapp-send';
+import { customerWantsStatus } from './notify';
 
 const APP_URL = process.env.APP_URL || process.env.NEXTAUTH_URL || '';
 
@@ -55,6 +56,11 @@ export async function onPaymentConfirmed(orderId: string): Promise<PaymentConfir
     return { delivered: false, reason: 'no-customer-phone' };
   }
 
+  const cafe = order.cafe as WACafe;
+  if (!customerWantsStatus(cafe, 'PAID')) {
+    return { delivered: false, reason: 'paid-notification-disabled' };
+  }
+
   let pdf: Buffer;
   try {
     pdf = await renderInvoicePdf(invoiceDataFromOrder(order));
@@ -62,14 +68,22 @@ export async function onPaymentConfirmed(orderId: string): Promise<PaymentConfir
     return { delivered: false, reason: `pdf-render-failed: ${e?.message ?? e}` };
   }
 
-  const cafe = order.cafe as WACafe;
   const config = configFromCafe(cafe);
+
+  // Single combined caption — payment confirmation + invoice (the PDF
+  // attached) + the cafe-configured Google review link. We deliberately
+  // never auto-fill /review/<id> here; if no link is set the line is
+  // simply omitted.
+  const reviewUrl = cafe.settings?.googleReviewUrl?.trim();
   const message = [
-    `🧾 *Invoice — ${cafe.name}*`,
+    `🧾 *Payment received — ${cafe.name}*`,
     '',
     `Order *#${order.orderNumber}* is paid. Thank you!`,
     `Total: ₹${order.totalAmount.toFixed(0)}`,
-    APP_URL ? `\nView online: ${APP_URL}/order/${order.id}` : null,
+    APP_URL ? `View online: ${APP_URL}/order/${order.id}` : null,
+    '',
+    'Invoice attached above 👆',
+    reviewUrl ? `\n⭐ Loved your visit? Drop a quick review:\n${reviewUrl}` : null,
   ].filter(Boolean).join('\n');
 
   const result = await sendMessage({

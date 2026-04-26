@@ -19,6 +19,18 @@ const SENTINEL = '__unchanged__';
 const DEFAULT_GMAIL_SENDER = 'alerts@hdfcbank.net';
 const DEFAULT_GMAIL_SUBJECT = 'received UPI';
 
+const NOTIFY_STATUSES: { key: string; label: string; help: string }[] = [
+  { key: 'PLACED',     label: 'Order received',  help: 'Right after the customer places the order.' },
+  { key: 'ACCEPTED',   label: 'Order accepted',  help: 'When you confirm the order.' },
+  { key: 'PREPARING',  label: 'Preparing',       help: 'Kitchen has started cooking.' },
+  { key: 'READY',      label: 'Ready',           help: 'Order is ready for pickup / serve.' },
+  { key: 'SERVED',     label: 'Served',          help: 'Once the food is at the table.' },
+  { key: 'COMPLETED',  label: 'Completed',       help: 'Closed-out orders.' },
+  { key: 'CANCELLED',  label: 'Cancelled',       help: 'Cancelled orders.' },
+  { key: 'PAID',       label: 'Payment received',help: 'Combined message with invoice PDF + review link.' },
+];
+const DEFAULT_NOTIFY_STATUSES = ['PLACED', 'ACCEPTED', 'SERVED', 'PAID'];
+
 export function SettingsClient({ cafe }: { cafe: any }) {
   const [tab, setTab] = useState<Tab>('profile');
   const [form, setForm] = useState({
@@ -46,6 +58,7 @@ export function SettingsClient({ cafe }: { cafe: any }) {
     whatsappProvider: cafe.settings?.whatsappProvider ?? 'manual',
     notifyOwnerWA: cafe.settings?.notifyOwnerWA ?? true,
     notifyCustomerWA: cafe.settings?.notifyCustomerWA ?? true,
+    notifyOnStatuses: (cafe.settings?.notifyOnStatuses ?? DEFAULT_NOTIFY_STATUSES) as string[],
     waCloudToken: cafe.settings?.waCloudToken ?? '',         // SENTINEL when set
     waCloudPhoneId: cafe.settings?.waCloudPhoneId ?? '',
     waCloudVerifyToken: cafe.settings?.waCloudVerifyToken ?? '',
@@ -373,12 +386,61 @@ export function SettingsClient({ cafe }: { cafe: any }) {
               </label>
               <label className="flex items-center gap-2 px-3 py-2 rounded-xl border border-coffee-200 bg-white cursor-pointer">
                 <input type="checkbox" checked={settings.notifyCustomerWA} onChange={(e) => setSettings({ ...settings, notifyCustomerWA: e.target.checked })} className="accent-coffee-700" />
-                Notify customer on status updates
+                Customer notifications (master switch)
               </label>
               <label className="flex items-center gap-2 px-3 py-2 rounded-xl border border-coffee-200 bg-white cursor-pointer">
                 <input type="checkbox" checked={settings.enableSound} onChange={(e) => setSettings({ ...settings, enableSound: e.target.checked })} className="accent-coffee-700" />
                 Play sound on new order
               </label>
+            </div>
+
+            <div className={`md:col-span-2 rounded-2xl border border-coffee-200 bg-cream-50 p-4 space-y-3 ${settings.notifyCustomerWA ? '' : 'opacity-60'}`}>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <div className="font-semibold text-coffee-900">Customer message moments</div>
+                  <p className="helper">Pick which steps actually fire a WhatsApp to the customer. Off = silent for that step.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSettings({ ...settings, notifyOnStatuses: [...DEFAULT_NOTIFY_STATUSES] })}
+                  className="text-xs text-coffee-600 hover:text-coffee-900 underline underline-offset-4"
+                >
+                  Reset to defaults
+                </button>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-2">
+                {NOTIFY_STATUSES.map((s) => {
+                  const checked = settings.notifyOnStatuses.includes(s.key);
+                  return (
+                    <label
+                      key={s.key}
+                      className={`flex items-start gap-3 px-3 py-2.5 rounded-xl border cursor-pointer transition ${
+                        checked ? 'border-coffee-300 bg-white' : 'border-coffee-200 bg-white/60'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        disabled={!settings.notifyCustomerWA}
+                        onChange={(e) => {
+                          const next = e.target.checked
+                            ? Array.from(new Set([...settings.notifyOnStatuses, s.key]))
+                            : settings.notifyOnStatuses.filter((x) => x !== s.key);
+                          setSettings({ ...settings, notifyOnStatuses: next });
+                        }}
+                        className="accent-coffee-700 mt-0.5"
+                      />
+                      <span className="min-w-0">
+                        <span className="font-semibold text-coffee-900 text-sm">{s.label}</span>
+                        <span className="block text-[11px] text-coffee-600">{s.help}</span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+              <p className="text-[11px] text-coffee-500">
+                Tip: leave <b>Payment received</b> on — it's the combined message that delivers the invoice PDF and the review link from your settings.
+              </p>
             </div>
           </div>
         )}

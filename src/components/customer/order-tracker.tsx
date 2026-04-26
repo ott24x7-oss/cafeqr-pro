@@ -127,12 +127,17 @@ export function CustomerOrderTracker({ order: initialOrder }: { order: any }) {
               </Button>
             </Link>
           )}
-          {isComplete && cafe.settings?.reviewEnabled && (
-            <Link href={`/review/${order.id}`} className={cafe.settings?.paymentEnabled && order.paymentStatus !== 'PAID' ? '' : 'md:col-span-2'}>
+          {isComplete && cafe.settings?.reviewEnabled && cafe.settings?.googleReviewUrl && (
+            <a
+              href={cafe.settings.googleReviewUrl}
+              target="_blank"
+              rel="noreferrer"
+              className={cafe.settings?.paymentEnabled && order.paymentStatus !== 'PAID' ? '' : 'md:col-span-2'}
+            >
               <Button className="w-full" size="lg">
                 <Star className="h-4 w-4" /> Leave a review
               </Button>
-            </Link>
+            </a>
           )}
         </div>
 

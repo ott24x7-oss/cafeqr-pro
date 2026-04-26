@@ -30,7 +30,6 @@ export function CustomerCart({
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [phoneVerified, setPhoneVerified] = useState(false);
-  const [waLink, setWaLink] = useState<string | undefined>();
   const [note, setNote] = useState('');
   const [type, setType] = useState<'DINE_IN' | 'TAKEAWAY'>(table ? 'DINE_IN' : 'TAKEAWAY');
   const [submitting, setSubmitting] = useState(false);
@@ -53,7 +52,6 @@ export function CustomerCart({
       return;
     }
     setOtpSent(true);
-    setWaLink(data.waSendLink);
     if (data.otp) toast.info(`Demo OTP: ${data.otp}`, 'Auto-fill enabled');
     if (data.otp) setOtp(data.otp);
   }
@@ -170,11 +168,6 @@ export function CustomerCart({
                       <Input value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="4-digit code" inputMode="numeric" />
                       <Button onClick={verifyOtp}>Confirm</Button>
                     </div>
-                  )}
-                  {waLink && (
-                    <a href={waLink} target="_blank" rel="noreferrer" className="text-xs text-wagreen-dark mt-2 inline-block">
-                      Open WhatsApp to send code →
-                    </a>
                   )}
                   <div className="helper">We'll send order updates here.</div>
                 </div>

@@ -50,13 +50,26 @@ export async function POST(req: Request) {
   const plain = pickPlain(settings, [
     'taxPercent', 'serviceCharge', 'packingCharge', 'deliveryCharge',
     'minOrderAmount', 'acceptDineIn', 'acceptTakeaway', 'acceptDelivery',
-    'whatsappProvider', 'notifyOwnerWA', 'notifyCustomerWA',
+    'whatsappProvider', 'notifyOwnerWA', 'notifyCustomerWA', 'notifyOnStatuses',
     'waCloudPhoneId', 'baileysSessionId', 'notifyNumbers',
     'gmailUser', 'gmailSenderFilter', 'gmailSubjectFilter', 'paymentMatchWindowMinutes',
     'upiId', 'upiQrUrl', 'paymentEnabled', 'paymentNote',
     'reviewEnabled', 'googleReviewUrl', 'primaryColor', 'accentColor',
     'enableSound', 'language',
   ]);
+
+  // Whitelist the values we'll accept for notifyOnStatuses so a tampered
+  // payload can't sneak random strings into the array column.
+  const ALLOWED_NOTIF_STATUSES = new Set([
+    'PLACED', 'ACCEPTED', 'PREPARING', 'READY', 'SERVED', 'COMPLETED', 'CANCELLED', 'PAID',
+  ]);
+  if (Array.isArray(plain.notifyOnStatuses)) {
+    plain.notifyOnStatuses = Array.from(
+      new Set(plain.notifyOnStatuses.filter((s: any) => typeof s === 'string' && ALLOWED_NOTIF_STATUSES.has(s)))
+    );
+  } else {
+    delete plain.notifyOnStatuses;
+  }
 
   // Secrets — encrypted at rest. Use SENTINEL from client when leaving alone.
   const secretUpdates: Record<string, any> = {};
