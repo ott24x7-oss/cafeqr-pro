@@ -105,7 +105,7 @@ export async function verifyFromGmail(cafeId: string): Promise<VerifyResult> {
     for (const uid of uids.slice(-50)) {
       try {
         const msg = await client.fetchOne(uid as any, { source: true, envelope: true });
-        if (!msg?.source) continue;
+        if (!msg || !msg.source) continue;
         const parsed = await simpleParser(msg.source as any);
         const text = `${parsed.subject ?? ''}\n${parsed.text ?? parsed.html ?? ''}`.replace(/<[^>]+>/g, ' ');
 
