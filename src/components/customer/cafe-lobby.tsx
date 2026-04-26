@@ -4,9 +4,10 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useMemo, useState } from 'react';
 import {
-  Coffee, MapPin, Phone, Search, ShoppingBag, Truck, Users, Clock, Star, ChevronRight, Sparkles,
+  Coffee, MapPin, Phone, Search, ShoppingBag, Truck, Users, Clock, Star, ChevronRight, Sparkles, Utensils, Flame,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { formatCurrency } from '@/lib/utils';
 
 type Table = {
   id: string;
@@ -18,6 +19,25 @@ type Table = {
   isOccupied: boolean;
 };
 
+type MenuItem = {
+  id: string;
+  name: string;
+  price: number;
+  discountedPrice: number | null;
+  imageUrl: string | null;
+  isPopular: boolean;
+  inStock: boolean;
+  diet: string;
+};
+
+type Category = {
+  id: string;
+  name: string;
+  slug: string;
+  imageUrl?: string | null;
+  items: MenuItem[];
+};
+
 type Cafe = {
   slug: string;
   name: string;
@@ -27,7 +47,9 @@ type Cafe = {
   city?: string | null;
   address?: string | null;
   phone?: string | null;
+  currency?: string;
   tables: Table[];
+  categories?: Category[];
   settings?: {
     acceptDineIn?: boolean;
     acceptTakeaway?: boolean;
@@ -117,9 +139,147 @@ export function CafeLobby({ cafe }: { cafe: Cafe }) {
           {cafe.description && (
             <p className="mt-3 text-sm text-coffee-700">{cafe.description}</p>
           )}
+          {/* Quick stats strip — fills the empty space below the description
+              with something useful at a glance. */}
+          {(() => {
+            const allItems = (cafe.categories ?? []).flatMap((c) => c.items);
+            const tableCount = cafe.tables.length;
+            const itemCount = allItems.length;
+            const catCount = (cafe.categories ?? []).filter((c) => c.items.length > 0).length;
+            if (!itemCount && !tableCount) return null;
+            return (
+              <div className="mt-3 pt-3 border-t border-coffee-100 flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-coffee-600">
+                {itemCount > 0 && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Utensils className="h-3.5 w-3.5 text-coffee-500" /> {itemCount} dishes
+                  </span>
+                )}
+                {catCount > 0 && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5 text-coffee-500" /> {catCount} categories
+                  </span>
+                )}
+                {tableCount > 0 && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Users className="h-3.5 w-3.5 text-coffee-500" /> {tableCount} tables
+                  </span>
+                )}
+              </div>
+            );
+          })()}
         </section>
 
         <div className="space-y-6">
+        {/* Bestsellers strip — horizontal scroll of popular items so the
+            page lands with food, not just navigation. */}
+        {(() => {
+          const bestsellers = (cafe.categories ?? [])
+            .flatMap((c) => c.items)
+            .filter((i) => i.isPopular && i.inStock !== false)
+            .slice(0, 8);
+          if (bestsellers.length === 0) return null;
+          return (
+            <section>
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="font-display text-lg sm:text-xl font-bold text-coffee-900 inline-flex items-center gap-2">
+                  <Flame className="h-4 w-4 text-rose-500" /> Bestsellers
+                </h2>
+                <span className="text-xs text-coffee-500">{bestsellers.length}</span>
+              </div>
+              <div className="flex gap-3 overflow-x-auto -mx-4 px-4 pb-2 snap-x scroll-smooth scrollbar-none">
+                {bestsellers.map((it) => (
+                  <Link
+                    key={it.id}
+                    href={`/cafe/${cafe.slug}/table/walk-in`}
+                    className="snap-start shrink-0 w-36 sm:w-40 group"
+                  >
+                    <div className="relative h-32 sm:h-36 rounded-2xl overflow-hidden bg-coffee-gradient">
+                      {it.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={it.imageUrl} alt={it.name} className="absolute inset-0 h-full w-full object-cover" />
+                      ) : (
+                        <div className="absolute inset-0 grid place-items-center text-cream-50/60">
+                          <Coffee className="h-8 w-8" />
+                        </div>
+                      )}
+                      <div className="absolute top-1.5 left-1.5">
+                        <span
+                          className={`inline-flex items-center justify-center h-3.5 w-3.5 border-2 bg-white rounded-sm ${
+                            it.diet === 'VEG' || it.diet === 'VEGAN' ? 'border-emerald-600' : 'border-rose-600'
+                          }`}
+                          title={it.diet === 'VEG' || it.diet === 'VEGAN' ? 'Veg' : 'Non-veg'}
+                        >
+                          <span className={`h-1.5 w-1.5 rounded-full ${it.diet === 'VEG' || it.diet === 'VEGAN' ? 'bg-emerald-600' : 'bg-rose-600'}`} />
+                        </span>
+                      </div>
+                      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent p-2">
+                        <div className="text-cream-50 text-xs font-semibold leading-tight line-clamp-2 group-hover:underline">
+                          {it.name}
+                        </div>
+                        <div className="text-cream-200 text-[11px] mt-0.5">
+                          {formatCurrency(it.discountedPrice ?? it.price, cafe.currency ?? 'INR')}
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          );
+        })()}
+
+        {/* Browse menu — categories preview with a 'View all' deep-link.
+            Each tile shows the category name + item count + first item names so
+            the customer can see what's on offer without scanning a table QR. */}
+        {(cafe.categories ?? []).filter((c) => c.items.length > 0).length > 0 && (
+          <section>
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="font-display text-lg sm:text-xl font-bold text-coffee-900">Browse menu</h2>
+              <Link
+                href={`/cafe/${cafe.slug}/table/walk-in`}
+                className="text-xs text-coffee-700 hover:text-coffee-900 inline-flex items-center gap-0.5"
+              >
+                View full menu <ChevronRight className="h-3 w-3" />
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+              {(cafe.categories ?? [])
+                .filter((c) => c.items.length > 0)
+                .slice(0, 6)
+                .map((c) => (
+                  <Link
+                    key={c.id}
+                    href={`/cafe/${cafe.slug}/table/walk-in`}
+                    className="group relative rounded-2xl overflow-hidden border border-coffee-100 bg-white hover:shadow-coffee transition active:scale-[0.99]"
+                  >
+                    <div className="relative h-24 sm:h-28 bg-coffee-gradient">
+                      {c.items[0]?.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={c.items[0].imageUrl}
+                          alt={c.name}
+                          className="absolute inset-0 h-full w-full object-cover opacity-90"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 grid place-items-center text-cream-50/60">
+                          <Utensils className="h-6 w-6" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
+                      <div className="absolute bottom-1.5 left-2 right-2 text-cream-50">
+                        <div className="text-sm font-bold leading-tight line-clamp-1">{c.name}</div>
+                        <div className="text-[10px] text-cream-200/90">{c.items.length} items</div>
+                      </div>
+                    </div>
+                    <div className="px-2.5 py-1.5 text-[11px] text-coffee-600 line-clamp-1">
+                      {c.items.slice(0, 3).map((i) => i.name).join(' · ')}
+                    </div>
+                  </Link>
+                ))}
+            </div>
+          </section>
+        )}
+
         {/* Quick actions */}
         <section className="grid grid-cols-2 gap-3">
           {showTakeaway && (

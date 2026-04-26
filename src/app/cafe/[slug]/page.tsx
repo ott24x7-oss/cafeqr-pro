@@ -27,6 +27,20 @@ export default async function CafeIndexPage({
         orderBy: { number: 'asc' },
         select: { id: true, number: true, name: true, code: true, area: true, capacity: true, isOccupied: true },
       },
+      categories: {
+        where: { isActive: true },
+        orderBy: { sortOrder: 'asc' },
+        include: {
+          items: {
+            where: { isAvailable: true },
+            orderBy: [{ isPopular: 'desc' }, { sortOrder: 'asc' }],
+            select: {
+              id: true, name: true, price: true, discountedPrice: true, imageUrl: true,
+              isPopular: true, inStock: true, diet: true,
+            },
+          },
+        },
+      },
     },
   });
   if (!cafe) notFound();
