@@ -503,6 +503,29 @@ model Notification {
   @@index([cafeId])
 }
 
+// ─── SITE SETTINGS (global, single row keyed by id='singleton') ──────────
+// Super-admin-managed. Holds the platform's branding strings, support email,
+// SMTP credentials for password-reset email, and a free-form `content` blob
+// the marketing pages read so the admin can tweak homepage copy without a
+// redeploy.
+model SiteSettings {
+  id          String   @id @default("singleton")
+  siteName    String   @default("CafeQR Pro")
+  tagline     String?
+  supportEmail String?
+  // SMTP — used by lib/mail.ts as the highest-priority transport (above the
+  // env vars) so admins can change the mailer from the dashboard.
+  smtpHost    String?
+  smtpPort    Int?
+  smtpUser    String?
+  smtpPass    String?  // encrypted at rest
+  smtpFrom    String?
+  // Free-form Json bag for marketing page copy (hero / about / footer / faq …)
+  content     Json?
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?
+}
+
 // ─── 17. BAILEYS AUTH (per-session, per-file blob) ───────────────────────
 // Mirrors what Baileys' `useMultiFileAuthState` writes to disk so paired
 // WhatsApp sessions survive container restarts and Railway redeploys.

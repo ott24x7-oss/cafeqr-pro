@@ -7,9 +7,12 @@ import { Button } from '@/components/ui/button';
 import { formatDate } from '@/lib/utils';
 import { toast } from '@/components/ui/toaster';
 
-export function AdminCafesTable({ cafes: initial }: { cafes: any[] }) {
+interface PlanRow { id: string; name: string; slug: string; priceMonthly: number }
+
+export function AdminCafesTable({ cafes: initial, plans = [] }: { cafes: any[]; plans?: PlanRow[] }) {
   const [cafes, setCafes] = useState(initial);
   const [q, setQ] = useState('');
+  const [planBusy, setPlanBusy] = useState<string | null>(null);
 
   async function toggle(c: any) {
     const next = c.status === 'SUSPENDED' ? 'ACTIVE' : 'SUSPENDED';
@@ -21,6 +24,23 @@ export function AdminCafesTable({ cafes: initial }: { cafes: any[] }) {
     if (r.ok) {
       setCafes((cur) => cur.map((x) => x.id === c.id ? { ...x, status: next } : x));
       toast.success(`Cafe ${next.toLowerCase()}`);
+    }
+  }
+
+  async function setPlan(c: any, planId: string) {
+    if (planId === (c.planId ?? '')) return;
+    setPlanBusy(c.id);
+    const newPlan = plans.find((p) => p.id === planId) ?? null;
+    const r = await fetch(`/api/admin/cafes/${c.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ planId: planId || null }),
+    });
+    setPlanBusy(null);
+    if (r.ok) {
+      setCafes((cur) => cur.map((x) => x.id === c.id ? { ...x, planId: planId || null, plan: newPlan } : x));
+      toast.success(newPlan ? `Plan set to ${newPlan.name}` : 'Plan cleared');
+    } else {
+      toast.error('Could not change plan');
     }
   }
 
@@ -57,7 +77,25 @@ export function AdminCafesTable({ cafes: initial }: { cafes: any[] }) {
                     <div className="text-coffee-800">{c.owner.name}</div>
                     <div className="text-xs text-coffee-500">{c.owner.email}</div>
                   </td>
-                  <td>{c.plan?.name ?? <span className="text-coffee-400">—</span>}</td>
+                  <td>
+                    {plans.length > 0 ? (
+                      <select
+                        className="input !h-8 !py-0.5 !pr-7 !pl-2 text-xs max-w-[140px]"
+                        value={c.planId ?? ''}
+                        disabled={planBusy === c.id}
+                        onChange={(e) => setPlan(c, e.target.value)}
+                      >
+                        <option value="">— No plan —</option>
+                        {plans.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}{p.priceMonthly ? ` · ₹${p.priceMonthly}` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      c.plan?.name ?? <span className="text-coffee-400">—</span>
+                    )}
+                  </td>
                   <td><span className={`pill ${c.status === 'ACTIVE' ? 'pill-wa' : c.status === 'TRIAL' ? 'pill-amber' : 'pill-rose'}`}>{c.status}</span></td>
                   <td>{c._count.tables}</td>
                   <td>{c._count.menuItems}</td>

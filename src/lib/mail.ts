@@ -1,13 +1,16 @@
 /**
  * Outgoing email transport.
  *
- * Order of preference:
- *   1. SMTP_HOST + SMTP_USER + SMTP_PASS  → nodemailer
- *   2. PHP mailer relay at PHP_MAILER_URL (defaults to ott24x7's relay) — used
- *      automatically when SMTP isn't configured. Hidden from the UI on
- *      purpose; the cafe owner doesn't have to think about it.
+ * Resolution order on each send():
+ *   1. SiteSettings.smtp* (set via Super Admin → Site → Email)
+ *   2. SMTP_HOST + SMTP_USER + SMTP_PASS env vars
+ *   3. PHP relay at PHP_MAILER_URL (defaults to ott24x7's relay)
+ *
+ * Each transport is tried in order; the first to succeed wins. Failures are
+ * logged but never thrown — callers branch on the returned `transport`.
  */
 import nodemailer from 'nodemailer';
+import { getSiteSettings } from './site-settings';
 
 const PHP_MAILER_URL =
   process.env.PHP_MAILER_URL || 'https://ott24x7.com/mailer/send.php';
@@ -15,26 +18,57 @@ const PHP_MAILER_KEY = process.env.PHP_MAILER_KEY || '';
 const FROM_DEFAULT =
   process.env.SMTP_FROM || 'CafeQR Pro <no-reply@cafeqr.pro>';
 
-let cachedTransporter: nodemailer.Transporter | null = null;
+interface SmtpConfig {
+  host: string;
+  port: number;
+  user: string;
+  pass: string;
+  from?: string;
+}
 
-function buildTransporter() {
+async function resolveSmtp(): Promise<SmtpConfig | null> {
+  // 1) DB-backed Site Settings
+  try {
+    const s = await getSiteSettings();
+    if (s.smtpHost && s.smtpUser && s.smtpPass) {
+      return {
+        host: s.smtpHost,
+        port: s.smtpPort ?? 587,
+        user: s.smtpUser,
+        pass: s.smtpPass,
+        from: s.smtpFrom ?? undefined,
+      };
+    }
+  } catch {/* DB unavailable — fall through to env */}
+
+  // 2) Env vars
+  const host = process.env.SMTP_HOST;
+  const port = Number(process.env.SMTP_PORT ?? 587);
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  if (host && user && pass) {
+    return { host, port, user, pass, from: process.env.SMTP_FROM };
+  }
+  return null;
+}
+
+function buildTransporter(cfg: SmtpConfig) {
+  return nodemailer.createTransport({
+    host: cfg.host,
+    port: cfg.port,
+    secure: cfg.port === 465,
+    auth: { user: cfg.user, pass: cfg.pass },
+  });
+}
+
+/** @deprecated kept for backwards compat with existing callers. */
+export function getTransporter() {
   const host = process.env.SMTP_HOST;
   const port = Number(process.env.SMTP_PORT ?? 587);
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
   if (!host || !user || !pass) return null;
-  return nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465,
-    auth: { user, pass },
-  });
-}
-
-export function getTransporter() {
-  if (cachedTransporter) return cachedTransporter;
-  cachedTransporter = buildTransporter();
-  return cachedTransporter;
+  return buildTransporter({ host, port, user, pass, from: process.env.SMTP_FROM });
 }
 
 async function sendViaPhpRelay(opts: { to: string; subject: string; html: string; text?: string; from?: string }) {
@@ -66,18 +100,31 @@ async function sendViaPhpRelay(opts: { to: string; subject: string; html: string
 }
 
 export async function sendMail(opts: { to: string; subject: string; html: string; text?: string; from?: string }) {
-  const t = getTransporter();
-  if (t) {
+  const smtp = await resolveSmtp();
+  if (smtp) {
     try {
-      await t.sendMail({ from: opts.from ?? FROM_DEFAULT, ...opts });
+      const t = buildTransporter(smtp);
+      await t.sendMail({ from: opts.from ?? smtp.from ?? FROM_DEFAULT, ...opts });
       return { ok: true, transport: 'smtp' as const };
     } catch (e) {
-      console.warn('[mail] SMTP send failed, falling back to php relay', e);
+      console.warn('[mail] SMTP send failed, falling back to php relay', (e as any)?.message ?? e);
     }
   }
-  const r = await sendViaPhpRelay(opts);
+  const r = await sendViaPhpRelay({ ...opts, from: opts.from ?? FROM_DEFAULT });
   if (r.ok) return { ok: true, transport: 'php' as const };
   return { ok: false, transport: 'none' as const };
+}
+
+/** Verifies SMTP credentials by opening a connection without sending a real
+ *  message. Used by the Site Settings → Email "Test" button. */
+export async function verifySmtp(cfg: SmtpConfig): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const t = buildTransporter(cfg);
+    await t.verify();
+    return { ok: true };
+  } catch (e: any) {
+    return { ok: false, error: e?.message ?? String(e) };
+  }
 }
 
 export function passwordResetEmail(name: string, link: string) {
