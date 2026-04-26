@@ -172,10 +172,24 @@ model CafeSettings {
   whatsappProvider WAProvider @default(manual)
   notifyOwnerWA   Boolean  @default(true)
   notifyCustomerWA Boolean @default(true)
+  // Per-cafe WhatsApp Cloud API credentials (encrypted at rest)
+  waCloudToken         String?
+  waCloudPhoneId       String?
+  waCloudVerifyToken   String?
+  // Optional reference for a Baileys worker session
+  baileysSessionId     String?
+  // Extra phone numbers (E.164 digits) that receive new-order WA pings
+  notifyNumbers        String[]  @default([])
   upiId           String?
   upiQrUrl        String?
   paymentEnabled  Boolean  @default(true)
   paymentNote     String?
+  // Auto-verify UPI payments by reading bank emails from the cafe's Gmail inbox
+  gmailUser                  String?
+  gmailAppPassword           String?   // encrypted
+  gmailSenderFilter          String?   // e.g. "alerts@hdfcbank.net"
+  gmailSubjectFilter         String?   // e.g. "received UPI"
+  paymentMatchWindowMinutes  Int       @default(30)
   reviewEnabled   Boolean  @default(true)
   googleReviewUrl String?
   customSubdomain String?  @unique
@@ -194,13 +208,14 @@ model CafeSettings {
 
 // ─── 4. STAFF ─────────────────────────────────────────────────────────────
 model Staff {
-  id        String    @id @default(cuid())
-  cafeId    String
-  userId    String
-  role      StaffRole @default(WAITER)
-  isActive  Boolean   @default(true)
-  invitedAt DateTime  @default(now())
-  joinedAt  DateTime?
+  id                 String    @id @default(cuid())
+  cafeId             String
+  userId             String
+  role               StaffRole @default(WAITER)
+  isActive           Boolean   @default(true)
+  notifyOnNewOrder   Boolean   @default(false)
+  invitedAt          DateTime  @default(now())
+  joinedAt           DateTime?
 
   cafe      Cafe      @relation(fields: [cafeId], references: [id], onDelete: Cascade)
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)

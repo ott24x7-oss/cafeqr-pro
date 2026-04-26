@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { calcCart } from '@/lib/order-utils';
 import { genOrderNumber } from '@/lib/utils';
+import { notifyNewOrder } from '@/lib/notify';
 
 const cartItemSchema = z.object({
   menuItemId: z.string(),
@@ -96,6 +97,9 @@ export async function POST(req: Request) {
         link: `/dashboard/orders/${order.id}`,
       },
     });
+
+    // Fire-and-forget WhatsApp fan-out (owner + admins + staff opted in).
+    notifyNewOrder(order.id).catch(() => {});
 
     return NextResponse.json({ ok: true, order });
   } catch (e: any) {

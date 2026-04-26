@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { getOwnerCafe } from '@/lib/guards';
+import { notifyCustomerStatus } from '@/lib/notify';
 
 const schema = z.object({
   status: z.enum(['NEW', 'ACCEPTED', 'PREPARING', 'READY', 'SERVED', 'COMPLETED', 'CANCELLED']),
@@ -43,6 +44,9 @@ export async function POST(req: Request, { params }: { params: { orderId: string
       if (!open) await prisma.table.update({ where: { id: order.tableId }, data: { isOccupied: false } });
     }
   }
+
+  // Auto-notify customer over WhatsApp (no-op if not configured).
+  notifyCustomerStatus(order.id, body.status).catch(() => {});
 
   return NextResponse.json({ order: next });
 }

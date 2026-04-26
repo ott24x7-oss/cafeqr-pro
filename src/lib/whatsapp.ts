@@ -1,11 +1,15 @@
 /**
  * CafeQR Pro — WhatsApp service
  *
- * Phase 1: Manual `wa.me` deep links + ready-made templates.
- * Phase 2 (drop-in): Cloud API + Baileys provider implementations
- *                    behind the same `sendMessage()` interface.
+ * - manual:    returns a wa.me link the UI opens / shares.
+ * - cloud_api: posts to Meta Cloud API. Per-cafe creds (encrypted in DB) take
+ *              precedence over WHATSAPP_CLOUD_TOKEN / WHATSAPP_CLOUD_PHONE_ID
+ *              env fallbacks, so each cafe can use its own bot number.
+ * - baileys:   forwarded to a self-hosted Baileys worker (BAILEYS_WORKER_URL).
+ *              Implementation lives in worker/baileys-server.ts.
  */
 import type { Order, OrderItem, Cafe, CafeSettings } from '@prisma/client';
+import { decrypt } from './crypto';
 
 export type WAProvider = 'manual' | 'cloud_api' | 'baileys';
 
@@ -126,7 +130,7 @@ export function generateOTPMessage(otp: string, cafeName?: string) {
   ].join('\n');
 }
 
-// ─── Provider abstraction (Phase 2 ready) ─────────────────────────────────
+// ─── Provider abstraction ─────────────────────────────────────────────────
 export interface SendResult {
   ok: boolean;
   provider: WAProvider;
@@ -134,25 +138,45 @@ export interface SendResult {
   error?: string;
 }
 
+export interface CafeWAConfig {
+  provider?: WAProvider;
+  cloudToken?: string | null;        // encrypted (we decrypt) or plain
+  cloudPhoneId?: string | null;
+  baileysSessionId?: string | null;
+}
+
 export interface SendOpts {
   to: string;
   message: string;
   provider?: WAProvider;
+  config?: CafeWAConfig;
 }
 
-export async function sendMessage({ to, message, provider = 'manual' }: SendOpts): Promise<SendResult> {
-  const link = waLink(to, message);
+function maybeDecrypt(v?: string | null): string | undefined {
+  if (!v) return undefined;
+  // Encrypted format from src/lib/crypto.ts is `iv:tag:data` (all hex). If it
+  // doesn't match that shape we assume the value is already plaintext (e.g.
+  // legacy data or env values).
+  if (/^[0-9a-f]+:[0-9a-f]+:[0-9a-f]+$/i.test(v)) {
+    const out = decrypt(v);
+    return out || v;
+  }
+  return v;
+}
 
-  if (provider === 'manual') {
-    // Phase 1 — return a wa.me link the UI opens / shares.
+export async function sendMessage({ to, message, provider, config }: SendOpts): Promise<SendResult> {
+  const link = waLink(to, message);
+  const eff: WAProvider = (provider ?? config?.provider ?? 'manual') as WAProvider;
+
+  if (eff === 'manual') {
     return { ok: true, provider: 'manual', link };
   }
 
-  if (provider === 'cloud_api') {
+  if (eff === 'cloud_api') {
     try {
-      const token = process.env.WHATSAPP_CLOUD_TOKEN;
-      const phoneId = process.env.WHATSAPP_CLOUD_PHONE_ID;
-      if (!token || !phoneId) return { ok: false, provider, error: 'Cloud API not configured', link };
+      const token   = maybeDecrypt(config?.cloudToken)   ?? process.env.WHATSAPP_CLOUD_TOKEN;
+      const phoneId = maybeDecrypt(config?.cloudPhoneId) ?? process.env.WHATSAPP_CLOUD_PHONE_ID;
+      if (!token || !phoneId) return { ok: false, provider: eff, error: 'Cloud API not configured', link };
       const res = await fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
         method: 'POST',
         headers: {
@@ -166,17 +190,45 @@ export async function sendMessage({ to, message, provider = 'manual' }: SendOpts
           text: { body: message },
         }),
       });
-      if (!res.ok) return { ok: false, provider, error: await res.text(), link };
-      return { ok: true, provider, link };
+      if (!res.ok) return { ok: false, provider: eff, error: await res.text(), link };
+      return { ok: true, provider: eff, link };
     } catch (e: any) {
-      return { ok: false, provider, error: e?.message ?? 'send failed', link };
+      return { ok: false, provider: eff, error: e?.message ?? 'send failed', link };
     }
   }
 
-  if (provider === 'baileys') {
-    // Hook in your Baileys session manager here. Stub:
-    return { ok: false, provider, error: 'Baileys not wired up yet', link };
+  if (eff === 'baileys') {
+    try {
+      const base = process.env.BAILEYS_WORKER_URL;
+      if (!base) return { ok: false, provider: eff, error: 'BAILEYS_WORKER_URL not set', link };
+      const res = await fetch(`${base.replace(/\/$/, '')}/send`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(process.env.BAILEYS_WORKER_TOKEN ? { Authorization: `Bearer ${process.env.BAILEYS_WORKER_TOKEN}` } : {}),
+        },
+        body: JSON.stringify({
+          sessionId: config?.baileysSessionId ?? 'default',
+          to: normalizePhone(to),
+          message,
+        }),
+      });
+      if (!res.ok) return { ok: false, provider: eff, error: await res.text(), link };
+      return { ok: true, provider: eff, link };
+    } catch (e: any) {
+      return { ok: false, provider: eff, error: e?.message ?? 'baileys send failed', link };
+    }
   }
 
-  return { ok: false, provider, error: 'unknown provider', link };
+  return { ok: false, provider: eff, error: 'unknown provider', link };
+}
+
+export function configFromCafe(cafe: WACafe): CafeWAConfig {
+  const s = cafe.settings;
+  return {
+    provider: (s?.whatsappProvider ?? 'manual') as WAProvider,
+    cloudToken: s?.waCloudToken ?? null,
+    cloudPhoneId: s?.waCloudPhoneId ?? null,
+    baileysSessionId: s?.baileysSessionId ?? null,
+  };
 }

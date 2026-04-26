@@ -1,13 +1,16 @@
 /**
- * Phase-1 customer WhatsApp login: returns a wa.me link the customer can tap
- * to send a one-tap "Hi" to the cafe with a 4-digit OTP. We store the OTP for
- * the phone for 10 minutes; verify-route checks it.
+ * Customer WhatsApp login OTP.
  *
- * In production, swap this for Cloud API / Baileys to send the OTP.
+ * - If a `cafeSlug` is provided AND that cafe has a Cloud API or Baileys
+ *   provider configured, the OTP is delivered over WhatsApp through the
+ *   cafe's bot number.
+ * - Otherwise we fall back to a wa.me deep link the customer can tap to ping
+ *   the cafe themselves.
  */
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { normalizePhone, waLink } from '@/lib/whatsapp';
+import { normalizePhone, waLink, configFromCafe } from '@/lib/whatsapp';
+import { sendOTP } from '@/lib/notify';
 
 const otpStore = (globalThis as any).__cafeqr_otp ??= new Map<string, { otp: string; expiresAt: number }>();
 
@@ -20,21 +23,35 @@ export async function POST(req: Request) {
     const otp = String(Math.floor(1000 + Math.random() * 9000));
     otpStore.set(normalized, { otp, expiresAt: Date.now() + 10 * 60 * 1000 });
 
-    let ownerWa: string | undefined;
+    let cafe: any = null;
     if (cafeSlug) {
-      const cafe = await prisma.cafe.findUnique({ where: { slug: cafeSlug }, select: { whatsappNo: true } });
-      ownerWa = cafe?.whatsappNo ?? undefined;
+      cafe = await prisma.cafe.findUnique({
+        where: { slug: cafeSlug },
+        include: { settings: true },
+      });
     }
 
-    // Manual phase: return the OTP to client (in dev) and a wa.me link to send.
+    const provider = cafe ? configFromCafe(cafe).provider : 'manual';
+    let sendResult: any = null;
+    if (provider !== 'manual' && cafe) {
+      sendResult = await sendOTP(normalized, otp, cafe);
+    }
+
+    const delivered = sendResult?.ok === true;
+
     return NextResponse.json({
       ok: true,
-      // ⚠ Remove `otp` from response when Cloud API/Baileys is wired up.
-      otp: process.env.NODE_ENV === 'production' ? undefined : otp,
-      waSendLink: ownerWa
-        ? waLink(ownerWa, `Hi! My code is ${otp}`)
+      delivered,
+      provider,
+      // Only expose OTP in dev when nothing was actually sent.
+      otp: !delivered && process.env.NODE_ENV !== 'production' ? otp : undefined,
+      // Manual fallback link the customer can use to ping the cafe.
+      waSendLink: cafe?.whatsappNo
+        ? waLink(cafe.whatsappNo, `Hi! My code is ${otp}`)
         : undefined,
-      hint: 'Use any 4-digit OTP — manual mode for trial.',
+      hint: delivered
+        ? 'Code sent on WhatsApp.'
+        : 'Manual mode — use the wa.me link or contact the cafe for your code.',
     });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message ?? 'OTP error' }, { status: 400 });
