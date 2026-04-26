@@ -7,7 +7,6 @@
  * `hydrateAllSessions()` there so the moment a deploy lands, every
  * previously-paired cafe reconnects without anyone clicking anything.
  */
-import 'server-only';
 import {
   default as makeWASocket,
   DisconnectReason,
