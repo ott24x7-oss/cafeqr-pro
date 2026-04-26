@@ -29,7 +29,20 @@ const nextConfig = {
     ],
   },
   webpack: (config, { isServer }) => {
-    if (!isServer) {
+    if (isServer) {
+      // Externalize Node-native packages from ALL server compilations
+      // (App Router + Pages Router). serverComponentsExternalPackages only
+      // covers the App Router server pass, so the pages compiler still
+      // tries to bundle these and chokes on 'crypto' / 'fs'.
+      config.externals = config.externals || [];
+      config.externals.push({
+        '@whiskeysockets/baileys': 'commonjs @whiskeysockets/baileys',
+        imapflow: 'commonjs imapflow',
+        mailparser: 'commonjs mailparser',
+        pino: 'commonjs pino',
+        pdfkit: 'commonjs pdfkit',
+      });
+    } else {
       // Belt-and-braces: ensure these never end up in any client bundle.
       config.resolve.alias = {
         ...(config.resolve.alias ?? {}),

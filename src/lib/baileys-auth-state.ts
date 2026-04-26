@@ -10,7 +10,6 @@
  * Behaviour matches `useMultiFileAuthState` so swapping it in is a
  * drop-in change inside `baileys-manager.ts`.
  */
-import 'server-only';
 import {
   initAuthCreds,
   BufferJSON,
