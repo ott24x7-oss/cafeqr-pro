@@ -265,8 +265,22 @@ export function MenuManager({ categories: initialCats, items: initialItems }: { 
               />
             </label>
             <div className="flex items-start gap-3">
-              <div className="h-16 w-16 rounded-xl bg-coffee-gradient grid place-items-center shrink-0">
-                <Coffee className="h-6 w-6 text-cream-50" />
+              <div className="h-16 w-16 rounded-xl bg-coffee-gradient grid place-items-center shrink-0 overflow-hidden">
+                {it.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={it.imageUrl}
+                    alt={it.name}
+                    className="h-full w-full object-cover"
+                    onError={(e) => {
+                      const img = e.currentTarget as HTMLImageElement;
+                      img.style.display = 'none';
+                      img.parentElement?.classList.add('grid', 'place-items-center');
+                    }}
+                  />
+                ) : (
+                  <Coffee className="h-6 w-6 text-cream-50" />
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
