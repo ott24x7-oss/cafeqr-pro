@@ -77,7 +77,9 @@ export async function searchInboxForCreditAlerts(
     for (const subject of subjects) {
       queries.push(
         client.search({ since: opts.since, from, subject } as any).then(
-          (r) => (r ?? []).map((u: any) => Number(u)),
+          // imapflow returns `false | number[]` — `||` covers both falsy cases
+          // (null/undefined and an actual `false`).
+          (r) => (r || []).map((u: any) => Number(u)),
           () => [] as number[]
         )
       );
