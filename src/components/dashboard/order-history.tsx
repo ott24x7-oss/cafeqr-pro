@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Search, Filter, Download, Loader2, ChevronRight, RefreshCw } from 'lucide-react';
+import { Search, Filter, Download, Loader2, ChevronRight, RefreshCw, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import { toast } from '@/components/ui/toaster';
 
 const STATUSES = ['NEW', 'ACCEPTED', 'PREPARING', 'READY', 'SERVED', 'COMPLETED', 'CANCELLED'];
 const TYPES = ['DINE_IN', 'TAKEAWAY', 'DELIVERY'];
@@ -55,6 +56,8 @@ export function OrderHistory({ tables }: { tables: { id: string; number: string;
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
 
   const queryString = useMemo(() => {
     const p = new URLSearchParams();
@@ -84,6 +87,70 @@ export function OrderHistory({ tables }: { tables: { id: string; number: string;
 
   function toggle(arr: string[], v: string) {
     return arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v];
+  }
+
+  function toggleSelect(id: string) {
+    setSelected((s) => {
+      const next = new Set(s);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    setSelected((s) => {
+      if (s.size === orders.length) return new Set();
+      return new Set(orders.map((o) => o.id));
+    });
+  }
+
+  async function deleteSelected() {
+    if (selected.size === 0) return;
+    if (!confirm(`Permanently delete ${selected.size} order${selected.size > 1 ? 's' : ''}? This cannot be undone.`)) return;
+    setDeleting(true);
+    const r = await fetch('/api/dashboard/orders/bulk-delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: [...selected] }),
+    });
+    setDeleting(false);
+    const data = await r.json().catch(() => ({} as any));
+    if (!r.ok) {
+      toast.error('Delete failed', data.error ?? '');
+      return;
+    }
+    toast.success(`${data.deleted} order${data.deleted === 1 ? '' : 's'} deleted`);
+    setSelected(new Set());
+    load(true);
+  }
+
+  async function deleteAllMatching() {
+    if (totalCount === 0) return;
+    const msg = `Permanently delete ALL ${totalCount} order${totalCount > 1 ? 's' : ''} matching the current filters? This cannot be undone.\n\nType DELETE to confirm.`;
+    const confirmation = prompt(msg);
+    if (confirmation !== 'DELETE') return;
+    setDeleting(true);
+    const r = await fetch('/api/dashboard/orders/bulk-delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        filter: {
+          status: filters.status.length ? filters.status : undefined,
+          type: filters.type.length ? filters.type : undefined,
+          after: filters.from ? new Date(filters.from).toISOString() : undefined,
+          before: filters.to ? new Date(filters.to + 'T23:59:59').toISOString() : undefined,
+        },
+      }),
+    });
+    setDeleting(false);
+    const data = await r.json().catch(() => ({} as any));
+    if (!r.ok) {
+      toast.error('Bulk delete failed', data.error ?? '');
+      return;
+    }
+    toast.success(`${data.deleted} orders cleared`);
+    setSelected(new Set());
+    load(true);
   }
 
   function exportCsv() {
@@ -122,15 +189,42 @@ export function OrderHistory({ tables }: { tables: { id: string; number: string;
           <h1 className="font-display text-2xl md:text-3xl font-bold text-coffee-900">Order history</h1>
           <p className="text-coffee-600 text-sm">{totalCount.toLocaleString()} orders · {formatCurrency(revenue)} revenue</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button variant="outline" onClick={() => load(true)} disabled={loading} size="sm">
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
           </Button>
           <Button variant="outline" onClick={exportCsv} size="sm" disabled={!orders.length}>
             <Download className="h-4 w-4" /> CSV
           </Button>
+          <Button
+            variant="outline"
+            onClick={deleteAllMatching}
+            size="sm"
+            disabled={!totalCount || deleting}
+            title={`Delete all ${totalCount} orders matching current filters`}
+          >
+            <Trash2 className="h-4 w-4 text-rose-500" /> Clear all matching
+          </Button>
         </div>
       </div>
+
+      {/* Bulk-action bar — only when at least one row is ticked */}
+      {selected.size > 0 && (
+        <div className="card-warm !p-3 flex items-center justify-between gap-3 bg-rose-50/50 border-rose-200">
+          <div className="text-sm text-rose-900">
+            <b>{selected.size}</b> order{selected.size === 1 ? '' : 's'} selected
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setSelected(new Set())}>
+              <X className="h-4 w-4" /> Clear
+            </Button>
+            <Button variant="destructive" size="sm" onClick={deleteSelected} disabled={deleting}>
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              Delete selected
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Search bar — always visible */}
       <div className="card-warm !p-3">
@@ -244,6 +338,15 @@ export function OrderHistory({ tables }: { tables: { id: string; number: string;
               <table className="w-full text-sm">
                 <thead className="bg-cream-100 text-coffee-700">
                   <tr>
+                    <th className="p-3 w-10">
+                      <input
+                        type="checkbox"
+                        className="accent-coffee-700"
+                        checked={orders.length > 0 && selected.size === orders.length}
+                        onChange={toggleSelectAll}
+                        title="Select all on this page"
+                      />
+                    </th>
                     <th className="text-left p-3">Order</th>
                     <th className="text-left p-3">When</th>
                     <th className="text-left p-3">Customer</th>
@@ -256,7 +359,15 @@ export function OrderHistory({ tables }: { tables: { id: string; number: string;
                 </thead>
                 <tbody>
                   {orders.map((o) => (
-                    <tr key={o.id} className="border-t border-coffee-100 hover:bg-cream-50">
+                    <tr key={o.id} className={`border-t border-coffee-100 hover:bg-cream-50 ${selected.has(o.id) ? 'bg-rose-50/40' : ''}`}>
+                      <td className="p-3">
+                        <input
+                          type="checkbox"
+                          className="accent-coffee-700"
+                          checked={selected.has(o.id)}
+                          onChange={() => toggleSelect(o.id)}
+                        />
+                      </td>
                       <td className="p-3 font-semibold text-coffee-900">#{o.orderNumber}</td>
                       <td className="p-3 text-coffee-600 whitespace-nowrap">{formatDate(o.createdAt)}</td>
                       <td className="p-3">
@@ -281,33 +392,40 @@ export function OrderHistory({ tables }: { tables: { id: string; number: string;
             {/* Mobile cards */}
             <div className="md:hidden divide-y divide-coffee-100">
               {orders.map((o) => (
-                <Link
+                <div
                   key={o.id}
-                  href={`/dashboard/orders/${o.id}`}
-                  className="flex items-start justify-between p-4 hover:bg-cream-50"
+                  className={`flex items-start justify-between p-4 ${selected.has(o.id) ? 'bg-rose-50/40' : 'hover:bg-cream-50'}`}
                 >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-coffee-900">#{o.orderNumber}</span>
-                      <span className={`pill ${STATUS_TONE[o.status]} text-[10px]`}>{o.status}</span>
-                    </div>
-                    <div className="text-xs text-coffee-600 mt-1">
-                      {formatDate(o.createdAt)}{o.table ? ` · Table ${o.table.number}` : ''}
-                    </div>
-                    {(o.customerName || o.customerPhone) && (
-                      <div className="text-xs text-coffee-500 mt-0.5 truncate">
-                        {o.customerName} {o.customerPhone && `· ${o.customerPhone}`}
+                  <input
+                    type="checkbox"
+                    className="accent-coffee-700 mt-1 mr-3 shrink-0"
+                    checked={selected.has(o.id)}
+                    onChange={() => toggleSelect(o.id)}
+                  />
+                  <Link href={`/dashboard/orders/${o.id}`} className="flex items-start justify-between gap-3 flex-1 min-w-0">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-coffee-900">#{o.orderNumber}</span>
+                        <span className={`pill ${STATUS_TONE[o.status]} text-[10px]`}>{o.status}</span>
                       </div>
-                    )}
-                    <div className="text-xs text-coffee-500 mt-1">{o.items.length} items</div>
-                  </div>
-                  <div className="text-right ml-3 shrink-0">
-                    <div className="font-bold text-coffee-900">{formatCurrency(o.totalAmount)}</div>
-                    <div className={`mt-1 pill ${PAY_TONE[o.paymentStatus]} text-[10px]`}>
-                      {o.paymentStatus.replace('_', ' ')}
+                      <div className="text-xs text-coffee-600 mt-1">
+                        {formatDate(o.createdAt)}{o.table ? ` · Table ${o.table.number}` : ''}
+                      </div>
+                      {(o.customerName || o.customerPhone) && (
+                        <div className="text-xs text-coffee-500 mt-0.5 truncate">
+                          {o.customerName} {o.customerPhone && `· ${o.customerPhone}`}
+                        </div>
+                      )}
+                      <div className="text-xs text-coffee-500 mt-1">{o.items.length} items</div>
                     </div>
-                  </div>
-                </Link>
+                    <div className="text-right ml-3 shrink-0">
+                      <div className="font-bold text-coffee-900">{formatCurrency(o.totalAmount)}</div>
+                      <div className={`mt-1 pill ${PAY_TONE[o.paymentStatus]} text-[10px]`}>
+                        {o.paymentStatus.replace('_', ' ')}
+                      </div>
+                    </div>
+                  </Link>
+                </div>
               ))}
             </div>
           </>

@@ -18,12 +18,86 @@ export function MenuManager({ categories: initialCats, items: initialItems }: { 
   const [showItemModal, setShowItemModal] = useState(false);
   const [editItem, setEditItem] = useState<any | null>(null);
   const [showBulkImport, setShowBulkImport] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const filtered = items.filter((i) => {
     if (activeCat !== 'all' && i.categoryId !== activeCat) return false;
     if (search && !i.name.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
+
+  function toggleSelect(id: string) {
+    setSelected((s) => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+  }
+  function toggleSelectAllVisible() {
+    setSelected((s) => {
+      if (s.size === filtered.length && filtered.length > 0) return new Set();
+      return new Set(filtered.map((x) => x.id));
+    });
+  }
+
+  /** Reconcile state from a bulk-delete response: deleted IDs disappear,
+   *  hidden IDs flip isAvailable=false in place (kept for past orders). */
+  function applyBulkResult(payload: { deletedIds: string[]; hiddenIds: string[] }) {
+    setItems((cur) => cur
+      .filter((i) => !payload.deletedIds.includes(i.id))
+      .map((i) => payload.hiddenIds.includes(i.id) ? { ...i, isAvailable: false, inStock: false } : i)
+    );
+    setSelected(new Set());
+  }
+
+  async function bulkDelete(opts: { ids?: string[]; categoryId?: string; all?: boolean; promptCount: number }) {
+    if (opts.promptCount === 0) return;
+    const what = opts.all
+      ? `ALL ${opts.promptCount} menu items`
+      : opts.categoryId
+        ? `all ${opts.promptCount} items in this category`
+        : `${opts.promptCount} selected item${opts.promptCount === 1 ? '' : 's'}`;
+    const confirmStr = opts.all || opts.promptCount > 20 ? 'DELETE' : null;
+    if (confirmStr) {
+      const r = prompt(`Permanently delete ${what}?\nItems with order history will be hidden instead.\n\nType ${confirmStr} to confirm.`);
+      if (r !== confirmStr) return;
+    } else {
+      if (!confirm(`Permanently delete ${what}?\nItems with order history will be hidden instead.`)) return;
+    }
+    setBulkBusy(true);
+    const targetIds = opts.ids ?? (opts.categoryId
+      ? items.filter((i) => i.categoryId === opts.categoryId).map((i) => i.id)
+      : items.map((i) => i.id));
+    const r = await fetch('/api/dashboard/menu/items/bulk-delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ids: opts.ids,
+        categoryId: opts.categoryId,
+        all: opts.all,
+      }),
+    });
+    setBulkBusy(false);
+    const data = await r.json().catch(() => ({} as any));
+    if (!r.ok) {
+      toast.error('Bulk delete failed', data.error ?? '');
+      return;
+    }
+    // Server doesn't echo IDs — recompute locally based on which targets had
+    // order history so the UI reconciles correctly.
+    const hadOrders = (id: string) => {
+      const it = items.find((i) => i.id === id);
+      return !!(it && (it._count?.orderItems ?? 0) > 0);
+    };
+    const hiddenIds = targetIds.filter((id) => hadOrders(id));
+    const deletedIds = targetIds.filter((id) => !hadOrders(id));
+    applyBulkResult({ deletedIds, hiddenIds });
+    const parts: string[] = [];
+    if (data.deleted) parts.push(`${data.deleted} deleted`);
+    if (data.hidden) parts.push(`${data.hidden} hidden (had orders)`);
+    toast.success('Done', parts.join(' · ') || 'No changes');
+  }
 
   async function deleteItem(id: string) {
     if (!confirm('Delete this item?')) return;
@@ -114,7 +188,64 @@ export function MenuManager({ categories: initialCats, items: initialItems }: { 
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-coffee-400" />
           <Input placeholder="Search items…" className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
+
+        <div className="mt-4 flex items-center justify-between flex-wrap gap-2 border-t border-cream-200 pt-3">
+          <label className="flex items-center gap-2 text-sm text-coffee-700 cursor-pointer">
+            <input
+              type="checkbox"
+              className="accent-coffee-700"
+              checked={filtered.length > 0 && selected.size === filtered.length}
+              onChange={toggleSelectAllVisible}
+            />
+            Select all visible ({filtered.length})
+          </label>
+          <div className="flex gap-2 flex-wrap">
+            {activeCat !== 'all' && (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={bulkBusy}
+                onClick={() => bulkDelete({
+                  categoryId: activeCat,
+                  promptCount: items.filter((i) => i.categoryId === activeCat).length,
+                })}
+              >
+                <Trash2 className="h-3 w-3 text-rose-500" /> Delete all in this category
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={bulkBusy || items.length === 0}
+              onClick={() => bulkDelete({ all: true, promptCount: items.length })}
+            >
+              <Trash2 className="h-3 w-3 text-rose-500" /> Delete ALL items
+            </Button>
+          </div>
+        </div>
       </div>
+
+      {selected.size > 0 && (
+        <div className="card-warm bg-rose-50 border-rose-200 flex items-center justify-between flex-wrap gap-2">
+          <div className="text-sm text-coffee-800">
+            <span className="font-bold">{selected.size}</span> selected
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => setSelected(new Set())}>
+              Clear
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={bulkBusy}
+              onClick={() => bulkDelete({ ids: Array.from(selected), promptCount: selected.size })}
+            >
+              {bulkBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3 text-rose-500" />}
+              Delete selected
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {filtered.length === 0 && (
@@ -124,7 +255,15 @@ export function MenuManager({ categories: initialCats, items: initialItems }: { 
           </div>
         )}
         {filtered.map((it) => (
-          <div key={it.id} className={`card-warm relative ${!it.isAvailable ? 'opacity-60' : ''}`}>
+          <div key={it.id} className={`card-warm relative ${!it.isAvailable ? 'opacity-60' : ''} ${selected.has(it.id) ? 'ring-2 ring-rose-300' : ''}`}>
+            <label className="absolute top-2 right-2 z-10 cursor-pointer">
+              <input
+                type="checkbox"
+                className="accent-coffee-700 h-4 w-4"
+                checked={selected.has(it.id)}
+                onChange={() => toggleSelect(it.id)}
+              />
+            </label>
             <div className="flex items-start gap-3">
               <div className="h-16 w-16 rounded-xl bg-coffee-gradient grid place-items-center shrink-0">
                 <Coffee className="h-6 w-6 text-cream-50" />
