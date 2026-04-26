@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Trash2, Loader2, X, UserCheck, Mail, Phone } from 'lucide-react';
+import { Plus, Trash2, Loader2, X, UserCheck, Mail, Phone, Bell, BellOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui/toaster';
@@ -24,6 +24,22 @@ export function StaffManager({ initialStaff }: { initialStaff: any[] }) {
     if (!confirm('Remove this staff member?')) return;
     const r = await fetch(`/api/dashboard/staff/${id}`, { method: 'DELETE' });
     if (r.ok) setStaff((c) => c.filter((s) => s.id !== id));
+  }
+
+  async function toggleNotify(id: string, next: boolean) {
+    const before = staff;
+    setStaff((c) => c.map((s) => s.id === id ? { ...s, notifyOnNewOrder: next } : s));
+    const r = await fetch(`/api/dashboard/staff/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notifyOnNewOrder: next }),
+    });
+    if (!r.ok) {
+      setStaff(before);
+      toast.error('Could not update');
+    } else {
+      toast.success(next ? 'Will receive new-order WA pings' : 'Pings turned off');
+    }
   }
 
   return (
@@ -69,6 +85,28 @@ export function StaffManager({ initialStaff }: { initialStaff: any[] }) {
               <span className="text-coffee-500">Joined {formatDate(s.joinedAt ?? s.invitedAt, { dateStyle: 'short', timeStyle: undefined })}</span>
             </div>
             <div className="text-[11px] text-coffee-500 mt-1">{ROLE_DESC[s.role]}</div>
+
+            <button
+              onClick={() => toggleNotify(s.id, !s.notifyOnNewOrder)}
+              className={`mt-3 w-full flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-xs font-medium border transition ${
+                s.notifyOnNewOrder
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100'
+                  : 'bg-cream-50 border-coffee-200 text-coffee-700 hover:bg-cream-100'
+              }`}
+              title={s.user.phone ? '' : 'Add a phone number to this user to enable WhatsApp pings'}
+              disabled={!s.user.phone}
+            >
+              <span className="flex items-center gap-1.5">
+                {s.notifyOnNewOrder ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
+                WhatsApp on new order
+              </span>
+              <span className={`h-4 w-7 rounded-full relative transition ${s.notifyOnNewOrder ? 'bg-emerald-500' : 'bg-coffee-300'}`}>
+                <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition-all ${s.notifyOnNewOrder ? 'left-3.5' : 'left-0.5'}`} />
+              </span>
+            </button>
+            {!s.user.phone && (
+              <div className="text-[10px] text-coffee-400 mt-1">Add phone number to enable</div>
+            )}
           </div>
         ))}
       </div>
