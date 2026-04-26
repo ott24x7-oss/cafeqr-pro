@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       ok: true,
       // Surface the URL to the dev client when SMTP isn't configured.
-      resetUrl: result.skipped ? resetUrl : undefined,
+      resetUrl: result.transport === 'none' ? resetUrl : undefined,
     });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message ?? 'Failed' }, { status: 400 });
