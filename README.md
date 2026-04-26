@@ -272,6 +272,30 @@ Railway gives you a URL like `https://cafeqr-pro.up.railway.app`.
 
 Railway → service → **Settings** → **Domains** → add your domain → update DNS CNAME → set `NEXTAUTH_URL` and `APP_URL` env vars.
 
+### Optional companion services
+
+Two optional long-running workers live under `worker/`. Each can be deployed as a *separate* Railway service from the same repo.
+
+#### Payment auto-verify poller (`worker/payment-poller.ts`)
+
+Polls every cafe with Gmail credentials configured and auto-verifies UPI payments by reading bank credit-alert emails. The same matcher backs the dashboard's "Verify from email" button.
+
+1. Railway → New service → connect this repo.
+2. Override start command: `npx prisma generate && npx tsx worker/payment-poller.ts`
+3. Share `DATABASE_URL` and `ENCRYPTION_KEY` env vars with the main app. Optional: `POLL_INTERVAL_SEC` (default 60), `POLL_CONCURRENCY` (default 3).
+
+The cafe owner adds Gmail address + [app password](https://myaccount.google.com/apppasswords) under **Settings → Payment → Auto-verify**.
+
+#### Baileys WhatsApp worker (`worker/baileys-server.ts`)
+
+Hosts WhatsApp-Web sockets so cafes that don't want Cloud API can pair their phone with a QR scan. The file is currently a scaffold — the comments at the top describe the remaining `@whiskeysockets/baileys` integration. The main app already calls this worker via `BAILEYS_WORKER_URL` when a cafe selects the `baileys` provider.
+
+1. Railway → New service → start command: `npx tsx worker/baileys-server.ts`
+2. Mount a Railway volume at `/data` so pairing state survives restarts.
+3. Set `BAILEYS_WORKER_TOKEN` to a random secret. Add the same value + `BAILEYS_WORKER_URL=https://<this-service>.up.railway.app` to the main app's env.
+
+For most cafes Cloud API is the recommended choice — official, no QR pairing, runs entirely inside Next.js.
+
 ---
 
 ## 🗂 Environment variables
@@ -285,11 +309,15 @@ Railway → service → **Settings** → **Domains** → add your domain → upd
 | `SUPER_ADMIN_EMAIL`            | ✅       | Created on first seed                                       |
 | `SUPER_ADMIN_PASSWORD`         | ✅       | First-login password (change immediately after)             |
 | `SUPER_ADMIN_NAME`             |          | Display name for super admin                                |
-| `WHATSAPP_PROVIDER`            |          | `manual` *(default)* / `cloud_api` / `baileys`              |
-| `WHATSAPP_CLOUD_TOKEN`         |          | Meta Cloud API token (provider = cloud_api)                 |
-| `WHATSAPP_CLOUD_PHONE_ID`      |          | Meta Cloud API phone-number ID                              |
+| `WHATSAPP_PROVIDER`            |          | `manual` *(default)* / `cloud_api` / `baileys` (env-level fallback) |
+| `WHATSAPP_CLOUD_TOKEN`         |          | Cloud API token used when a cafe doesn't set its own         |
+| `WHATSAPP_CLOUD_PHONE_ID`      |          | Cloud API phone-number ID used when a cafe doesn't set its own |
+| `BAILEYS_WORKER_URL`           |          | URL of the Baileys companion worker (provider = baileys)    |
+| `BAILEYS_WORKER_TOKEN`         |          | Bearer token shared between main app and Baileys worker     |
+| `POLL_INTERVAL_SEC`            |          | Payment poller interval in seconds (default 60, worker only) |
+| `POLL_CONCURRENCY`             |          | Cafes processed in parallel by the poller (default 3)        |
 | `SMTP_HOST` …                  |          | Optional outgoing email (resets, receipts)                  |
-| `ENCRYPTION_KEY`               |          | 64-hex-char AES-256-GCM key for sensitive fields            |
+| `ENCRYPTION_KEY`               | ✅       | 64-hex-char AES-256-GCM key — required for storing WA tokens, Gmail app passwords |
 
 ---
 

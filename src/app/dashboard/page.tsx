@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { getOwnerCafe } from '@/lib/guards';
 import { formatCurrency } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { CafeStoreLink } from '@/components/dashboard/cafe-store-link';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,12 +47,16 @@ export default async function DashboardOverview() {
     { l: 'Reviews', v: (reviewAgg._avg.rating ?? 0).toFixed(1) + '★', s: `${reviewAgg._count} ratings`, tone: 'text-caramel-dark', icon: Star },
   ];
 
+  const appUrl = process.env.APP_URL || process.env.NEXTAUTH_URL || '';
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-20 md:pb-4">
       <div>
         <h1 className="font-display text-2xl md:text-3xl font-bold text-coffee-900">Dashboard</h1>
         <p className="text-coffee-600 text-sm">Here's what's happening at {cafe.name} today.</p>
       </div>
+
+      <CafeStoreLink slug={cafe.slug} cafeName={cafe.name} appUrl={appUrl} full={false} />
 
       {cafe.status === 'TRIAL' && cafe.trialEndsAt && (
         <div className="card-warm border-amber-200 bg-amber-50 flex items-center gap-3">
