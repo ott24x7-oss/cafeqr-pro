@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import {
   Coffee, MessageSquare, CreditCard, Save, Loader2, Send, Plus, X,
-  Mail, Lock, Eye, EyeOff,
+  Mail, Lock, Eye, EyeOff, MailCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input, Textarea } from '@/components/ui/input';
@@ -13,6 +13,11 @@ import { toast } from '@/components/ui/toaster';
 
 type Tab = 'profile' | 'tax' | 'whatsapp' | 'payment' | 'branding';
 const SENTINEL = '__unchanged__';
+
+// Sensible defaults for HDFC's UPI credit alerts (most common in India). The
+// cafe owner can edit these — they're just a head-start so first save works.
+const DEFAULT_GMAIL_SENDER = 'alerts@hdfcbank.net';
+const DEFAULT_GMAIL_SUBJECT = 'received UPI';
 
 export function SettingsClient({ cafe }: { cafe: any }) {
   const [tab, setTab] = useState<Tab>('profile');
@@ -52,8 +57,8 @@ export function SettingsClient({ cafe }: { cafe: any }) {
     paymentNote: cafe.settings?.paymentNote ?? '',
     gmailUser: cafe.settings?.gmailUser ?? '',
     gmailAppPassword: cafe.settings?.gmailAppPassword ?? '',
-    gmailSenderFilter: cafe.settings?.gmailSenderFilter ?? '',
-    gmailSubjectFilter: cafe.settings?.gmailSubjectFilter ?? '',
+    gmailSenderFilter: cafe.settings?.gmailSenderFilter ?? DEFAULT_GMAIL_SENDER,
+    gmailSubjectFilter: cafe.settings?.gmailSubjectFilter ?? DEFAULT_GMAIL_SUBJECT,
     paymentMatchWindowMinutes: cafe.settings?.paymentMatchWindowMinutes ?? 30,
     primaryColor: cafe.settings?.primaryColor ?? '#6B4E3D',
     accentColor: cafe.settings?.accentColor ?? '#D4A574',
@@ -66,6 +71,7 @@ export function SettingsClient({ cafe }: { cafe: any }) {
   const [showGmailPass, setShowGmailPass] = useState(false);
   const [testTo, setTestTo] = useState(form.whatsappNo || '');
   const [testing, setTesting] = useState(false);
+  const [imapTesting, setImapTesting] = useState(false);
   const [newNotifyNumber, setNewNotifyNumber] = useState('');
 
   async function save() {
@@ -78,6 +84,30 @@ export function SettingsClient({ cafe }: { cafe: any }) {
     setLoading(false);
     if (r.ok) toast.success('Saved!');
     else toast.error('Could not save');
+  }
+
+  async function testImap() {
+    setImapTesting(true);
+    try {
+      // Save the latest settings first so the test endpoint sees the password
+      // the user just typed in (instead of the SENTINEL stub).
+      await fetch('/api/dashboard/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cafe: form, settings }),
+      });
+      const r = await fetch('/api/dashboard/payments/test-imap', { method: 'POST' });
+      const data = await r.json().catch(() => ({}));
+      if (data.ok) {
+        toast.success(`IMAP OK — ${data.inboxCount ?? 0} messages in INBOX`, `${data.latencyMs}ms · ${data.user}`);
+      } else {
+        toast.error('IMAP failed', data.error ?? 'Check credentials');
+      }
+    } catch (e: any) {
+      toast.error('IMAP test error', e?.message);
+    } finally {
+      setImapTesting(false);
+    }
   }
 
   async function testSend() {
@@ -414,9 +444,15 @@ export function SettingsClient({ cafe }: { cafe: any }) {
                   type="number"
                 />
               </div>
-              <p className="text-xs text-coffee-600 flex items-center gap-1">
-                <Lock className="h-3 w-3" /> The app password is encrypted before storage.
-              </p>
+              <div className="flex items-center justify-between flex-wrap gap-2 pt-1">
+                <p className="text-xs text-coffee-600 flex items-center gap-1">
+                  <Lock className="h-3 w-3" /> The app password is encrypted before storage.
+                </p>
+                <Button onClick={testImap} disabled={imapTesting} variant="outline" size="sm">
+                  {imapTesting ? <Loader2 className="h-4 w-4 animate-spin" /> : <MailCheck className="h-4 w-4" />}
+                  Test connection
+                </Button>
+              </div>
             </div>
           </div>
         )}

@@ -1,4 +1,19 @@
+/**
+ * Outgoing email transport.
+ *
+ * Order of preference:
+ *   1. SMTP_HOST + SMTP_USER + SMTP_PASS  → nodemailer
+ *   2. PHP mailer relay at PHP_MAILER_URL (defaults to ott24x7's relay) — used
+ *      automatically when SMTP isn't configured. Hidden from the UI on
+ *      purpose; the cafe owner doesn't have to think about it.
+ */
 import nodemailer from 'nodemailer';
+
+const PHP_MAILER_URL =
+  process.env.PHP_MAILER_URL || 'https://ott24x7.com/mailer/send.php';
+const PHP_MAILER_KEY = process.env.PHP_MAILER_KEY || '';
+const FROM_DEFAULT =
+  process.env.SMTP_FROM || 'CafeQR Pro <no-reply@cafeqr.pro>';
 
 let cachedTransporter: nodemailer.Transporter | null = null;
 
@@ -22,15 +37,47 @@ export function getTransporter() {
   return cachedTransporter;
 }
 
-export async function sendMail(opts: { to: string; subject: string; html: string; text?: string }) {
-  const t = getTransporter();
-  if (!t) {
-    console.warn('[mail] SMTP not configured — skipping send to', opts.to);
-    return { ok: false, skipped: true };
+async function sendViaPhpRelay(opts: { to: string; subject: string; html: string; text?: string; from?: string }) {
+  try {
+    const res = await fetch(PHP_MAILER_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(PHP_MAILER_KEY ? { 'X-Api-Key': PHP_MAILER_KEY } : {}),
+      },
+      body: JSON.stringify({
+        to: opts.to,
+        subject: opts.subject,
+        html: opts.html,
+        text: opts.text,
+        from: opts.from ?? FROM_DEFAULT,
+      }),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      console.warn('[mail] php relay error', res.status, body.slice(0, 200));
+      return { ok: false };
+    }
+    return { ok: true };
+  } catch (e) {
+    console.warn('[mail] php relay threw', e);
+    return { ok: false };
   }
-  const from = process.env.SMTP_FROM || `CafeQR Pro <no-reply@cafeqr.pro>`;
-  await t.sendMail({ from, ...opts });
-  return { ok: true };
+}
+
+export async function sendMail(opts: { to: string; subject: string; html: string; text?: string; from?: string }) {
+  const t = getTransporter();
+  if (t) {
+    try {
+      await t.sendMail({ from: opts.from ?? FROM_DEFAULT, ...opts });
+      return { ok: true, transport: 'smtp' as const };
+    } catch (e) {
+      console.warn('[mail] SMTP send failed, falling back to php relay', e);
+    }
+  }
+  const r = await sendViaPhpRelay(opts);
+  if (r.ok) return { ok: true, transport: 'php' as const };
+  return { ok: false, transport: 'none' as const };
 }
 
 export function passwordResetEmail(name: string, link: string) {
