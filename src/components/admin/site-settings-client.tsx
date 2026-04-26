@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
-  Save, Loader2, Eye, EyeOff, Send, Globe, Mail, FileText, Lock, ShieldCheck, IndianRupee,
+  Save, Loader2, Eye, EyeOff, Send, Globe, Mail, FileText, Lock, ShieldCheck, IndianRupee, MailCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input, Textarea } from '@/components/ui/input';
@@ -57,6 +57,8 @@ export function SiteSettingsClient({ initial, infra }: { initial: any; infra?: I
   const [showPlatformPass, setShowPlatformPass] = useState(false);
   const [saving, setSaving] = useState(false);
   const [smtpTesting, setSmtpTesting] = useState<'verify' | 'send' | null>(null);
+  const [imapTesting, setImapTesting] = useState(false);
+  const [imapResult, setImapResult] = useState<any>(null);
 
   async function save() {
     setSaving(true);
@@ -93,6 +95,37 @@ export function SiteSettingsClient({ initial, infra }: { initial: any; infra?: I
     } else {
       const data = await r.json().catch(() => ({} as any));
       toast.error('Save failed', data.error ?? '');
+    }
+  }
+
+  async function testPlatformImap() {
+    setImapTesting(true);
+    setImapResult(null);
+    try {
+      // Save first so the test endpoint sees fresh creds.
+      await fetch('/api/admin/site-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          platformGmailUser: form.platformGmailUser || null,
+          platformGmailAppPassword: form.platformGmailAppPassword,
+        }),
+      });
+      const r = await fetch('/api/admin/site-settings/test-platform-imap', { method: 'POST' });
+      const data = await r.json().catch(() => ({} as any));
+      setImapResult(data);
+      if (data.ok) {
+        toast.success(
+          `IMAP OK — ${data.inboxCount ?? 0} in INBOX`,
+          `${data.filteredCount ?? 0} credit alert(s) found`
+        );
+      } else {
+        toast.error('IMAP failed', data.error ?? 'Check credentials');
+      }
+    } catch (e: any) {
+      toast.error('IMAP test error', e?.message);
+    } finally {
+      setImapTesting(false);
     }
   }
 
@@ -262,6 +295,102 @@ export function SiteSettingsClient({ initial, infra }: { initial: any; infra?: I
               </div>
               <p className="helper">Encrypted at rest. Same Gmail app password format you used for the cafe-side IMAP.</p>
             </div>
+
+            <div className="md:col-span-2 flex items-center justify-between flex-wrap gap-2 pt-2 border-t border-coffee-100">
+              <p className="text-xs text-coffee-600 flex items-center gap-1">
+                <Lock className="h-3 w-3" /> Credentials encrypted at rest. The matcher already knows about
+                Paytm / PhonePe / GPay / HDFC / Axis / SBI / ICICI.
+              </p>
+              <Button onClick={testPlatformImap} disabled={imapTesting} variant="outline" size="sm">
+                {imapTesting ? <Loader2 className="h-4 w-4 animate-spin" /> : <MailCheck className="h-4 w-4" />}
+                Test connection
+              </Button>
+            </div>
+
+            {imapResult && (
+              <div className={`md:col-span-2 rounded-xl border p-3 text-xs ${imapResult.ok ? 'border-coffee-200 bg-white' : 'border-rose-200 bg-rose-50'}`}>
+                {!imapResult.ok ? (
+                  <div className="text-rose-700">
+                    <div className="font-semibold">Connection failed</div>
+                    <div className="mt-1 break-words">{imapResult.error}</div>
+                    <div className="mt-2 text-coffee-600">
+                      With 2-factor on, paste a 16-char Gmail{' '}
+                      <a className="underline" href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer">app password</a>,
+                      not the regular Gmail password.
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3 text-coffee-800">
+                    <div className="flex flex-wrap gap-3 items-center">
+                      <span className="pill bg-emerald-100 text-emerald-800">Connected</span>
+                      <span className={`pill text-[10px] ${imapResult.transport === 'relay' ? 'bg-amber-100 text-amber-800' : 'bg-coffee-100 text-coffee-700'}`}>
+                        via {imapResult.transport === 'relay' ? 'PHP relay' : 'direct IMAP'}
+                      </span>
+                      {imapResult.inboxCount != null && (
+                        <span className="text-coffee-600">INBOX: <b>{imapResult.inboxCount}</b></span>
+                      )}
+                      <span className={`text-coffee-700 ${imapResult.filteredCount === 0 ? 'text-rose-700 font-semibold' : ''}`}>
+                        Credit alerts matched: <b>{imapResult.filteredCount}</b>
+                      </span>
+                    </div>
+                    {imapResult.note && (
+                      <div className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-2 py-1">
+                        {imapResult.note}
+                      </div>
+                    )}
+                    {imapResult.filteredCount === 0 && (
+                      <div className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-amber-900">
+                        Built-in matcher (Paytm / PhonePe / GPay / HDFC / Axis / SBI / ICICI + subjects:
+                        paid · received · deposit · credit) found 0 hits in the last 24 hours. That's normal
+                        if no cafe owner has paid yet — the next bank credit alert will be auto-matched.
+                      </div>
+                    )}
+                    {imapResult.recent?.length > 0 && (
+                      <div>
+                        <div className="font-semibold text-coffee-900 mb-1">Recent senders (last 24h):</div>
+                        <div className="space-y-1 max-h-48 overflow-y-auto">
+                          {imapResult.recent.map((r: any, i: number) => (
+                            <div key={i} className="rounded-md border border-coffee-100 bg-cream-50 px-2 py-1.5">
+                              <div className="font-mono text-[11px] text-coffee-900 truncate">{r.from || '(no sender)'}</div>
+                              <div className="text-[11px] text-coffee-600 truncate">{r.subject || '(no subject)'}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* PHP mailer / relay info — hardcoded URL surfaced read-only so
+                the admin can see the safety net at a glance. */}
+            {infra && (
+              <div className="md:col-span-2 rounded-2xl border border-coffee-200 bg-cream-50 p-4 space-y-2 mt-1">
+                <div className="flex items-center gap-2 font-semibold text-coffee-900 text-sm">
+                  <ShieldCheck className="h-4 w-4 text-emerald-700" /> PHP relay (auto-managed fallback)
+                </div>
+                <p className="text-xs text-coffee-600">
+                  The platform's outgoing mail and IMAP fall back to this relay automatically if Railway
+                  blocks port 587 / 993. URL is set via the
+                  <code className="mx-1 px-1.5 py-0.5 bg-white rounded border border-coffee-200">PHP_MAILER_URL</code> env var
+                  and is non-editable here on purpose.
+                </p>
+                <div>
+                  <label className="label">PHP mailer URL</label>
+                  <div className="flex items-center gap-2">
+                    <Input value={infra.phpMailerUrl} readOnly className="bg-white !cursor-default font-mono text-xs" />
+                    <span className={`pill text-[10px] ${infra.phpMailerKeySet ? 'bg-emerald-100 text-emerald-800' : 'bg-coffee-100 text-coffee-700'}`}>
+                      <Lock className="h-3 w-3" /> {infra.phpMailerKeySet ? 'Auth on' : 'No shared key'}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <label className="label">IMAP relay URL (auto-derived)</label>
+                  <Input value={infra.imapRelayUrl} readOnly className="bg-white !cursor-default font-mono text-xs" />
+                </div>
+              </div>
+            )}
           </div>
         )}
 
