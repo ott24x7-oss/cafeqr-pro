@@ -21,6 +21,8 @@ export interface SendOpts {
   message: string;
   provider?: WAProvider;
   config?: CafeWAConfig;
+  /** Optional image URL — sent as the message media with `message` as caption. */
+  imageUrl?: string;
 }
 
 function maybeDecrypt(v?: string | null): string | undefined {
@@ -32,7 +34,7 @@ function maybeDecrypt(v?: string | null): string | undefined {
   return v;
 }
 
-export async function sendMessage({ to, message, provider, config }: SendOpts): Promise<SendResult> {
+export async function sendMessage({ to, message, provider, config, imageUrl }: SendOpts): Promise<SendResult> {
   const link = waLink(to, message);
   const eff: WAProvider = (provider ?? config?.provider ?? 'manual') as WAProvider;
 
@@ -45,18 +47,26 @@ export async function sendMessage({ to, message, provider, config }: SendOpts): 
       const token   = maybeDecrypt(config?.cloudToken)   ?? process.env.WHATSAPP_CLOUD_TOKEN;
       const phoneId = maybeDecrypt(config?.cloudPhoneId) ?? process.env.WHATSAPP_CLOUD_PHONE_ID;
       if (!token || !phoneId) return { ok: false, provider: eff, error: 'Cloud API not configured', link };
+      const body = imageUrl
+        ? {
+            messaging_product: 'whatsapp',
+            to: normalizePhone(to),
+            type: 'image',
+            image: { link: imageUrl, caption: message },
+          }
+        : {
+            messaging_product: 'whatsapp',
+            to: normalizePhone(to),
+            type: 'text',
+            text: { body: message },
+          };
       const res = await fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          messaging_product: 'whatsapp',
-          to: normalizePhone(to),
-          type: 'text',
-          text: { body: message },
-        }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) return { ok: false, provider: eff, error: await res.text(), link };
       return { ok: true, provider: eff, link };
@@ -75,6 +85,7 @@ export async function sendMessage({ to, message, provider, config }: SendOpts): 
           sessionId: config?.baileysSessionId ?? undefined,
           to: normalizePhone(to),
           message,
+          imageUrl,
         });
         return { ok: r.ok, provider: eff, link, error: r.error };
       } catch (e: any) {
@@ -92,6 +103,7 @@ export async function sendMessage({ to, message, provider, config }: SendOpts): 
           sessionId: config?.baileysSessionId ?? 'default',
           to: normalizePhone(to),
           message,
+          imageUrl,
         }),
       });
       if (!res.ok) return { ok: false, provider: eff, error: await res.text(), link };

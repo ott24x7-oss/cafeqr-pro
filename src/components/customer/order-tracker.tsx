@@ -2,13 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Coffee, CheckCircle2, Clock, ChefHat, Bell, MessageSquare, Star, CreditCard, Receipt } from 'lucide-react';
+import { Coffee, CheckCircle2, ChefHat, Bell, Star, CreditCard, Receipt } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
-import {
-  generateOwnerOrderMessage,
-  waLink,
-} from '@/lib/whatsapp';
 
 const STEPS = [
   { k: 'NEW', l: 'Order placed', i: Bell },
@@ -37,14 +33,6 @@ export function CustomerOrderTracker({ order: initialOrder }: { order: any }) {
   const currentIdx = Math.max(0, STEPS.findIndex((s) => s.k === order.status));
   const isCancelled = order.status === 'CANCELLED';
   const isComplete = order.status === 'COMPLETED' || order.status === 'SERVED';
-
-  const ownerWa = cafe.whatsappNo ?? '';
-  const ownerLink = ownerWa
-    ? waLink(
-        ownerWa,
-        generateOwnerOrderMessage(order, cafe, typeof window !== 'undefined' ? window.location.origin : '')
-      )
-    : '';
 
   return (
     <div className="min-h-screen bg-cream-50 pb-20">
@@ -129,24 +117,18 @@ export function CustomerOrderTracker({ order: initialOrder }: { order: any }) {
           </div>
         </div>
 
-        {/* Action buttons */}
+        {/* Action buttons. Owner-side WhatsApp is sent automatically by the
+            cafe's bot — customers don't see a manual share button here. */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {ownerLink && (
-            <a href={ownerLink} target="_blank" rel="noreferrer">
-              <Button variant="wa" className="w-full" size="lg">
-                <MessageSquare className="h-4 w-4" /> Send to Owner WhatsApp
-              </Button>
-            </a>
-          )}
           {cafe.settings?.paymentEnabled && order.paymentStatus !== 'PAID' && (
-            <Link href={`/pay/${order.id}`}>
+            <Link href={`/pay/${order.id}`} className={isComplete && cafe.settings?.reviewEnabled ? '' : 'md:col-span-2'}>
               <Button variant="accent" className="w-full" size="lg">
                 <CreditCard className="h-4 w-4" /> Pay Now · {formatCurrency(order.totalAmount)}
               </Button>
             </Link>
           )}
           {isComplete && cafe.settings?.reviewEnabled && (
-            <Link href={`/review/${order.id}`} className={ownerLink ? '' : 'md:col-span-2'}>
+            <Link href={`/review/${order.id}`} className={cafe.settings?.paymentEnabled && order.paymentStatus !== 'PAID' ? '' : 'md:col-span-2'}>
               <Button className="w-full" size="lg">
                 <Star className="h-4 w-4" /> Leave a review
               </Button>

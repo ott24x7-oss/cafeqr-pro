@@ -55,6 +55,24 @@ export function generateOwnerOrderMessage(order: OrderForWA, cafe: WACafe, appUr
   return lines.join('\n');
 }
 
+export function generateCustomerOrderReceivedMessage(order: OrderForWA, cafe: WACafe, appUrl?: string) {
+  const itemSummary = order.items
+    .slice(0, 5)
+    .map((i) => `• ${i.quantity}× ${i.name}${i.variantName ? ` (${i.variantName})` : ''}`)
+    .join('\n');
+  const more = order.items.length > 5 ? `\n…and ${order.items.length - 5} more` : '';
+  return [
+    `🆕 *Order received — ${cafe.name}*`,
+    '',
+    `Hi${order.customerName ? ' ' + order.customerName : ''}, we got your order *#${order.orderNumber}*.`,
+    '',
+    itemSummary + more,
+    '',
+    `*Total:* ₹${order.totalAmount.toFixed(0)}`,
+    appUrl ? `\nTrack live: ${appUrl}/order/${order.id}` : null,
+  ].filter(Boolean).join('\n');
+}
+
 export function generateCustomerStatusMessage(
   order: OrderForWA,
   cafe: WACafe,

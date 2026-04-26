@@ -165,7 +165,12 @@ export async function logoutSession(id: string, keepRecord = false): Promise<boo
   return true;
 }
 
-export async function sendBaileysInProcess(opts: { sessionId?: string; to: string; message: string }): Promise<{ ok: boolean; error?: string }> {
+export async function sendBaileysInProcess(opts: {
+  sessionId?: string;
+  to: string;
+  message: string;
+  imageUrl?: string;
+}): Promise<{ ok: boolean; error?: string }> {
   const id = opts.sessionId || 'default';
   let sess = sessions.get(id);
   // Auto-resume if a saved auth state exists on disk and we haven't started.
@@ -182,7 +187,14 @@ export async function sendBaileysInProcess(opts: { sessionId?: string; to: strin
   }
   const jid = `${opts.to.replace(/\D/g, '')}@s.whatsapp.net`;
   try {
-    await sess.sock.sendMessage(jid, { text: opts.message });
+    if (opts.imageUrl) {
+      await sess.sock.sendMessage(jid, {
+        image: { url: opts.imageUrl },
+        caption: opts.message,
+      });
+    } else {
+      await sess.sock.sendMessage(jid, { text: opts.message });
+    }
     return { ok: true };
   } catch (e: any) {
     return { ok: false, error: e?.message ?? 'baileys send failed' };

@@ -8,6 +8,8 @@ import {
   configFromCafe,
   generateOwnerOrderMessage,
   generateCustomerStatusMessage,
+  generateCustomerOrderReceivedMessage,
+  generatePaymentMessage,
   type WACafe,
   type OrderForWA,
 } from './whatsapp';
@@ -37,9 +39,17 @@ export async function notifyNewOrder(orderId: string) {
     if (!order || !order.cafe) return;
     const cafe = order.cafe as WACafe;
     const config = configFromCafe(cafe);
-    const message = generateOwnerOrderMessage(order as OrderForWA, cafe, APP_URL);
+
+    // Owner + admin numbers + opted-in staff.
+    const ownerMessage = generateOwnerOrderMessage(order as OrderForWA, cafe, APP_URL);
     const tos = await recipientsForNewOrder(cafe);
-    await Promise.all(tos.map((to) => sendMessage({ to, message, config })));
+    await Promise.all(tos.map((to) => sendMessage({ to, message: ownerMessage, config })));
+
+    // Customer "order received" — auto via the bot, no manual share button.
+    if (order.customerPhone && cafe.settings?.notifyCustomerWA !== false) {
+      const customerMsg = generateCustomerOrderReceivedMessage(order as OrderForWA, cafe, APP_URL);
+      await sendMessage({ to: order.customerPhone, message: customerMsg, config });
+    }
   } catch (e) {
     console.error('[notify.newOrder]', e);
   }
@@ -53,11 +63,29 @@ export async function notifyCustomerStatus(orderId: string, status: string) {
     });
     if (!order || !order.cafe) return;
     const cafe = order.cafe as WACafe;
-    if (!cafe.settings?.notifyCustomerWA) return;
+    if (cafe.settings?.notifyCustomerWA === false) return;
     if (!order.customerPhone) return;
     const config = configFromCafe(cafe);
     const message = generateCustomerStatusMessage(order as OrderForWA, cafe, status, APP_URL);
     await sendMessage({ to: order.customerPhone, message, config });
+
+    // When the order is READY and not yet paid, follow up with the payment
+    // link — UPI ID in the caption + the cafe's UPI QR as image media when
+    // available so the customer can pay with one tap.
+    if (
+      status === 'READY' &&
+      order.paymentStatus !== 'PAID' &&
+      cafe.settings?.paymentEnabled &&
+      cafe.settings?.upiId
+    ) {
+      const payMsg = generatePaymentMessage(order as OrderForWA, cafe, APP_URL);
+      await sendMessage({
+        to: order.customerPhone,
+        message: payMsg,
+        config,
+        imageUrl: cafe.settings?.upiQrUrl ?? undefined,
+      });
+    }
   } catch (e) {
     console.error('[notify.customerStatus]', e);
   }
@@ -77,6 +105,5 @@ export async function sendOTP(phone: string, otp: string, cafe?: WACafe) {
     const config = configFromCafe(cafe);
     return sendMessage({ to: phone, message, config });
   }
-  // No cafe context — manual link only.
   return sendMessage({ to: phone, message, provider: 'manual' });
 }
