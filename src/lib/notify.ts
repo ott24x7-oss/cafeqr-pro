@@ -65,6 +65,26 @@ export async function notifyNewOrder(orderId: string) {
       const customerMsg = generateCustomerOrderReceivedMessage(order as OrderForWA, cafe, APP_URL);
       await sendMessage({ to: order.customerPhone, message: customerMsg, config });
     }
+
+    // DELIVERY orders → loop in the configured delivery partner with the
+    // address + customer phone so they can roll out without the cafe owner
+    // playing telephone.
+    if (order.type === 'DELIVERY' && cafe.settings?.deliveryPartnerPhone) {
+      const partnerMsg = [
+        `🛵 *New delivery — ${cafe.name}*`,
+        '',
+        `Order *#${order.orderNumber}*  ·  ₹${order.totalAmount.toFixed(0)}`,
+        order.customerName ? `Customer: ${order.customerName}` : null,
+        order.customerPhone ? `Phone: ${order.customerPhone}` : null,
+        order.customerNote ? `Note: ${order.customerNote}` : null,
+        '',
+        '*Items:*',
+        ...order.items.map((i) => `• ${i.quantity}× ${i.name}`),
+        '',
+        APP_URL ? `Order details: ${APP_URL}/dashboard/orders/${order.id}` : null,
+      ].filter(Boolean).join('\n');
+      await sendMessage({ to: cafe.settings.deliveryPartnerPhone, message: partnerMsg, config });
+    }
   } catch (e) {
     console.error('[notify.newOrder]', e);
   }

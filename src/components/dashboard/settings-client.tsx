@@ -10,6 +10,8 @@ import { Input, Textarea } from '@/components/ui/input';
 import { ImagePicker } from '@/components/ui/image-picker';
 import { BaileysPair } from './baileys-pair';
 import { toast } from '@/components/ui/toaster';
+import { CURRENCIES } from '@/lib/utils';
+import { COUNTRY_DIAL } from '@/lib/whatsapp';
 
 type Tab = 'profile' | 'tax' | 'whatsapp' | 'payment' | 'branding';
 const SENTINEL = '__unchanged__';
@@ -31,6 +33,10 @@ const NOTIFY_STATUSES: { key: string; label: string; help: string }[] = [
 ];
 const DEFAULT_NOTIFY_STATUSES = ['PLACED', 'ACCEPTED', 'SERVED', 'PAID'];
 
+const COUNTRY_OPTIONS = Object.entries(COUNTRY_DIAL)
+  .sort((a, b) => a[0].localeCompare(b[0]))
+  .map(([iso, dial]) => ({ iso, dial, label: `${iso} · +${dial}` }));
+
 export function SettingsClient({ cafe }: { cafe: any }) {
   const [tab, setTab] = useState<Tab>('profile');
   const [form, setForm] = useState({
@@ -45,6 +51,7 @@ export function SettingsClient({ cafe }: { cafe: any }) {
     fssaiNumber: cafe.fssaiNumber ?? '',
     logoUrl: cafe.logoUrl ?? '',
     coverUrl: cafe.coverUrl ?? '',
+    currency: (cafe.currency ?? 'INR') as string,
   });
 
   const [settings, setSettings] = useState({
@@ -78,6 +85,8 @@ export function SettingsClient({ cafe }: { cafe: any }) {
     accentColor: cafe.settings?.accentColor ?? '#D4A574',
     googleReviewUrl: cafe.settings?.googleReviewUrl ?? '',
     enableSound: cafe.settings?.enableSound ?? true,
+    country: (cafe.settings?.country ?? 'IN') as string,
+    deliveryPartnerPhone: cafe.settings?.deliveryPartnerPhone ?? '',
   });
 
   const [loading, setLoading] = useState(false);
@@ -217,10 +226,53 @@ export function SettingsClient({ cafe }: { cafe: any }) {
             <div className="grid md:grid-cols-2 gap-4">
               <Field l="Cafe name" v={form.name} on={(v: string) => setForm({ ...form, name: v })} />
               <Field l="Email" v={form.email} on={(v: string) => setForm({ ...form, email: v })} />
-              <Field l="Phone" v={form.phone} on={(v: string) => setForm({ ...form, phone: v })} />
-              <Field l="WhatsApp number" v={form.whatsappNo} on={(v: string) => setForm({ ...form, whatsappNo: v })} />
-              <Field l="GST number" v={form.gstNumber} on={(v: string) => setForm({ ...form, gstNumber: v })} />
-              <Field l="FSSAI number" v={form.fssaiNumber} on={(v: string) => setForm({ ...form, fssaiNumber: v })} />
+
+              <div>
+                <label className="label">Country</label>
+                <select
+                  className="input"
+                  value={settings.country}
+                  onChange={(e) => setSettings({ ...settings, country: e.target.value })}
+                >
+                  {COUNTRY_OPTIONS.map((c) => (
+                    <option key={c.iso} value={c.iso}>{c.label}</option>
+                  ))}
+                </select>
+                <p className="helper">Sets the dial code prefix used everywhere phone numbers are entered or sent.</p>
+              </div>
+              <div>
+                <label className="label">Default currency</label>
+                <select
+                  className="input"
+                  value={form.currency}
+                  onChange={(e) => setForm({ ...form, currency: e.target.value })}
+                >
+                  {CURRENCIES.map((c) => (
+                    <option key={c.code} value={c.code}>{c.label}</option>
+                  ))}
+                </select>
+                <p className="helper">All prices on the customer pages, dashboard and invoices use this.</p>
+              </div>
+
+              <div>
+                <label className="label">Phone</label>
+                <PhoneInput
+                  iso={settings.country}
+                  value={form.phone}
+                  onChange={(v) => setForm({ ...form, phone: v })}
+                />
+              </div>
+              <div>
+                <label className="label">WhatsApp number</label>
+                <PhoneInput
+                  iso={settings.country}
+                  value={form.whatsappNo}
+                  onChange={(v) => setForm({ ...form, whatsappNo: v })}
+                />
+              </div>
+
+              <Field l="GST / Tax number" v={form.gstNumber} on={(v: string) => setForm({ ...form, gstNumber: v })} />
+              <Field l="FSSAI / License number" v={form.fssaiNumber} on={(v: string) => setForm({ ...form, fssaiNumber: v })} />
               <Field l="City" v={form.city} on={(v: string) => setForm({ ...form, city: v })} />
               <Field l="Address" v={form.address} on={(v: string) => setForm({ ...form, address: v })} className="md:col-span-2" />
               <Field l="Description" v={form.description} on={(v: string) => setForm({ ...form, description: v })} multiline className="md:col-span-2" />
@@ -238,7 +290,7 @@ export function SettingsClient({ cafe }: { cafe: any }) {
               {[
                 ['acceptDineIn', 'Dine in'],
                 ['acceptTakeaway', 'Takeaway'],
-                ['acceptDelivery', 'Delivery'],
+                ['acceptDelivery', 'Home delivery'],
               ].map(([k, l]) => (
                 <label key={k} className="flex items-center gap-2 px-3 py-2 rounded-xl border border-coffee-200 bg-white cursor-pointer">
                   <input
@@ -251,6 +303,34 @@ export function SettingsClient({ cafe }: { cafe: any }) {
                 </label>
               ))}
             </div>
+
+            {settings.acceptDelivery && (
+              <div className="md:col-span-2 rounded-2xl border border-coffee-200 bg-cream-50 p-4 space-y-3">
+                <div className="font-semibold text-coffee-900 flex items-center gap-2">
+                  🛵 Home delivery
+                </div>
+                <p className="helper">
+                  When a delivery order lands, the bot will WhatsApp this number with the customer's
+                  name, phone, address and items so the partner can roll out immediately.
+                </p>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="label">Delivery partner WhatsApp</label>
+                    <PhoneInput
+                      iso={settings.country}
+                      value={settings.deliveryPartnerPhone}
+                      onChange={(v) => setSettings({ ...settings, deliveryPartnerPhone: v })}
+                    />
+                  </div>
+                  <Field
+                    l="Default delivery charge"
+                    v={settings.deliveryCharge}
+                    on={(v: string) => setSettings({ ...settings, deliveryCharge: Number(v) })}
+                    type="number"
+                  />
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -652,6 +732,28 @@ function Field({ l, v, on, type = 'text', multiline, placeholder, className }: a
       ) : (
         <Input type={type} value={v ?? ''} onChange={(e) => on(e.target.value)} placeholder={placeholder} />
       )}
+    </div>
+  );
+}
+
+/** Phone input with a country-code prefix prefilled from the cafe's country
+ *  setting. We persist a digits-only national number; the dial code is added
+ *  at send-time by `normalizePhone`. */
+function PhoneInput({ iso, value, onChange }: { iso: string; value: string; onChange: (v: string) => void }) {
+  const dial = COUNTRY_DIAL[(iso ?? 'IN').toUpperCase()] ?? '91';
+  return (
+    <div className="flex">
+      <span className="inline-flex items-center px-3 rounded-l-xl border border-r-0 border-coffee-200 bg-cream-100 text-sm text-coffee-700 font-mono">
+        +{dial}
+      </span>
+      <Input
+        type="tel"
+        inputMode="tel"
+        value={value ?? ''}
+        onChange={(e) => onChange(e.target.value.replace(/[^\d]/g, ''))}
+        placeholder="9876543210"
+        className="rounded-l-none"
+      />
     </div>
   );
 }

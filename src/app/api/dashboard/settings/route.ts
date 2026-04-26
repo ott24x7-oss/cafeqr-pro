@@ -27,22 +27,25 @@ export async function POST(req: Request) {
   if (!cafe) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   const { cafe: cafeFields, settings } = await req.json();
 
-  await prisma.cafe.update({
-    where: { id: cafe.id },
-    data: {
-      name: cafeFields.name,
-      description: cafeFields.description,
-      address: cafeFields.address,
-      city: cafeFields.city,
-      phone: cafeFields.phone,
-      whatsappNo: cafeFields.whatsappNo,
-      email: cafeFields.email,
-      gstNumber: cafeFields.gstNumber,
-      fssaiNumber: cafeFields.fssaiNumber,
-      logoUrl: cafeFields.logoUrl || null,
-      coverUrl: cafeFields.coverUrl || null,
-    },
-  });
+  // Accept the currency override (defaults to INR). We deliberately don't
+  // touch ownerId / status / planId here — those are super-admin domain.
+  const cafeUpdate: any = {
+    name: cafeFields.name,
+    description: cafeFields.description,
+    address: cafeFields.address,
+    city: cafeFields.city,
+    phone: cafeFields.phone,
+    whatsappNo: cafeFields.whatsappNo,
+    email: cafeFields.email,
+    gstNumber: cafeFields.gstNumber,
+    fssaiNumber: cafeFields.fssaiNumber,
+    logoUrl: cafeFields.logoUrl || null,
+    coverUrl: cafeFields.coverUrl || null,
+  };
+  if (typeof cafeFields.currency === 'string' && cafeFields.currency.length === 3) {
+    cafeUpdate.currency = cafeFields.currency.toUpperCase();
+  }
+  await prisma.cafe.update({ where: { id: cafe.id }, data: cafeUpdate });
 
   const existing = await prisma.cafeSettings.findUnique({ where: { cafeId: cafe.id } });
 
@@ -56,6 +59,7 @@ export async function POST(req: Request) {
     'upiId', 'upiQrUrl', 'paymentEnabled', 'paymentTiming', 'paymentNote',
     'reviewEnabled', 'googleReviewUrl', 'primaryColor', 'accentColor',
     'enableSound', 'language',
+    'country', 'deliveryPartnerPhone',
   ]);
 
   // Whitelist the values we'll accept for notifyOnStatuses so a tampered

@@ -5,15 +5,32 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/** Currencies the dashboard exposes in the picker. Locale picks a sensible
+ *  number-format default; the cafe still controls the actual currency. */
+export const CURRENCIES: { code: string; symbol: string; label: string; locale: string }[] = [
+  { code: 'INR', symbol: '₹',  label: 'INR · Indian Rupee',         locale: 'en-IN' },
+  { code: 'USD', symbol: '$',  label: 'USD · US Dollar',            locale: 'en-US' },
+  { code: 'EUR', symbol: '€',  label: 'EUR · Euro',                 locale: 'en-IE' },
+  { code: 'GBP', symbol: '£',  label: 'GBP · British Pound',        locale: 'en-GB' },
+  { code: 'AED', symbol: 'د.إ', label: 'AED · UAE Dirham',          locale: 'en-AE' },
+  { code: 'SGD', symbol: 'S$', label: 'SGD · Singapore Dollar',     locale: 'en-SG' },
+  { code: 'AUD', symbol: 'A$', label: 'AUD · Australian Dollar',    locale: 'en-AU' },
+  { code: 'CAD', symbol: 'C$', label: 'CAD · Canadian Dollar',      locale: 'en-CA' },
+];
+
+const CURRENCY_LOCALE = new Map(CURRENCIES.map((c) => [c.code, c.locale]));
+
 export function formatCurrency(amount: number, currency = 'INR') {
+  const locale = CURRENCY_LOCALE.get(currency) ?? 'en-IN';
   try {
-    return new Intl.NumberFormat('en-IN', {
+    return new Intl.NumberFormat(locale, {
       style: 'currency',
       currency,
       maximumFractionDigits: 2,
     }).format(amount);
   } catch {
-    return `₹${amount.toFixed(2)}`;
+    const sym = CURRENCIES.find((c) => c.code === currency)?.symbol ?? '';
+    return `${sym}${amount.toFixed(2)}`;
   }
 }
 

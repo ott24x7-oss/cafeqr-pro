@@ -17,11 +17,37 @@ export interface WACafe extends Cafe {
   settings?: CafeSettings | null;
 }
 
-export function normalizePhone(phone: string, defaultCountry = '91'): string {
+/** Map ISO-3166 alpha-2 → E.164 dial code (no `+`). Add more as the SaaS
+ *  expands; defaults to India when the cafe hasn't picked yet. */
+export const COUNTRY_DIAL: Record<string, string> = {
+  IN: '91',  US: '1',   GB: '44',  AE: '971',
+  SG: '65',  AU: '61',  CA: '1',   IE: '353',
+  DE: '49',  FR: '33',  ES: '34',  IT: '39',
+  NL: '31',  CH: '41',  SA: '966', QA: '974',
+  PK: '92',  BD: '880', LK: '94',  NP: '977',
+  MY: '60',  ID: '62',  PH: '63',  TH: '66',
+  VN: '84',  ZA: '27',  NZ: '64',
+};
+
+export function dialCodeFor(country: string | null | undefined): string {
+  return COUNTRY_DIAL[(country ?? 'IN').toUpperCase()] ?? '91';
+}
+
+export function normalizePhone(phone: string, defaultCountry: string = '91'): string {
   if (!phone) return '';
-  let p = phone.replace(/\D/g, '');
+  // Strip everything except digits and a leading `+`.
+  let p = phone.trim().replace(/[^\d+]/g, '');
+  if (p.startsWith('+')) p = p.slice(1);
   if (p.startsWith('00')) p = p.slice(2);
-  if (p.length === 10) p = defaultCountry + p;
+
+  // The default-country argument is either the dial code itself ('91') or an
+  // ISO-2 code ('IN') — accept both for back-compat.
+  const dial = /^\d+$/.test(defaultCountry) ? defaultCountry : dialCodeFor(defaultCountry);
+
+  // Heuristic: if it's already long enough to include a country code and
+  // doesn't start with the cafe's dial code, leave it. Otherwise treat as a
+  // local number and prepend the dial code.
+  if (p.length <= 10) p = dial + p;
   return p;
 }
 
