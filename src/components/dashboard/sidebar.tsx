@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import {
   LayoutDashboard, ListOrdered, Utensils, QrCode, CreditCard, Star, Users, Settings, BarChart3, Receipt,
-  Coffee, LogOut, Bell, Shield, Tag,
+  Coffee, LogOut, Bell, Shield, Tag, History,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -17,6 +17,7 @@ export function DashboardSidebar({ role, cafeName, isAdmin }: { role: string; ca
   const ownerNav: NavItem[] = [
     { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
     { href: '/dashboard/orders', label: 'Live Orders', icon: ListOrdered },
+    { href: '/dashboard/orders/history', label: 'Order History', icon: History },
     { href: '/dashboard/menu', label: 'Menu', icon: Utensils },
     { href: '/dashboard/tables', label: 'Tables & QR', icon: QrCode },
     { href: '/dashboard/payments', label: 'Payments', icon: CreditCard },
@@ -38,8 +39,8 @@ export function DashboardSidebar({ role, cafeName, isAdmin }: { role: string; ca
   const nav = isAdmin ? adminNav : ownerNav;
 
   const limited = role === 'KITCHEN' ? ['/dashboard', '/dashboard/orders'] :
-                  role === 'WAITER'  ? ['/dashboard', '/dashboard/orders', '/dashboard/tables'] :
-                  role === 'CASHIER' ? ['/dashboard', '/dashboard/orders', '/dashboard/payments', '/dashboard/billing'] : null;
+                  role === 'WAITER'  ? ['/dashboard', '/dashboard/orders', '/dashboard/orders/history', '/dashboard/tables'] :
+                  role === 'CASHIER' ? ['/dashboard', '/dashboard/orders', '/dashboard/orders/history', '/dashboard/payments', '/dashboard/billing'] : null;
 
   return (
     <aside className="hidden md:flex md:flex-col w-60 shrink-0 border-r border-coffee-100 bg-white sticky top-0 h-screen">
@@ -57,7 +58,14 @@ export function DashboardSidebar({ role, cafeName, isAdmin }: { role: string; ca
 
       <nav className="px-3 py-3 flex-1 overflow-y-auto">
         {nav.map((item) => {
-          const active = path === item.href || (item.href !== '/dashboard' && path.startsWith(item.href));
+          // Exact match for short paths; startsWith for nested. Avoid Live Orders
+          // matching while on /dashboard/orders/history.
+          const active = path === item.href ||
+            (item.href !== '/dashboard' && item.href !== '/dashboard/orders' &&
+              path.startsWith(item.href + '/')) ||
+            (item.href === '/dashboard/orders' &&
+              (path === '/dashboard/orders' ||
+                (path.startsWith('/dashboard/orders/') && !path.startsWith('/dashboard/orders/history'))));
           const disabled = limited && !limited.includes(item.href);
           return (
             <Link
