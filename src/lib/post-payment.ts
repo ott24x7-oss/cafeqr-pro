@@ -61,9 +61,10 @@ export async function onPaymentConfirmed(orderId: string): Promise<PaymentConfir
     return { delivered: false, reason: 'paid-notification-disabled' };
   }
 
+  const template = (cafe.settings as any)?.invoiceTemplate ?? 'classic';
   let pdf: Buffer;
   try {
-    pdf = await renderInvoicePdf(invoiceDataFromOrder(order));
+    pdf = await renderInvoicePdf(invoiceDataFromOrder(order), template);
   } catch (e: any) {
     return { delivered: false, reason: `pdf-render-failed: ${e?.message ?? e}` };
   }

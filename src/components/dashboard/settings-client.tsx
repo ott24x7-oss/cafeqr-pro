@@ -76,6 +76,7 @@ export function SettingsClient({ cafe }: { cafe: any }) {
     paymentEnabled: cafe.settings?.paymentEnabled ?? true,
     paymentTiming: (cafe.settings?.paymentTiming ?? 'prepaid') as 'prepaid' | 'postpaid',
     paymentNote: cafe.settings?.paymentNote ?? '',
+    invoiceTemplate: (cafe.settings?.invoiceTemplate ?? 'classic') as string,
     gmailUser: cafe.settings?.gmailUser ?? '',
     gmailAppPassword: cafe.settings?.gmailAppPassword ?? '',
     gmailSenderFilter: cafe.settings?.gmailSenderFilter ?? DEFAULT_GMAIL_SENDER,
@@ -586,6 +587,13 @@ export function SettingsClient({ cafe }: { cafe: any }) {
             <Field l="Note shown to customer" v={settings.paymentNote} on={(v: string) => setSettings({ ...settings, paymentNote: v })} multiline className="md:col-span-2" placeholder="Pay using any UPI app and submit txn ID" />
             <Field l="Google review URL" v={settings.googleReviewUrl} on={(v: string) => setSettings({ ...settings, googleReviewUrl: v })} placeholder="https://g.page/your-cafe/review" className="md:col-span-2" />
 
+            <div className="md:col-span-2">
+              <InvoiceTemplatePicker
+                value={settings.invoiceTemplate}
+                onChange={(v) => setSettings({ ...settings, invoiceTemplate: v })}
+              />
+            </div>
+
             <div className="md:col-span-2 rounded-2xl border border-coffee-200 bg-cream-50 p-4 space-y-3">
               <div className="font-semibold text-coffee-900 flex items-center gap-2">
                 <Mail className="h-4 w-4" /> Auto-verify UPI payments from Gmail
@@ -733,6 +741,187 @@ function Field({ l, v, on, type = 'text', multiline, placeholder, className }: a
         <Input type={type} value={v ?? ''} onChange={(e) => on(e.target.value)} placeholder={placeholder} />
       )}
     </div>
+  );
+}
+
+interface TplOpt { key: string; name: string; blurb: string; preview: React.ReactNode; }
+const TEMPLATE_OPTIONS: TplOpt[] = [
+  { key: 'classic', name: 'Classic', blurb: 'Coffee + cream brand colours', preview: <ThumbClassic /> },
+  { key: 'modern',  name: 'Modern',  blurb: 'Teal accent stripe, sans-serif', preview: <ThumbModern /> },
+  { key: 'minimal', name: 'Minimal', blurb: 'Black-and-white, ultra-clean', preview: <ThumbMinimal /> },
+  { key: 'receipt', name: 'Receipt', blurb: 'Thermal-printer style (80mm)', preview: <ThumbReceipt /> },
+  { key: 'elegant', name: 'Elegant', blurb: 'Italic accents, serif', preview: <ThumbElegant /> },
+  { key: 'bold',    name: 'Bold',    blurb: 'Charcoal block + amber accent', preview: <ThumbBold /> },
+];
+
+function InvoiceTemplatePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="rounded-2xl border border-coffee-200 bg-cream-50 p-4">
+      <div className="font-semibold text-coffee-900 mb-1">Invoice template</div>
+      <p className="helper mb-3">
+        The PDF style your customer receives on WhatsApp after a successful payment. Saved on Save changes.
+      </p>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+        {TEMPLATE_OPTIONS.map((t) => {
+          const active = value === t.key;
+          return (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => onChange(t.key)}
+              className={`text-left rounded-xl border p-2 transition active:scale-[0.99] ${
+                active ? 'border-coffee-700 bg-white ring-2 ring-coffee-200' : 'border-coffee-200 bg-white hover:bg-cream-100'
+              }`}
+            >
+              <div className="aspect-[5/7] rounded-md overflow-hidden bg-cream-100 grid place-items-center">
+                {t.preview}
+              </div>
+              <div className="mt-2 px-1">
+                <div className="text-sm font-semibold text-coffee-900 flex items-center justify-between">
+                  {t.name}
+                  {active && <span className="pill text-[9px] bg-coffee-700 text-cream-50">Active</span>}
+                </div>
+                <div className="text-[10px] text-coffee-500">{t.blurb}</div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// SVG mock-up thumbnails — not pixel-perfect renders of the PDF, just
+// "vibe" representations so the cafe owner can pick visually.
+function ThumbClassic() {
+  return (
+    <svg viewBox="0 0 100 140" className="w-full h-full">
+      <rect width="100" height="140" fill="#FFFBF5" />
+      <text x="8" y="18" fontSize="9" fontWeight="bold" fill="#6B4E3D" fontFamily="serif">Cafe Mocha</text>
+      <line x1="8" y1="26" x2="92" y2="26" stroke="#E8D5BE" strokeDasharray="2 2" />
+      <text x="8" y="38" fontSize="6" fill="#85604A">Receipt #1234</text>
+      <rect x="8" y="48" width="84" height="0.6" fill="#E8D5BE" />
+      <g fontSize="5" fill="#3E2D24">
+        <text x="8" y="58">Cappuccino</text><text x="86" y="58" textAnchor="end">₹180</text>
+        <text x="8" y="68">Latte</text><text x="86" y="68" textAnchor="end">₹200</text>
+        <text x="8" y="78">Croissant</text><text x="86" y="78" textAnchor="end">₹150</text>
+      </g>
+      <line x1="8" y1="90" x2="92" y2="90" stroke="#E8D5BE" />
+      <text x="8" y="102" fontSize="7" fontWeight="bold" fill="#3E2D24">Total</text>
+      <text x="92" y="102" textAnchor="end" fontSize="7" fontWeight="bold" fill="#3E2D24">₹530</text>
+      <rect x="8" y="110" width="22" height="8" rx="2" fill="#DCFCE7" />
+      <text x="19" y="116" textAnchor="middle" fontSize="5" fill="#166534" fontWeight="bold">PAID</text>
+    </svg>
+  );
+}
+function ThumbModern() {
+  return (
+    <svg viewBox="0 0 100 140" className="w-full h-full">
+      <rect width="100" height="140" fill="#fff" />
+      <rect width="100" height="28" fill="#0F766E" />
+      <text x="8" y="18" fontSize="9" fontWeight="bold" fill="#fff">Cafe Mocha</text>
+      <text x="92" y="14" textAnchor="end" fontSize="6" fill="#A7F3D0">RECEIPT</text>
+      <text x="92" y="22" textAnchor="end" fontSize="5" fill="#fff">#1234</text>
+      <g fontSize="5" fill="#0F172A">
+        <text x="8" y="48" fill="#64748B">ITEM</text><text x="92" y="48" textAnchor="end" fill="#64748B">AMOUNT</text>
+        <line x1="8" y1="52" x2="92" y2="52" stroke="#0F766E" />
+        <text x="8" y="62">Cappuccino</text><text x="92" y="62" textAnchor="end">₹180</text>
+        <text x="8" y="72">Latte</text><text x="92" y="72" textAnchor="end">₹200</text>
+        <text x="8" y="82">Croissant</text><text x="92" y="82" textAnchor="end">₹150</text>
+      </g>
+      <line x1="8" y1="94" x2="92" y2="94" stroke="#E2E8F0" />
+      <text x="8" y="106" fontSize="8" fontWeight="bold">Total</text>
+      <text x="92" y="106" textAnchor="end" fontSize="8" fontWeight="bold">₹530</text>
+      <rect x="8" y="114" width="22" height="8" rx="2" fill="#0F766E" />
+      <text x="19" y="120" textAnchor="middle" fontSize="5" fill="#fff" fontWeight="bold">PAID</text>
+    </svg>
+  );
+}
+function ThumbMinimal() {
+  return (
+    <svg viewBox="0 0 100 140" className="w-full h-full">
+      <rect width="100" height="140" fill="#fff" />
+      <text x="8" y="14" fontSize="6" fontWeight="bold" fill="#000" letterSpacing="2">CAFE MOCHA</text>
+      <line x1="8" y1="22" x2="92" y2="22" stroke="#000" strokeWidth="0.4" />
+      <text x="8" y="32" fontSize="5" fill="#000">Receipt #1234</text>
+      <text x="92" y="32" textAnchor="end" fontSize="5" fill="#000">Table 4</text>
+      <line x1="8" y1="38" x2="92" y2="38" stroke="#000" strokeWidth="0.4" />
+      <g fontSize="5" fill="#000">
+        <text x="8" y="50">Cappuccino</text><text x="92" y="50" textAnchor="end">₹180</text>
+        <text x="8" y="60">Latte</text><text x="92" y="60" textAnchor="end">₹200</text>
+        <text x="8" y="70">Croissant</text><text x="92" y="70" textAnchor="end">₹150</text>
+      </g>
+      <line x1="8" y1="84" x2="92" y2="84" stroke="#000" strokeWidth="0.4" />
+      <text x="8" y="96" fontSize="7" fontWeight="bold">Total</text>
+      <text x="92" y="96" textAnchor="end" fontSize="7" fontWeight="bold">₹530</text>
+      <text x="8" y="112" fontSize="6" fontWeight="bold">PAID</text>
+    </svg>
+  );
+}
+function ThumbReceipt() {
+  return (
+    <svg viewBox="0 0 100 140" className="w-full h-full">
+      <rect width="100" height="140" fill="#FFFBF5" />
+      <rect x="30" y="6" width="40" height="128" fill="#fff" stroke="#E2E8F0" />
+      <text x="50" y="18" textAnchor="middle" fontSize="6" fontWeight="bold" fill="#000">CAFE MOCHA</text>
+      <text x="50" y="26" textAnchor="middle" fontSize="3.5" fill="#444">Brigade Rd · 9876543210</text>
+      <text x="50" y="36" textAnchor="middle" fontSize="3.5">- - - - - - - - -</text>
+      <g fontSize="3.5" fill="#000" fontFamily="monospace">
+        <text x="32" y="46">Cappuccino  1  ₹180</text>
+        <text x="32" y="54">Latte       1  ₹200</text>
+        <text x="32" y="62">Croissant   1  ₹150</text>
+      </g>
+      <text x="50" y="72" textAnchor="middle" fontSize="3.5">- - - - - - - - -</text>
+      <text x="32" y="82" fontSize="4" fontFamily="monospace" fontWeight="bold">TOTAL    ₹530.00</text>
+      <text x="50" y="98" textAnchor="middle" fontSize="5" fontWeight="bold">* * PAID * *</text>
+      <text x="50" y="116" textAnchor="middle" fontSize="3.5" fill="#666">Thank you!</text>
+    </svg>
+  );
+}
+function ThumbElegant() {
+  return (
+    <svg viewBox="0 0 100 140" className="w-full h-full">
+      <rect width="100" height="140" fill="#fff" />
+      <text x="8" y="22" fontSize="14" fontStyle="italic" fill="#8B6F47" fontFamily="serif">Cafe Mocha</text>
+      <text x="8" y="32" fontSize="4.5" fill="#7A6E63" fontFamily="serif">12 Brigade Rd · 9876543210</text>
+      <line x1="8" y1="40" x2="92" y2="40" stroke="#8B6F47" strokeWidth="0.3" />
+      <text x="8" y="52" fontSize="5" fontStyle="italic" fill="#7A6E63" fontFamily="serif">Receipt</text>
+      <text x="8" y="62" fontSize="6" fill="#1A1A1A" fontFamily="serif">#1234</text>
+      <g fontSize="5" fill="#1A1A1A" fontFamily="serif">
+        <text x="8" y="78">Cappuccino</text><text x="92" y="78" textAnchor="end">₹180</text>
+        <text x="8" y="88">Latte</text><text x="92" y="88" textAnchor="end">₹200</text>
+        <text x="8" y="98">Croissant</text><text x="92" y="98" textAnchor="end">₹150</text>
+      </g>
+      <line x1="8" y1="106" x2="92" y2="106" stroke="#8B6F47" strokeWidth="0.3" />
+      <text x="8" y="118" fontSize="7" fontWeight="bold" fontFamily="serif">Total</text>
+      <text x="92" y="118" textAnchor="end" fontSize="7" fontWeight="bold" fontFamily="serif">₹530</text>
+      <text x="50" y="132" textAnchor="middle" fontSize="5" fontStyle="italic" fill="#8B6F47" fontFamily="serif">— Paid with thanks —</text>
+    </svg>
+  );
+}
+function ThumbBold() {
+  return (
+    <svg viewBox="0 0 100 140" className="w-full h-full">
+      <rect width="100" height="140" fill="#fff" />
+      <rect width="100" height="44" fill="#0F172A" />
+      <rect y="44" width="100" height="2" fill="#F59E0B" />
+      <text x="8" y="18" fontSize="11" fontWeight="bold" fill="#fff">Cafe Mocha</text>
+      <text x="8" y="30" fontSize="5" fill="#F59E0B" letterSpacing="1.5">RECEIPT</text>
+      <text x="8" y="38" fontSize="4.5" fill="#fff">#1234 · 26 Apr 2026</text>
+      <g fontSize="5" fill="#0F172A">
+        <text x="8" y="60" fill="#64748B">ITEM</text>
+        <text x="92" y="60" textAnchor="end" fill="#64748B">AMOUNT</text>
+        <line x1="8" y1="64" x2="92" y2="64" stroke="#F59E0B" strokeWidth="1.5" />
+        <text x="8" y="74" fontWeight="bold">Cappuccino</text><text x="92" y="74" textAnchor="end">₹180</text>
+        <text x="8" y="84" fontWeight="bold">Latte</text><text x="92" y="84" textAnchor="end">₹200</text>
+        <text x="8" y="94" fontWeight="bold">Croissant</text><text x="92" y="94" textAnchor="end">₹150</text>
+      </g>
+      <line x1="8" y1="102" x2="92" y2="102" stroke="#E2E8F0" />
+      <text x="8" y="114" fontSize="9" fontWeight="bold">TOTAL</text>
+      <text x="92" y="114" textAnchor="end" fontSize="9" fontWeight="bold">₹530</text>
+      <rect x="8" y="120" width="84" height="12" fill="#F59E0B" />
+      <text x="50" y="129" textAnchor="middle" fontSize="6" fontWeight="bold" fill="#0F172A" letterSpacing="2">PAID</text>
+    </svg>
   );
 }
 

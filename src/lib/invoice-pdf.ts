@@ -45,7 +45,8 @@ const COLORS = {
 
 const fmtINR = (n: number) => `Rs. ${n.toFixed(2)}`;
 
-export function renderInvoicePdf(data: InvoiceData): Promise<Buffer> {
+/** Classic template — coffee + cream brand colours, A5. */
+function renderClassic(data: InvoiceData): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument({
@@ -212,6 +213,27 @@ function formatDate(d: Date): string {
     day: '2-digit', month: 'short', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
   });
+}
+
+/**
+ * Public renderer — picks one of the bundled templates by name. Defaults to
+ * Classic for unknown values so a freshly-migrated cafe with no preference
+ * keeps its existing-looking receipts.
+ */
+export async function renderInvoicePdf(
+  data: InvoiceData,
+  template: string = 'classic'
+): Promise<Buffer> {
+  switch (template) {
+    case 'modern':  return (await import('./invoice-templates/modern')).renderModern(data);
+    case 'minimal': return (await import('./invoice-templates/minimal')).renderMinimal(data);
+    case 'receipt': return (await import('./invoice-templates/receipt')).renderReceipt(data);
+    case 'elegant': return (await import('./invoice-templates/elegant')).renderElegant(data);
+    case 'bold':    return (await import('./invoice-templates/bold')).renderBold(data);
+    case 'classic':
+    default:
+      return renderClassic(data);
+  }
 }
 
 /** Convenience: build InvoiceData from a Prisma order row. The grand-total

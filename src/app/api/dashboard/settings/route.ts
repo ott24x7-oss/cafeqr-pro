@@ -60,6 +60,7 @@ export async function POST(req: Request) {
     'reviewEnabled', 'googleReviewUrl', 'primaryColor', 'accentColor',
     'enableSound', 'language',
     'country', 'deliveryPartnerPhone',
+    'invoiceTemplate',
   ]);
 
   // Whitelist the values we'll accept for notifyOnStatuses so a tampered
@@ -77,6 +78,13 @@ export async function POST(req: Request) {
 
   if (plain.paymentTiming !== undefined) {
     plain.paymentTiming = plain.paymentTiming === 'postpaid' ? 'postpaid' : 'prepaid';
+  }
+
+  // Whitelist invoice template values so a tampered payload can't store
+  // arbitrary strings the renderer would silently fall back to 'classic' on.
+  if (plain.invoiceTemplate !== undefined) {
+    const allowed = ['classic', 'modern', 'minimal', 'receipt', 'elegant', 'bold'];
+    if (!allowed.includes(plain.invoiceTemplate)) plain.invoiceTemplate = 'classic';
   }
 
   // Secrets — encrypted at rest. Use SENTINEL from client when leaving alone.

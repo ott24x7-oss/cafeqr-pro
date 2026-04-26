@@ -191,6 +191,9 @@ model CafeSettings {
   // 'postpaid' → owner marks Served, bot auto-sends a pay link via WhatsApp
   paymentTiming   String   @default("prepaid")
   paymentNote     String?
+  // Which PDF receipt template the post-payment WhatsApp attaches.
+  // Values: classic | modern | minimal | receipt | elegant | bold.
+  invoiceTemplate String   @default("classic")
   // Default country (ISO-3166 alpha-2) used to interpret phone numbers without
   // a country code prefix and to seed the customer-cart phone input.
   country         String   @default("IN")
