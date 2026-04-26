@@ -23,6 +23,7 @@ export async function POST(req: Request) {
     });
   }
 
-  const sess = await startSession(sessionId);
+  const force = body.force === true;
+  const sess = await startSession(sessionId, { force });
   return NextResponse.json({ sessionId, ...publicSession(sess) });
 }
