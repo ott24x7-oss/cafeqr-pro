@@ -77,7 +77,7 @@ export async function searchInboxForCreditAlerts(
     for (const subject of subjects) {
       queries.push(
         client.search({ since: opts.since, from, subject } as any).then(
-          (r) => (r ?? []).map((u: any) => Number(u)),
+          (r) => (r || []).map((u: any) => Number(u)),
           () => [] as number[]
         )
       );
