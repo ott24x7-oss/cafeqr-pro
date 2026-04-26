@@ -46,31 +46,50 @@ export default async function BillingPage() {
       </div>
 
       <div className="grid md:grid-cols-3 gap-4">
-        {plans.map((p) => (
-          <div key={p.id} className={`card-warm flex flex-col ${p.isPopular ? 'ring-2 ring-coffee-300' : ''}`}>
-            {p.isPopular && <span className="pill-amber self-start mb-2">Popular</span>}
-            <h3 className="font-display text-xl font-bold text-coffee-900">{p.name}</h3>
-            <p className="text-sm text-coffee-600 min-h-[40px]">{p.description}</p>
-            <div className="font-display text-3xl font-bold text-coffee-900 mt-3">
-              {p.priceMonthly === 0 ? 'Free' : `₹${p.priceMonthly}`}
-              {p.priceMonthly > 0 && <span className="text-coffee-500 text-sm"> /mo</span>}
+        {plans.map((p) => {
+          const isCurrent = p.id === current?.id;
+          // Compare against current plan price to label up/down. If there is
+          // no current plan (trial), every paid plan is an upgrade and free
+          // plans are just "Choose".
+          const currentPrice = current?.priceMonthly ?? -1;
+          const isUpgrade = !isCurrent && p.priceMonthly > currentPrice;
+          const isDowngrade = !isCurrent && p.priceMonthly < currentPrice && currentPrice >= 0;
+          const label = isCurrent ? 'Current plan' : isUpgrade ? 'Upgrade' : isDowngrade ? 'Downgrade' : 'Choose';
+          return (
+            <div key={p.id} className={`card-warm flex flex-col ${p.isPopular ? 'ring-2 ring-coffee-300' : ''} ${isCurrent ? 'ring-2 ring-emerald-300' : ''}`}>
+              <div className="flex gap-2 self-start mb-2">
+                {p.isPopular && <span className="pill-amber">Popular</span>}
+                {isCurrent && <span className="pill bg-emerald-100 text-emerald-700">Active</span>}
+              </div>
+              <h3 className="font-display text-xl font-bold text-coffee-900">{p.name}</h3>
+              <p className="text-sm text-coffee-600 min-h-[40px]">{p.description}</p>
+              <div className="font-display text-3xl font-bold text-coffee-900 mt-3">
+                {p.priceMonthly === 0 ? 'Free' : `₹${p.priceMonthly}`}
+                {p.priceMonthly > 0 && <span className="text-coffee-500 text-sm"> /mo</span>}
+              </div>
+              <ul className="mt-4 space-y-1.5 text-sm text-coffee-700 flex-1">
+                <li className="flex items-start gap-2"><Check className="h-3.5 w-3.5 text-emerald-600 mt-1" />{p.maxTables} tables</li>
+                <li className="flex items-start gap-2"><Check className="h-3.5 w-3.5 text-emerald-600 mt-1" />{p.maxMenuItems} menu items</li>
+                <li className="flex items-start gap-2"><Check className="h-3.5 w-3.5 text-emerald-600 mt-1" />{p.maxStaff} staff</li>
+                {p.whatsappEnabled && <li className="flex items-start gap-2"><Check className="h-3.5 w-3.5 text-emerald-600 mt-1" />WhatsApp notifications</li>}
+                {p.analytics && <li className="flex items-start gap-2"><Check className="h-3.5 w-3.5 text-emerald-600 mt-1" />Analytics</li>}
+                {p.customBranding && <li className="flex items-start gap-2"><Check className="h-3.5 w-3.5 text-emerald-600 mt-1" />Custom branding</li>}
+              </ul>
+              {isCurrent ? (
+                <Button className="w-full mt-4" variant="outline" disabled>
+                  <Check className="h-3.5 w-3.5" /> {label}
+                </Button>
+              ) : (
+                <form action="/api/dashboard/billing/select" method="POST" className="mt-4">
+                  <input type="hidden" name="planId" value={p.id} />
+                  <Button className="w-full" type="submit">
+                    {label} <ArrowRight className="h-3.5 w-3.5" />
+                  </Button>
+                </form>
+              )}
             </div>
-            <ul className="mt-4 space-y-1.5 text-sm text-coffee-700 flex-1">
-              <li className="flex items-start gap-2"><Check className="h-3.5 w-3.5 text-emerald-600 mt-1" />{p.maxTables} tables</li>
-              <li className="flex items-start gap-2"><Check className="h-3.5 w-3.5 text-emerald-600 mt-1" />{p.maxMenuItems} menu items</li>
-              <li className="flex items-start gap-2"><Check className="h-3.5 w-3.5 text-emerald-600 mt-1" />{p.maxStaff} staff</li>
-              {p.whatsappEnabled && <li className="flex items-start gap-2"><Check className="h-3.5 w-3.5 text-emerald-600 mt-1" />WhatsApp notifications</li>}
-              {p.analytics && <li className="flex items-start gap-2"><Check className="h-3.5 w-3.5 text-emerald-600 mt-1" />Analytics</li>}
-              {p.customBranding && <li className="flex items-start gap-2"><Check className="h-3.5 w-3.5 text-emerald-600 mt-1" />Custom branding</li>}
-            </ul>
-            <form action="/api/dashboard/billing/select" method="POST" className="mt-4">
-              <input type="hidden" name="planId" value={p.id} />
-              <Button className="w-full" variant={p.id === current?.id ? 'outline' : 'default'} type="submit">
-                {p.id === current?.id ? 'Current' : 'Switch'} <ArrowRight className="h-3.5 w-3.5" />
-              </Button>
-            </form>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {subs.length > 0 && (

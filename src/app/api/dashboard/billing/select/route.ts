@@ -29,6 +29,13 @@ export async function POST(req: Request) {
   const plan = await prisma.plan.findUnique({ where: { id: planId } });
   if (!plan) return NextResponse.redirect(publicRedirect(req, '/dashboard/billing'));
 
+  // Same plan + cafe is already ACTIVE on it → no-op. Without this guard a
+  // stale "Current" submit would create a fresh pending Subscription and
+  // dump the user on the pay page asking for payment again.
+  if (cafe.planId === plan.id && cafe.status === 'ACTIVE') {
+    return NextResponse.redirect(publicRedirect(req, '/dashboard/billing?already=1'));
+  }
+
   // Free plans don't need a payment step — flip immediately.
   const baseAmount = billing === 'yearly' ? plan.priceYearly : plan.priceMonthly;
   if (baseAmount <= 0) {
