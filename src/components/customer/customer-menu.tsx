@@ -242,12 +242,14 @@ export function CustomerMenu({ cafe, table }: { cafe: CafeWithMenu; table: any }
         )}
       </div>
 
-      {/* Floating MENU button (bottom-right). Tapping opens a category-jump
-          sheet so the customer can leap to a section without scrolling. */}
+      {/* Floating MENU button (bottom-right). When the cart bar is up we
+          lift the button above it so the two don't overlap. */}
       {sections.length > 1 && (
         <button
           onClick={() => setShowMenuJump(true)}
-          className="fixed bottom-4 right-4 z-40 h-14 w-14 rounded-full bg-coffee-900 text-cream-50 shadow-coffee flex items-center justify-center hover:scale-105 active:scale-95 transition"
+          className={`fixed right-4 z-40 h-14 w-14 rounded-full bg-coffee-900 text-cream-50 shadow-coffee flex items-center justify-center hover:scale-105 active:scale-95 transition ${
+            cart.length > 0 ? 'bottom-24' : 'bottom-4'
+          }`}
           aria-label="Menu sections"
         >
           <div className="flex flex-col items-center gap-0.5">
@@ -257,16 +259,25 @@ export function CustomerMenu({ cafe, table }: { cafe: CafeWithMenu; table: any }
         </button>
       )}
 
-      {/* Sticky cart */}
+      {/* Sticky cart bar — full-width (with side margin), Swiggy-style. */}
       {cart.length > 0 && (
-        <button
-          onClick={() => setShowCart(true)}
-          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-coffee-gradient text-cream-50 px-5 py-3.5 rounded-2xl shadow-coffee flex items-center gap-3 font-semibold animate-fade-up"
-        >
-          <ShoppingCart className="h-5 w-5" />
-          <span>{totals.itemCount} {totals.itemCount === 1 ? 'item' : 'items'} · {formatCurrency(totals.totalAmount)}</span>
-          <span className="opacity-80">View cart →</span>
-        </button>
+        <div className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 pointer-events-none">
+          <button
+            onClick={() => setShowCart(true)}
+            className="pointer-events-auto w-full max-w-3xl mx-auto bg-coffee-gradient text-cream-50 px-4 py-3.5 rounded-2xl shadow-coffee flex items-center gap-3 font-semibold animate-fade-up"
+          >
+            <div className="h-9 w-9 rounded-full bg-white/15 grid place-items-center shrink-0">
+              <ShoppingCart className="h-4 w-4" />
+            </div>
+            <div className="flex-1 text-left leading-tight min-w-0">
+              <div className="text-[11px] uppercase tracking-wider opacity-80">
+                {totals.itemCount} {totals.itemCount === 1 ? 'item' : 'items'}
+              </div>
+              <div className="text-base font-bold">{formatCurrency(totals.totalAmount)}</div>
+            </div>
+            <span className="text-sm font-semibold whitespace-nowrap">View cart →</span>
+          </button>
+        </div>
       )}
 
       {/* Category jump sheet (Swiggy-style — slides up from bottom). */}
