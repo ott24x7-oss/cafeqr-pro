@@ -287,15 +287,20 @@ export async function verifyFromGmail(cafeId: string): Promise<VerifyResult> {
   result.transport = fetched.transport;
   for (const e of fetched.errors) result.errors.push(e);
 
-  // Pre-load pending payments for the cafe within the matching window.
+  // Pre-load pending ORDERS for the cafe within the matching window. We
+  // intentionally query Order rather than Payment — a fresh order has no
+  // Payment row yet (one is only created when the customer types a UTR or
+  // the owner manually marks paid). Looking at Payment was silently
+  // returning an empty list and the matcher gave up with 0 hits even when
+  // the bank email was sitting right there.
   const pendingSince = new Date(Date.now() - (windowMin + 60 * 24) * 60 * 1000);
-  const pending = await prisma.payment.findMany({
+  const pending = await prisma.order.findMany({
     where: {
-      order: { cafeId: cafe.id },
-      status: { in: ['UNPAID', 'PENDING_VERIFICATION'] },
+      cafeId: cafe.id,
+      paymentStatus: { in: ['UNPAID', 'PENDING_VERIFICATION'] },
       createdAt: { gte: pendingSince },
     },
-    include: { order: true },
+    include: { payment: true },
     orderBy: { createdAt: 'desc' },
   });
 
@@ -308,53 +313,67 @@ export async function verifyFromGmail(cafeId: string): Promise<VerifyResult> {
       result.parsed += 1;
 
       const emailAt = m.date;
-      const matchPayment = pending.find((p) => {
-        // Prefer the per-order paise-nonced payable amount (matches almost
-        // exactly), fall back to the order total. ±0.5 tolerance handles
-        // minor rounding by some banks.
-        const target = p.order.payableAmount ?? p.amount;
+      const matchOrder = pending.find((o) => {
+        // Prefer the per-order paise-nonced payable amount; fall back to
+        // totalAmount for legacy rows. ±0.5 tolerance covers rare bank
+        // rounding.
+        const target = o.payableAmount ?? o.totalAmount;
         if (Math.abs(target - amount) > 0.5) return false;
-        if (p.transactionId && p.transactionId.toUpperCase() === ref.toUpperCase()) return true;
-        const diffMin = (emailAt.getTime() - p.createdAt.getTime()) / 60000;
+        if (o.payment?.transactionId && o.payment.transactionId.toUpperCase() === ref.toUpperCase()) return true;
+        const diffMin = (emailAt.getTime() - o.createdAt.getTime()) / 60000;
         return diffMin >= -2 && diffMin <= windowMin;
       });
 
-      if (!matchPayment) continue;
-      if (matchPayment.status === 'PAID') continue;
+      if (!matchOrder) continue;
+      if (matchOrder.paymentStatus === 'PAID') continue;
+
+      const paidAmount = matchOrder.payableAmount ?? matchOrder.totalAmount;
+      const note = `Auto-verified via ${fetched.transport === 'relay' ? 'PHP relay' : 'IMAP'}`;
 
       await prisma.$transaction([
-        prisma.payment.update({
-          where: { id: matchPayment.id },
-          data: {
+        prisma.payment.upsert({
+          where: { orderId: matchOrder.id },
+          create: {
+            orderId: matchOrder.id,
+            amount: paidAmount,
+            method: 'upi',
+            status: 'PAID',
+            transactionId: ref,
+            paidAt: emailAt,
+            verifiedAt: new Date(),
+            verifiedBy: 'gmail-auto',
+            notes: note,
+          },
+          update: {
             status: 'PAID',
             method: 'upi',
             transactionId: ref,
             paidAt: emailAt,
             verifiedAt: new Date(),
             verifiedBy: 'gmail-auto',
-            notes: `Auto-verified via ${fetched.transport === 'relay' ? 'PHP relay' : 'IMAP'}`,
+            notes: note,
           },
         }),
         prisma.order.update({
-          where: { id: matchPayment.orderId },
+          where: { id: matchOrder.id },
           data: { paymentStatus: 'PAID' },
         }),
       ]);
 
       result.matched += 1;
       result.matches.push({
-        orderId: matchPayment.orderId,
-        orderNumber: matchPayment.order.orderNumber,
+        orderId: matchOrder.id,
+        orderNumber: matchOrder.orderNumber,
         amount,
         ref,
         emailDate: emailAt.toISOString(),
       });
 
-      onPaymentConfirmed(matchPayment.orderId).catch((e) =>
-        result.errors.push(`post-payment ${matchPayment.orderId}: ${e?.message ?? e}`)
+      onPaymentConfirmed(matchOrder.id).catch((e) =>
+        result.errors.push(`post-payment ${matchOrder.id}: ${e?.message ?? e}`)
       );
 
-      const idx = pending.indexOf(matchPayment);
+      const idx = pending.indexOf(matchOrder);
       if (idx >= 0) pending.splice(idx, 1);
     } catch (e: any) {
       result.errors.push(e?.message ?? String(e));
