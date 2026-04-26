@@ -9,7 +9,11 @@ export default async function AdminSitePage() {
   const s = await getSiteSettings({ fresh: true });
   // Mask password — client uses a sentinel and only sends it back when the
   // user types a new one.
-  const safe = { ...s, smtpPass: s.smtpPass ? '__unchanged__' : '' };
+  const safe = {
+    ...s,
+    smtpPass: s.smtpPass ? '__unchanged__' : '',
+    platformGmailAppPassword: s.platformGmailAppPassword ? '__unchanged__' : '',
+  };
   // Surface infra-level config that the admin can't change from the UI but
   // should be able to confirm at a glance (the PHP relay is the safety net
   // when Gmail SMTP is blocked from the host network).

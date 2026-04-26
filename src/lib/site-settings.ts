@@ -21,6 +21,10 @@ export interface SiteSettingsView {
   smtpUser: string | null;
   smtpFrom: string | null;
   smtpPass: string | null;            // decrypted (server-only callers)
+  platformUpiId: string | null;
+  platformUpiQrUrl: string | null;
+  platformGmailUser: string | null;
+  platformGmailAppPassword: string | null; // decrypted
   content: Record<string, any>;
   updatedAt: Date | null;
 }
@@ -57,6 +61,10 @@ export async function getSiteSettings(opts?: { fresh?: boolean }): Promise<SiteS
     smtpUser: row.smtpUser,
     smtpFrom: row.smtpFrom,
     smtpPass: decryptPass(row.smtpPass),
+    platformUpiId: (row as any).platformUpiId ?? null,
+    platformUpiQrUrl: (row as any).platformUpiQrUrl ?? null,
+    platformGmailUser: (row as any).platformGmailUser ?? null,
+    platformGmailAppPassword: decryptPass((row as any).platformGmailAppPassword ?? null),
     content: (row.content as Record<string, any>) ?? {},
     updatedAt: row.updatedAt,
   };

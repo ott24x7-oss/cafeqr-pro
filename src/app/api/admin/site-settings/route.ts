@@ -20,17 +20,22 @@ const schema = z.object({
   smtpUser: z.string().nullable().optional(),
   smtpPass: z.string().nullable().optional(),
   smtpFrom: z.string().nullable().optional(),
+  platformUpiId: z.string().nullable().optional(),
+  platformUpiQrUrl: z.string().nullable().optional(),
+  platformGmailUser: z.string().nullable().optional(),
+  platformGmailAppPassword: z.string().nullable().optional(),
   content: z.record(z.any()).nullable().optional(),
 });
 
 export async function GET() {
   await requireSuperAdmin();
   const s = await getSiteSettings({ fresh: true });
-  // Mask the password — client just sees a sentinel and only sends it back
-  // when the user actually types a new one.
+  // Mask any stored passwords — the client just sees a sentinel and only
+  // sends it back when the admin actually types a new one.
   return NextResponse.json({
     ...s,
     smtpPass: s.smtpPass ? SENTINEL : '',
+    platformGmailAppPassword: s.platformGmailAppPassword ? SENTINEL : '',
   });
 }
 
@@ -51,20 +56,22 @@ export async function POST(req: Request) {
   if (body.smtpPort !== undefined) data.smtpPort = body.smtpPort;
   if (body.smtpUser !== undefined) data.smtpUser = body.smtpUser;
   if (body.smtpFrom !== undefined) data.smtpFrom = body.smtpFrom;
+  if (body.platformUpiId !== undefined) data.platformUpiId = body.platformUpiId;
+  if (body.platformUpiQrUrl !== undefined) data.platformUpiQrUrl = body.platformUpiQrUrl;
+  if (body.platformGmailUser !== undefined) data.platformGmailUser = body.platformGmailUser;
   if (body.content !== undefined) data.content = body.content;
 
-  // SMTP password — encrypt on write, leave alone when SENTINEL.
-  if (body.smtpPass !== undefined) {
-    if (body.smtpPass === SENTINEL) {
-      // no-op
-    } else if (body.smtpPass === null || body.smtpPass === '') {
-      data.smtpPass = null;
-    } else if (ENCRYPTED_RE.test(body.smtpPass)) {
-      data.smtpPass = body.smtpPass; // already encrypted (round-trip)
-    } else {
-      data.smtpPass = encrypt(body.smtpPass);
-    }
+  // Encrypt-on-write helpers for the two passwords. Both honour the
+  // SENTINEL "leave alone" pattern from the client.
+  function applySecret(field: 'smtpPass' | 'platformGmailAppPassword', value: any) {
+    if (value === undefined) return;
+    if (value === SENTINEL) return;
+    if (value === null || value === '') { data[field] = null; return; }
+    if (typeof value !== 'string') return;
+    data[field] = ENCRYPTED_RE.test(value) ? value : encrypt(value);
   }
+  applySecret('smtpPass', body.smtpPass);
+  applySecret('platformGmailAppPassword', body.platformGmailAppPassword);
 
   data.updatedBy = session.user.email;
 

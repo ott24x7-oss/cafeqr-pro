@@ -475,20 +475,28 @@ model Plan {
 
 // ─── 15. SUBSCRIPTION ─────────────────────────────────────────────────────
 model Subscription {
-  id         String   @id @default(cuid())
-  cafeId     String
-  planId     String
-  amount     Float
-  billing    String   @default("monthly") // monthly | yearly
-  startsAt   DateTime @default(now())
-  endsAt     DateTime
-  status     String   @default("active")  // active | cancelled | expired
-  createdAt  DateTime @default(now())
+  id            String   @id @default(cuid())
+  cafeId        String
+  planId        String
+  amount        Float
+  // Same shape as Order.payableAmount: amount + a 1-99 paise nonce so the
+  // IMAP matcher can pin a credit alert to a specific subscription row.
+  payableAmount Float?
+  billing       String   @default("monthly") // monthly | yearly
+  startsAt      DateTime @default(now())
+  endsAt        DateTime
+  // pending → awaiting UPI payment ✔ active → paid + current
+  // expired → past endsAt or superseded ✘ cancelled
+  status        String   @default("pending")
+  paidAt        DateTime?
+  transactionId String?
+  createdAt     DateTime @default(now())
 
-  cafe       Cafe     @relation(fields: [cafeId], references: [id], onDelete: Cascade)
-  plan       Plan     @relation(fields: [planId], references: [id])
+  cafe          Cafe     @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  plan          Plan     @relation(fields: [planId], references: [id])
 
   @@index([cafeId])
+  @@index([status])
 }
 
 // ─── 16. NOTIFICATION ─────────────────────────────────────────────────────
@@ -526,6 +534,12 @@ model SiteSettings {
   smtpUser    String?
   smtpPass    String?  // encrypted at rest
   smtpFrom    String?
+  // Platform UPI for collecting subscription payments from cafe owners.
+  // Mirrors the cafe-side UPI / IMAP setup but scoped to the SaaS owner.
+  platformUpiId            String?
+  platformUpiQrUrl         String?
+  platformGmailUser        String?
+  platformGmailAppPassword String?  // encrypted at rest
   // Free-form Json bag for marketing page copy (hero / about / footer / faq …)
   content     Json?
   updatedAt   DateTime @updatedAt

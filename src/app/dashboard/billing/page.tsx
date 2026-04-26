@@ -89,7 +89,8 @@ export default async function BillingPage() {
       )}
 
       <p className="text-xs text-coffee-500">
-        Billing integrations (Stripe / Razorpay) ship in next release. Today, plan switches activate instantly under "manual mode".
+        Plan switches go through a UPI payment with auto-verify against the platform's bank inbox.
+        Free plans activate instantly.
       </p>
     </div>
   );

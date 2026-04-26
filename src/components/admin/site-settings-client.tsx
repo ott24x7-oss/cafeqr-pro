@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import {
-  Save, Loader2, Eye, EyeOff, Send, Globe, Mail, FileText, Lock, ShieldCheck,
+  Save, Loader2, Eye, EyeOff, Send, Globe, Mail, FileText, Lock, ShieldCheck, IndianRupee,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input, Textarea } from '@/components/ui/input';
@@ -10,7 +10,7 @@ import { toast } from '@/components/ui/toaster';
 
 const SENTINEL = '__unchanged__';
 
-type Tab = 'branding' | 'email' | 'content';
+type Tab = 'branding' | 'email' | 'payment' | 'content';
 
 interface InfraInfo {
   phpMailerUrl: string;
@@ -29,11 +29,16 @@ export function SiteSettingsClient({ initial, infra }: { initial: any; infra?: I
     smtpUser: initial.smtpUser ?? '',
     smtpPass: initial.smtpPass ?? '',
     smtpFrom: initial.smtpFrom ?? '',
+    platformUpiId: initial.platformUpiId ?? '',
+    platformUpiQrUrl: initial.platformUpiQrUrl ?? '',
+    platformGmailUser: initial.platformGmailUser ?? '',
+    platformGmailAppPassword: initial.platformGmailAppPassword ?? '',
   });
   const [contentText, setContentText] = useState(
     JSON.stringify(initial.content ?? defaultContent(), null, 2)
   );
   const [showPass, setShowPass] = useState(false);
+  const [showPlatformPass, setShowPlatformPass] = useState(false);
   const [saving, setSaving] = useState(false);
   const [smtpTesting, setSmtpTesting] = useState<'verify' | 'send' | null>(null);
 
@@ -59,6 +64,10 @@ export function SiteSettingsClient({ initial, infra }: { initial: any; infra?: I
         smtpUser: form.smtpUser || null,
         smtpPass: form.smtpPass,        // SENTINEL leaves it alone, '' clears
         smtpFrom: form.smtpFrom || null,
+        platformUpiId: form.platformUpiId || null,
+        platformUpiQrUrl: form.platformUpiQrUrl || null,
+        platformGmailUser: form.platformGmailUser || null,
+        platformGmailAppPassword: form.platformGmailAppPassword,
         content: parsedContent,
       }),
     });
@@ -114,6 +123,7 @@ export function SiteSettingsClient({ initial, infra }: { initial: any; infra?: I
           {[
             { k: 'branding', l: 'Branding', i: Globe },
             { k: 'email', l: 'Email / SMTP', i: Mail },
+            { k: 'payment', l: 'Platform Payment', i: IndianRupee },
             { k: 'content', l: 'Site content', i: FileText },
           ].map((t) => (
             <button
@@ -202,6 +212,40 @@ export function SiteSettingsClient({ initial, infra }: { initial: any; infra?: I
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {tab === 'payment' && (
+          <div className="grid md:grid-cols-2 gap-4">
+            <p className="md:col-span-2 helper">
+              UPI ID + QR + Gmail credentials used by the platform to <b>collect subscription payments</b> from
+              cafe owners. Mirrors the cafe-side IMAP auto-verify but at platform level — the cafe owner pays
+              this UPI, our IMAP scans the inbox below, and the matching subscription flips to active. Without
+              this set, the Switch button on the billing page will tell users payment isn't configured.
+            </p>
+            <Field l="Platform UPI ID" v={form.platformUpiId} on={(v: string) => setForm({ ...form, platformUpiId: v })} placeholder="ott24x7@hdfc" />
+            <Field l="UPI QR image URL (optional)" v={form.platformUpiQrUrl} on={(v: string) => setForm({ ...form, platformUpiQrUrl: v })} placeholder="https://…/upi-qr.png" />
+            <Field l="Platform Gmail (for IMAP scan)" v={form.platformGmailUser} on={(v: string) => setForm({ ...form, platformGmailUser: v })} placeholder="ott24x7@gmail.com" />
+            <div>
+              <label className="label">Gmail app password</label>
+              <div className="relative">
+                <Input
+                  type={showPlatformPass ? 'text' : 'password'}
+                  value={form.platformGmailAppPassword === SENTINEL ? '••••••••••••' : form.platformGmailAppPassword}
+                  onChange={(e) => setForm({ ...form, platformGmailAppPassword: e.target.value })}
+                  onFocus={() => { if (form.platformGmailAppPassword === SENTINEL) setForm({ ...form, platformGmailAppPassword: '' }); }}
+                  placeholder="abcd efgh ijkl mnop"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPlatformPass(!showPlatformPass)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-coffee-500 hover:text-coffee-900"
+                >
+                  {showPlatformPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              <p className="helper">Encrypted at rest. Same Gmail app password format you used for the cafe-side IMAP.</p>
+            </div>
           </div>
         )}
 
