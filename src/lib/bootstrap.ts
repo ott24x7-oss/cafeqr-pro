@@ -14,7 +14,6 @@
  *      cafe owner who later changes their password through the UI doesn't
  *      get overwritten on every redeploy.
  */
-import 'server-only';
 import bcrypt from 'bcryptjs';
 import { prisma } from './prisma';
 
