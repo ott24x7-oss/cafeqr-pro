@@ -1,4 +1,4 @@
-name,description,price,category,diet,spicy,prepMinutes,isAvailable,inStock,isPopular,isFeatured,tags
-Cappuccino,Espresso with steamed milk,120,Coffee,VEG,NONE,5,true,true,true,false,hot;coffee
-Masala Chai,Indian spiced tea,60,Tea,VEG,MILD,3,true,true,false,false,hot;spiced
-Avocado Toast,Whole wheat bread with avocado,180,Breakfast,VEG,NONE,10,true,true,false,true,vegan;healthy
+name,description,price,category,diet,spicy,prepMinutes,isAvailable,inStock,isPopular,isFeatured,tags,imageUrl
+Cappuccino,Espresso with steamed milk,120,Coffee,VEG,NONE,5,true,true,true,false,hot;coffee,https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=600
+Masala Chai,Indian spiced tea,60,Tea,VEG,MILD,3,true,true,false,false,hot;spiced,https://images.unsplash.com/photo-1571934811356-5cc061b6821f?w=600
+Avocado Toast,Whole wheat bread with avocado,180,Breakfast,VEG,NONE,10,true,true,false,true,vegan;healthy,https://images.unsplash.com/photo-1541519227354-08fa5d50c44d?w=600

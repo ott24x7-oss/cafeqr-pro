@@ -32,6 +32,7 @@ interface ParsedRow {
   isPopular: string;
   isFeatured: string;
   tags: string;
+  imageUrl: string;
 }
 
 interface ImportError {
@@ -67,6 +68,7 @@ const HEADERS = [
   'isPopular',
   'isFeatured',
   'tags',
+  'imageUrl',
 ] as const;
 
 function parseCSVClient(text: string): { headers: string[]; rows: string[][] } {
@@ -112,6 +114,7 @@ function rowsToPreview(headers: string[], rows: string[][]): ParsedRow[] {
       isPopular: get('isPopular'),
       isFeatured: get('isFeatured'),
       tags: get('tags'),
+      imageUrl: get('imageUrl'),
     };
   });
 }
@@ -260,7 +263,11 @@ export function BulkMenuImport({ onClose, onImported }: BulkMenuImportProps) {
               <FileText className="h-5 w-5 text-coffee-600 shrink-0" />
               <div>
                 <p className="text-sm font-semibold text-coffee-900">Download CSV Template</p>
-                <p className="text-xs text-coffee-500">Use this template to format your menu data correctly</p>
+                <p className="text-xs text-coffee-500">
+                  Columns: name, description, price, category, diet, spicy, prepMinutes,
+                  isAvailable, inStock, isPopular, isFeatured, tags,{' '}
+                  <span className="font-semibold text-coffee-700">imageUrl</span> (https://… link)
+                </p>
               </div>
             </div>
             <a href="/menu-import-template.csv" download>
@@ -337,6 +344,7 @@ export function BulkMenuImport({ onClose, onImported }: BulkMenuImportProps) {
                       <thead className="bg-coffee-50 text-coffee-700">
                         <tr>
                           <th className="px-3 py-2 text-left font-semibold">#</th>
+                          <th className="px-3 py-2 text-left font-semibold">Image</th>
                           <th className="px-3 py-2 text-left font-semibold">Name</th>
                           <th className="px-3 py-2 text-left font-semibold">Category</th>
                           <th className="px-3 py-2 text-left font-semibold">Price</th>
@@ -346,17 +354,36 @@ export function BulkMenuImport({ onClose, onImported }: BulkMenuImportProps) {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-coffee-50">
-                        {preview.slice(0, 50).map((row) => (
-                          <tr key={row.rowNum} className="bg-white hover:bg-cream-50">
-                            <td className="px-3 py-2 text-coffee-400">{row.rowNum}</td>
-                            <td className="px-3 py-2 font-medium text-coffee-900 max-w-[140px] truncate">{row.name || <span className="text-rose-400 italic">missing</span>}</td>
-                            <td className="px-3 py-2 text-coffee-700">{row.category || <span className="text-rose-400 italic">missing</span>}</td>
-                            <td className="px-3 py-2 text-coffee-700">{row.price || <span className="text-rose-400 italic">missing</span>}</td>
-                            <td className="px-3 py-2 text-coffee-600">{row.diet || 'VEG'}</td>
-                            <td className="px-3 py-2 text-coffee-600">{row.spicy || 'NONE'}</td>
-                            <td className="px-3 py-2 text-coffee-500 max-w-[120px] truncate">{row.tags}</td>
-                          </tr>
-                        ))}
+                        {preview.slice(0, 50).map((row) => {
+                          const isHttp = /^https?:\/\//i.test(row.imageUrl);
+                          return (
+                            <tr key={row.rowNum} className="bg-white hover:bg-cream-50">
+                              <td className="px-3 py-2 text-coffee-400">{row.rowNum}</td>
+                              <td className="px-3 py-2">
+                                {row.imageUrl ? (
+                                  isHttp ? (
+                                    <img
+                                      src={row.imageUrl}
+                                      alt=""
+                                      className="h-9 w-9 rounded-lg object-cover bg-cream-100"
+                                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                                    />
+                                  ) : (
+                                    <span className="text-rose-400 italic" title={row.imageUrl}>invalid URL</span>
+                                  )
+                                ) : (
+                                  <span className="text-coffee-300">—</span>
+                                )}
+                              </td>
+                              <td className="px-3 py-2 font-medium text-coffee-900 max-w-[140px] truncate">{row.name || <span className="text-rose-400 italic">missing</span>}</td>
+                              <td className="px-3 py-2 text-coffee-700">{row.category || <span className="text-rose-400 italic">missing</span>}</td>
+                              <td className="px-3 py-2 text-coffee-700">{row.price || <span className="text-rose-400 italic">missing</span>}</td>
+                              <td className="px-3 py-2 text-coffee-600">{row.diet || 'VEG'}</td>
+                              <td className="px-3 py-2 text-coffee-600">{row.spicy || 'NONE'}</td>
+                              <td className="px-3 py-2 text-coffee-500 max-w-[120px] truncate">{row.tags}</td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                     {preview.length > 50 && (

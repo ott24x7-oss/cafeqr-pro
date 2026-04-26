@@ -182,6 +182,19 @@ export async function POST(req: Request) {
     // ── description ───────────────────────────────────────────────────────
     const description = get('description') || undefined;
 
+    // ── imageUrl ──────────────────────────────────────────────────────────
+    // Accept absolute http(s) URLs only — anything else is dropped with a
+    // warning so a typo doesn't poison the menu page with broken <img>s.
+    const imageUrlRaw = get('imageurl');
+    let imageUrl: string | undefined;
+    if (imageUrlRaw) {
+      if (/^https?:\/\//i.test(imageUrlRaw)) {
+        imageUrl = imageUrlRaw;
+      } else {
+        warnings.push({ row: rowNum, message: `imageUrl "${imageUrlRaw}" is not a valid http(s) URL — ignored` });
+      }
+    }
+
     // ── duplicate check ───────────────────────────────────────────────────
     if (name && existingNames.has(name.toLowerCase())) {
       warnings.push({ row: rowNum, message: `Item "${name}" already exists and will be imported as a duplicate` });
@@ -198,6 +211,7 @@ export async function POST(req: Request) {
       name,
       description,
       price,
+      imageUrl,
       diet: diet as any,
       spicy: spicy as any,
       prepMinutes,
