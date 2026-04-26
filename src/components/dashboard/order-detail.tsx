@@ -46,41 +46,16 @@ export function OrderDetailClient({ order, cafe }: { order: any; cafe: any }) {
   }
 
   async function downloadPdf() {
-    const { jsPDF } = await import('jspdf');
-    const html2canvas = (await import('html2canvas')).default;
-    const div = document.createElement('div');
-    div.innerHTML = billHtml({
-      orderNumber: order.orderNumber,
-      cafeName: cafe.name,
-      cafeAddress: cafe.address ?? undefined,
-      cafePhone: cafe.phone ?? undefined,
-      cafeGst: cafe.gstNumber ?? undefined,
-      tableNumber: order.table?.number,
-      customerName: order.customerName ?? undefined,
-      customerPhone: order.customerPhone ?? undefined,
-      createdAt: order.createdAt,
-      items: order.items,
-      subtotal: order.subtotal,
-      taxAmount: order.taxAmount,
-      serviceAmount: order.serviceAmount,
-      packingAmount: order.packingAmount,
-      deliveryAmount: order.deliveryAmount,
-      discountAmount: order.discountAmount,
-      totalAmount: order.totalAmount,
-      paymentStatus: order.paymentStatus,
-    });
-    div.style.position = 'fixed';
-    div.style.left = '-99999px';
-    div.style.top = '0';
-    document.body.appendChild(div);
-    const canvas = await html2canvas(div, { scale: 2 });
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF('p', 'mm', 'a5');
-    const w = pdf.internal.pageSize.getWidth();
-    const h = (canvas.height * w) / canvas.width;
-    pdf.addImage(imgData, 'PNG', 0, 0, w, h);
-    pdf.save(`bill-${order.orderNumber}.pdf`);
-    document.body.removeChild(div);
+    // Server-rendered pdfkit invoice (same template the customer's
+    // WhatsApp attachment uses). Replaces the old html2canvas screenshot
+    // path which broke on long item lists.
+    const url = `/api/dashboard/orders/${order.id}/invoice`;
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `invoice-${order.orderNumber}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   }
 
   async function markPaid() {

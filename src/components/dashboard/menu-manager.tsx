@@ -45,6 +45,26 @@ export function MenuManager({ categories: initialCats, items: initialItems }: { 
     }
   }
 
+  /** In-stock toggle. Different from isAvailable: an item can be ON the
+   *  menu but currently 'sold out' — customer sees it greyed out instead of
+   *  it disappearing. */
+  async function toggleStock(item: any) {
+    const next = !(item.inStock ?? true);
+    const before = items;
+    setItems((x) => x.map((i) => (i.id === item.id ? { ...i, inStock: next } : i)));
+    const r = await fetch(`/api/dashboard/menu/items/${item.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ inStock: next }),
+    });
+    if (!r.ok) {
+      setItems(before);
+      toast.error('Could not update stock');
+    } else {
+      toast.success(next ? 'Back in stock' : 'Marked sold out');
+    }
+  }
+
   async function deleteCat(id: string) {
     if (!confirm('Delete this category? Items will be uncategorized.')) return;
     const r = await fetch(`/api/dashboard/menu/categories/${id}`, { method: 'DELETE' });
@@ -113,6 +133,7 @@ export function MenuManager({ categories: initialCats, items: initialItems }: { 
                 <div className="flex items-center gap-1.5 flex-wrap">
                   {it.diet === 'VEG' || it.diet === 'VEGAN' ? <span className="veg-dot" /> : <span className="nonveg-dot" />}
                   {!it.isAvailable && <span className="pill-rose">Hidden</span>}
+                  {(it.inStock === false) && <span className="pill-amber">Sold out</span>}
                   {it.isPopular && <span className="pill-amber">Bestseller</span>}
                 </div>
                 <div className="font-bold text-coffee-900 truncate">{it.name}</div>
@@ -120,12 +141,20 @@ export function MenuManager({ categories: initialCats, items: initialItems }: { 
                 <div className="font-semibold text-coffee-800 mt-1">{formatCurrency(it.discountedPrice ?? it.price)}</div>
               </div>
             </div>
-            <div className="mt-3 flex gap-1.5">
+            <div className="mt-3 flex flex-wrap gap-1.5">
               <Button size="sm" variant="outline" onClick={() => { setEditItem(it); setShowItemModal(true); }}>
                 <Pencil className="h-3 w-3" /> Edit
               </Button>
               <Button size="sm" variant="outline" onClick={() => toggleAvailability(it)}>
                 <Power className="h-3 w-3" /> {it.isAvailable ? 'Hide' : 'Show'}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => toggleStock(it)}
+                title={it.inStock === false ? 'Currently sold out — click to mark back in stock' : 'In stock — click to mark sold out'}
+              >
+                {it.inStock === false ? '✕ Sold out' : '✓ In stock'}
               </Button>
               <Button size="sm" variant="ghost" onClick={() => deleteItem(it.id)}>
                 <Trash2 className="h-3 w-3 text-rose-500" />

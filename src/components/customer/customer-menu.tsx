@@ -222,7 +222,15 @@ function CategoryChip({ active, children, onClick }: any) {
 function MenuItemCard({ item, onAdd }: { item: any; onAdd: () => void }) {
   const price = item.discountedPrice ?? item.price;
   return (
-    <button onClick={onAdd} className="w-full card-warm flex gap-4 hover:-translate-y-0.5 transition text-left active:scale-[0.99]">
+    <button
+      onClick={item.inStock === false ? undefined : onAdd}
+      disabled={item.inStock === false}
+      className={`w-full card-warm flex gap-4 transition text-left ${
+        item.inStock === false
+          ? 'opacity-60 cursor-not-allowed'
+          : 'hover:-translate-y-0.5 active:scale-[0.99]'
+      }`}
+    >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
           {item.diet === 'VEG' || item.diet === 'VEGAN' ? (

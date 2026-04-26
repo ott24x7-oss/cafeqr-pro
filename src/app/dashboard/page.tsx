@@ -5,6 +5,7 @@ import { getOwnerCafe } from '@/lib/guards';
 import { formatCurrency } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { CafeStoreLink } from '@/components/dashboard/cafe-store-link';
+import { RevenueSparkline } from '@/components/dashboard/revenue-sparkline';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +16,10 @@ export default async function DashboardOverview() {
   const since = new Date();
   since.setHours(0, 0, 0, 0);
 
-  const [todayOrders, allTodayOrders, pendingOrders, completedToday, reviewAgg, latestOrders, topItems] = await Promise.all([
+  const sparkSince = new Date(Date.now() - 30 * 86400000);
+  sparkSince.setHours(0, 0, 0, 0);
+
+  const [todayOrders, allTodayOrders, pendingOrders, completedToday, reviewAgg, latestOrders, topItems, sparkOrders] = await Promise.all([
     prisma.order.aggregate({
       where: { cafeId: cafe.id, createdAt: { gte: since } },
       _sum: { totalAmount: true },
@@ -38,7 +42,24 @@ export default async function DashboardOverview() {
       orderBy: { _sum: { quantity: 'desc' } },
       take: 5,
     }),
+    prisma.order.findMany({
+      where: { cafeId: cafe.id, createdAt: { gte: sparkSince }, status: { not: 'CANCELLED' } },
+      select: { createdAt: true, totalAmount: true },
+    }),
   ]);
+
+  // Bucket the last 30 days into per-day revenue totals (oldest → newest).
+  const dayCount = 30;
+  const buckets = new Array(dayCount).fill(0) as number[];
+  const startMidnight = sparkSince.getTime();
+  for (const o of sparkOrders) {
+    const d = new Date(o.createdAt);
+    d.setHours(0, 0, 0, 0);
+    const idx = Math.floor((d.getTime() - startMidnight) / 86400000);
+    if (idx >= 0 && idx < dayCount) buckets[idx] += o.totalAmount;
+  }
+  const totalRevenue30d = buckets.reduce((a, b) => a + b, 0);
+  const avgPerDay = totalRevenue30d / dayCount;
 
   const stats = [
     { l: "Today's revenue", v: formatCurrency(todayOrders._sum.totalAmount ?? 0), s: `${allTodayOrders} orders`, tone: 'text-emerald-600', icon: Coffee },
@@ -68,6 +89,13 @@ export default async function DashboardOverview() {
           <Link href="/dashboard/billing"><Button size="sm">Upgrade</Button></Link>
         </div>
       )}
+
+      <RevenueSparkline
+        buckets={buckets}
+        totalRevenue={totalRevenue30d}
+        avgPerDay={avgPerDay}
+        currency={cafe.currency ?? 'INR'}
+      />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {stats.map((s) => (
