@@ -14,7 +14,7 @@ import { verifyFromGmail } from '@/lib/payment-verify';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const MIN_GAP_MS = 12_000;
+const MIN_GAP_MS = 4_000;
 // Keep the rate-limiter on globalThis so it survives Next.js dev module
 // reloading and is shared across all routes in a single Node process.
 const lastScanAt: Map<string, number> =

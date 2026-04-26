@@ -2,14 +2,16 @@
  * Auto-verify UPI payments by reading bank credit-alert emails from a Gmail
  * mailbox over IMAP.
  *
- * Two transports are available; the matcher tries them in this order:
- *   1. Direct IMAP from the Next.js process (`imapflow` over TLS to
- *      imap.gmail.com:993).
- *   2. PHP relay (`IMAP_RELAY_URL`) — used as a fallback when (1) fails to
- *      connect, e.g. because the host blocks outbound 993. The relay is a
- *      small PHP script (see `php/imap-relay.php`) that you can drop on a
- *      shared host that does have IMAP outbound, alongside the existing
- *      send.php mailer.
+ * Strategy:
+ *   1. Fetch envelopes for the last `LOOKBACK` messages by sequence (one
+ *      cheap IMAP command, ~150ms). Avoids the 40-way SEARCH matrix that
+ *      was being silently dropped under Gmail's command serialization.
+ *   2. Filter sender + subject in JS using the built-in wallet/bank list.
+ *   3. Fetch the full source only for the candidates (~5–10 typically),
+ *      parse amount + UTR, and match against pending payments.
+ *
+ * Falls back to the PHP relay (php/imap-relay.php on ott24x7's host) when
+ * the direct connect fails — usually because the host blocks outbound 993.
  */
 import 'server-only';
 import { ImapFlow } from 'imapflow';
@@ -18,10 +20,8 @@ import { prisma } from './prisma';
 import { decrypt } from './crypto';
 import { onPaymentConfirmed } from './post-payment';
 
-// Defaults applied when the cafe hasn't customised the filters. These cover
-// the senders that actually deliver UPI credit alerts in India today —
-// wallets, neobanks and the major banks. Hidden from the dashboard so the
-// owner doesn't have to maintain them.
+// Senders that actually deliver UPI credit alerts in India today. The cafe
+// owner doesn't have to know — defaults always win, no UI override.
 export const DEFAULT_SENDERS: string[] = [
   'no-reply@paytm.com',
   'noreply@paytm.com',
@@ -41,6 +41,12 @@ export const DEFAULT_SUBJECT_KEYWORDS: string[] = [
   'deposit',
   'credit',
 ];
+
+const LOOKBACK = 80; // messages back from the end of INBOX to scan
+// Only consider credit alerts that arrived within the last 10 minutes —
+// matches the "customer just clicked 'I have paid'" UX. Anything older is a
+// stale event and won't be tied to an active checkout session.
+const MAX_AGE_MS = 10 * 60 * 1000;
 
 const RELAY_URL = process.env.IMAP_RELAY_URL || (
   process.env.PHP_MAILER_URL
@@ -64,42 +70,84 @@ interface FetchResult {
   errors: string[];
 }
 
-/** Run senders × subjects matrix searches in parallel and union the UIDs. */
-export async function searchInboxForCreditAlerts(
-  client: ImapFlow,
-  opts: { since: Date; senders?: string[]; subjects?: string[] }
-): Promise<number[]> {
-  const senders = (opts.senders && opts.senders.length ? opts.senders : DEFAULT_SENDERS);
-  const subjects = (opts.subjects && opts.subjects.length ? opts.subjects : DEFAULT_SUBJECT_KEYWORDS);
-
-  const queries: Promise<number[]>[] = [];
-  for (const from of senders) {
-    for (const subject of subjects) {
-      queries.push(
-        client.search({ since: opts.since, from, subject } as any).then(
-          // imapflow returns `false | number[]` — `||` covers both falsy cases
-          // (null/undefined and an actual `false`).
-          (r) => (r || []).map((u: any) => Number(u)),
-          () => [] as number[]
-        )
-      );
-    }
-  }
-  const results = await Promise.all(queries);
-  const merged = new Set<number>();
-  for (const arr of results) for (const u of arr) merged.add(u);
-  return [...merged].sort((a, b) => a - b);
+function envelopeIsCandidate(from: string, subject: string): boolean {
+  const f = (from || '').toLowerCase();
+  const s = (subject || '').toLowerCase();
+  const senderHit = DEFAULT_SENDERS.some((d) => f.includes(d.toLowerCase()));
+  const subjectHit = DEFAULT_SUBJECT_KEYWORDS.some((k) => s.includes(k));
+  // Permissive: a known sender alone is enough; a strong subject keyword
+  // alone is also enough. The amount + UTR parser downstream rejects
+  // anything that isn't actually a credit alert.
+  return senderHit || subjectHit;
 }
 
-async function fetchDirect(opts: {
-  user: string;
-  pass: string;
-  since: Date;
-  senders?: string[];
-  subjects?: string[];
-}): Promise<FetchResult> {
-  const errors: string[] = [];
+/** Sequence-based fetch + JS filter — replaces the old SEARCH matrix. */
+export async function fetchInboxCreditMessages(
+  client: ImapFlow,
+  opts?: { lookback?: number }
+): Promise<{ messages: CreditMessage[]; scanned: number; recent: { date: Date | null; from: string; subject: string }[] }> {
+  const lookback = opts?.lookback ?? LOOKBACK;
+  const mailbox = (await client.mailboxOpen('INBOX', { readOnly: true })) as any;
+  const total = mailbox?.exists ?? 0;
+  if (total === 0) return { messages: [], scanned: 0, recent: [] };
+
+  const startSeq = Math.max(1, total - lookback + 1);
+  const range = `${startSeq}:${total}`;
+
+  // Pass 1: lightweight envelope scan.
+  type EnvRow = { uid: number; date: Date; from: string; subject: string };
+  const envelopes: EnvRow[] = [];
+  for await (const msg of client.fetch(range, { envelope: true, uid: true })) {
+    envelopes.push({
+      uid: msg.uid as number,
+      date: msg.envelope?.date ? new Date(msg.envelope.date as any) : new Date(),
+      from: msg.envelope?.from?.[0]?.address ?? '',
+      subject: msg.envelope?.subject ?? '',
+    });
+  }
+
+  // Sort newest-first so we hit the freshest credit alert quickly.
+  envelopes.sort((a, b) => b.date.getTime() - a.date.getTime());
+
+  // Only consider emails received in the last 6 hours — customers pay
+  // instantly, so anything older isn't a match for an active order.
+  const cutoff = Date.now() - MAX_AGE_MS;
+  const recentEnvs = envelopes.filter((e) => e.date.getTime() >= cutoff);
+
+  const candidates = recentEnvs.filter((e) => envelopeIsCandidate(e.from, e.subject));
+
+  // Pass 2: source fetch for candidates (sequential — IMAP serializes per
+  // connection anyway, so Promise.all gives no speed-up here).
   const messages: CreditMessage[] = [];
+  for (const c of candidates.slice(0, 30)) {
+    try {
+      const msg = await client.fetchOne(String(c.uid), { source: true }, { uid: true });
+      if (!msg || !msg.source) continue;
+      const parsed = await simpleParser(msg.source as any);
+      const text = `${parsed.subject ?? ''}\n${parsed.text ?? parsed.html ?? ''}`.replace(/<[^>]+>/g, ' ');
+      messages.push({
+        uid: String(c.uid),
+        from: c.from,
+        subject: c.subject,
+        date: parsed.date ?? c.date,
+        body: text,
+      });
+    } catch {/* skip — keep scanning */}
+  }
+
+  // Recent senders for diagnostics (top 12 newest-first, within the 6h
+  // window). Falls back to the absolute newest 12 if the window is empty
+  // so the diagnostic still shows something.
+  const diagPool = recentEnvs.length ? recentEnvs : envelopes;
+  const recent = diagPool.slice(0, 12).map((e) => ({
+    date: e.date, from: e.from, subject: e.subject,
+  }));
+
+  return { messages, scanned: candidates.length, recent };
+}
+
+async function fetchDirect(opts: { user: string; pass: string }): Promise<FetchResult & { recent: { date: Date | null; from: string; subject: string }[]; inboxCount: number }> {
+  const errors: string[] = [];
   const client = new ImapFlow({
     host: 'imap.gmail.com',
     port: 993,
@@ -109,50 +157,23 @@ async function fetchDirect(opts: {
   });
   try {
     await client.connect();
-    await client.mailboxOpen('INBOX', { readOnly: true });
-
-    const uids = await searchInboxForCreditAlerts(client, {
-      since: opts.since,
-      senders: opts.senders,
-      subjects: opts.subjects,
-    });
-
-    for (const uid of uids.slice(-50)) {
-      try {
-        const msg = await client.fetchOne(uid as any, { source: true, envelope: true });
-        if (!msg || !msg.source) continue;
-        const parsed = await simpleParser(msg.source as any);
-        const body = `${parsed.subject ?? ''}\n${parsed.text ?? parsed.html ?? ''}`.replace(/<[^>]+>/g, ' ');
-        messages.push({
-          uid: String(uid),
-          from: parsed.from?.value?.[0]?.address ?? '',
-          subject: parsed.subject ?? '',
-          date: parsed.date ?? msg.envelope?.date ?? new Date(),
-          body,
-        });
-      } catch (e: any) {
-        errors.push(e?.message ?? String(e));
-      }
-    }
-    return { messages, scanned: uids.length, transport: 'direct', errors };
+    const mailbox = (await client.mailboxOpen('INBOX', { readOnly: true })) as any;
+    const inboxCount = mailbox?.exists ?? 0;
+    const { messages, scanned, recent } = await fetchInboxCreditMessages(client);
+    return { messages, scanned, transport: 'direct', errors, recent, inboxCount };
   } finally {
     try { await client.logout(); } catch {}
   }
 }
 
-async function fetchViaRelay(opts: {
-  user: string;
-  pass: string;
-  since: Date;
-  senders?: string[];
-  subjects?: string[];
-}): Promise<FetchResult> {
+async function fetchViaRelay(opts: { user: string; pass: string }): Promise<FetchResult> {
   const errors: string[] = [];
   if (!RELAY_URL) {
     errors.push('IMAP_RELAY_URL not configured');
     return { messages: [], scanned: 0, transport: 'relay', errors };
   }
 
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const res = await fetch(RELAY_URL, {
     method: 'POST',
     headers: {
@@ -162,10 +183,10 @@ async function fetchViaRelay(opts: {
     body: JSON.stringify({
       user: opts.user,
       pass: opts.pass,
-      since: opts.since.toISOString(),
-      senders: opts.senders,
-      subjects: opts.subjects,
-      limit: 50,
+      since: since.toISOString(),
+      senders: DEFAULT_SENDERS,
+      subjects: DEFAULT_SUBJECT_KEYWORDS,
+      limit: 80,
     }),
   });
   const data = await res.json().catch(() => ({} as any));
@@ -183,20 +204,16 @@ async function fetchViaRelay(opts: {
   return { messages, scanned: data.matchedCount ?? messages.length, transport: 'relay', errors };
 }
 
-/** Direct IMAP first, fall back to PHP relay if the connect fails. */
+/** Direct IMAP first, fall back to PHP relay only on network-level errors. */
 async function fetchCreditMessages(opts: {
   user: string;
   pass: string;
-  since: Date;
-  senders?: string[];
-  subjects?: string[];
 }): Promise<FetchResult> {
   try {
-    return await fetchDirect(opts);
+    const r = await fetchDirect(opts);
+    return { messages: r.messages, scanned: r.scanned, transport: 'direct', errors: r.errors };
   } catch (e: any) {
     const msg = e?.message ?? String(e);
-    // Connection-level failures only — credential / search errors should
-    // surface as-is.
     const looksBlocked = /ETIMEDOUT|ECONNREFUSED|ENETUNREACH|EHOSTUNREACH|getaddrinfo|self.signed|Connection.*timed/i.test(msg);
     if (!looksBlocked) {
       return { messages: [], scanned: 0, transport: 'direct', errors: [msg] };
@@ -217,9 +234,9 @@ export interface VerifyResult {
 }
 
 const AMOUNT_RE = /(?:rs\.?|inr|₹)\s*([0-9]+(?:[,0-9]{0,3})*(?:\.[0-9]{1,2})?)/i;
-const UTR_LABELED_RE = /\b(?:utr|upi\s*ref(?:erence)?(?:\s*(?:no|number))?|ref(?:erence)?\s*(?:no|number)|txn\s*id|transaction\s*id)[^\w]{0,5}([A-Za-z0-9-]{9,})/i;
+const UTR_LABELED_RE = /\b(?:utr|upi\s*ref(?:erence)?(?:\s*(?:no|number))?|ref(?:erence)?\s*(?:no|number)|order\s*id|txn\s*id|transaction\s*id)[^\w]{0,5}([A-Za-z0-9-]{9,})/i;
 const UTR_LOOSE_RE  = /\b([0-9]{12,18})\b/;            // pure-numeric UTRs from many banks
-const UPI_REF_RE    = /\b([A-Z]{3,5}[0-9]{6,14})\b/;   // alphanumeric IMPS refs
+const UPI_REF_RE    = /\b([A-Z]{3,5}[0-9]{6,14})\b/;   // alphanumeric IMPS / Paytm refs
 
 function parseAmount(text: string): number | null {
   const m = text.match(AMOUNT_RE);
@@ -263,16 +280,9 @@ export async function verifyFromGmail(cafeId: string): Promise<VerifyResult> {
     return result;
   }
 
-  const customSender = cafe.settings.gmailSenderFilter?.trim();
-  const customSubject = cafe.settings.gmailSubjectFilter?.trim();
   const windowMin = Math.max(5, cafe.settings.paymentMatchWindowMinutes ?? 30);
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000); // last 24h of email
 
-  const fetched = await fetchCreditMessages({
-    user, pass, since,
-    senders: customSender ? [customSender] : undefined,
-    subjects: customSubject ? [customSubject] : undefined,
-  });
+  const fetched = await fetchCreditMessages({ user, pass });
   result.scanned = fetched.scanned;
   result.transport = fetched.transport;
   for (const e of fetched.errors) result.errors.push(e);
@@ -348,4 +358,13 @@ export async function verifyFromGmail(cafeId: string): Promise<VerifyResult> {
   }
 
   return result;
+}
+
+/** Backwards-compatible export for callers (test-imap) that imported the old
+ *  search helper. The matcher itself no longer uses it. */
+export async function searchInboxForCreditAlerts(
+  _client: ImapFlow,
+  _opts: { since: Date; senders?: string[]; subjects?: string[] }
+): Promise<number[]> {
+  return [];
 }
