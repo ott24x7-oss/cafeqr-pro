@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, Search, Coffee, X, Power, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Coffee, X, Power, Loader2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input, Textarea } from '@/components/ui/input';
 import { formatCurrency, slugify } from '@/lib/utils';
 import { toast } from '@/components/ui/toaster';
+import { BulkMenuImport } from '@/components/dashboard/bulk-menu-import';
 
 export function MenuManager({ categories: initialCats, items: initialItems }: { categories: any[]; items: any[] }) {
   const [cats, setCats] = useState(initialCats);
@@ -16,6 +17,7 @@ export function MenuManager({ categories: initialCats, items: initialItems }: { 
   const [editCat, setEditCat] = useState<any | null>(null);
   const [showItemModal, setShowItemModal] = useState(false);
   const [editItem, setEditItem] = useState<any | null>(null);
+  const [showBulkImport, setShowBulkImport] = useState(false);
 
   const filtered = items.filter((i) => {
     if (activeCat !== 'all' && i.categoryId !== activeCat) return false;
@@ -56,7 +58,10 @@ export function MenuManager({ categories: initialCats, items: initialItems }: { 
           <h1 className="font-display text-2xl md:text-3xl font-bold text-coffee-900">Menu</h1>
           <p className="text-coffee-600 text-sm">{items.length} items in {cats.length} categories</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" onClick={() => setShowBulkImport(true)}>
+            <Upload className="h-4 w-4" /> Bulk Import
+          </Button>
           <Button variant="outline" onClick={() => { setEditCat(null); setShowCatModal(true); }}>
             <Plus className="h-4 w-4" /> Category
           </Button>
@@ -130,6 +135,15 @@ export function MenuManager({ categories: initialCats, items: initialItems }: { 
         ))}
       </div>
 
+      {showBulkImport && (
+        <BulkMenuImport
+          onClose={() => setShowBulkImport(false)}
+          onImported={(count) => {
+            // Refresh the page to show newly imported items
+            if (count > 0) window.location.reload();
+          }}
+        />
+      )}
       {showCatModal && (
         <CategoryModal
           cat={editCat}
