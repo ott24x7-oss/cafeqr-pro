@@ -71,39 +71,55 @@ export function CafeLobby({ cafe }: { cafe: Cafe }) {
     >
       {/* Hero */}
       <header className="relative">
-        <div className="h-44 sm:h-56 md:h-64 w-full bg-coffee-gradient relative overflow-hidden">
+        <div className="h-40 sm:h-56 md:h-64 w-full bg-coffee-gradient relative overflow-hidden">
           {cafe.coverUrl && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={cafe.coverUrl} alt="" className="absolute inset-0 h-full w-full object-cover opacity-90" />
+            <img src={cafe.coverUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
           )}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/10 to-black/40" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/5 to-black/30" />
         </div>
-        <div className="max-w-3xl mx-auto px-4 -mt-12 sm:-mt-16 relative">
-          <div className="flex items-end gap-3 sm:gap-4">
-            <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl bg-white shadow-coffee grid place-items-center overflow-hidden border-4 border-cream-50 shrink-0">
+      </header>
+
+      <main className="max-w-3xl mx-auto px-4 -mt-16 sm:-mt-20 relative space-y-5">
+        {/* Cafe info card — sits over the hero */}
+        <section className="rounded-2xl bg-white border border-coffee-100 shadow-coffee p-4 sm:p-5">
+          <div className="flex items-start gap-3 sm:gap-4">
+            <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl bg-cream-50 grid place-items-center overflow-hidden ring-1 ring-coffee-100 shrink-0">
               {cafe.logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={cafe.logoUrl} alt={cafe.name} className="h-full w-full object-cover" />
               ) : (
-                <Coffee className="h-10 w-10 text-coffee-700" />
+                <Coffee className="h-8 w-8 sm:h-10 sm:w-10 text-coffee-700" />
               )}
             </div>
-            <div className="text-cream-50 pb-2 min-w-0">
-              <h1 className="font-display text-2xl sm:text-3xl font-bold truncate">{cafe.name}</h1>
-              {(cafe.city || cafe.address) && (
-                <div className="text-xs sm:text-sm flex items-center gap-1 opacity-90 truncate">
-                  <MapPin className="h-3 w-3 shrink-0" /> <span className="truncate">{cafe.address ?? cafe.city}</span>
-                </div>
-              )}
+            <div className="min-w-0 flex-1">
+              <h1 className="font-display text-xl sm:text-2xl md:text-3xl font-bold text-coffee-900 leading-tight truncate">
+                {cafe.name}
+              </h1>
+              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm text-coffee-600">
+                {(cafe.city || cafe.address) && (
+                  <span className="inline-flex items-center gap-1 min-w-0">
+                    <MapPin className="h-3 w-3 shrink-0" />
+                    <span className="truncate">{cafe.address ?? cafe.city}</span>
+                  </span>
+                )}
+                {cafe.phone && (
+                  <a href={`tel:${cafe.phone}`} className="inline-flex items-center gap-1 hover:text-coffee-900">
+                    <Phone className="h-3 w-3" /> {cafe.phone}
+                  </a>
+                )}
+                <span className="inline-flex items-center gap-1 text-emerald-700">
+                  <Clock className="h-3 w-3" /> Open
+                </span>
+              </div>
             </div>
           </div>
           {cafe.description && (
             <p className="mt-3 text-sm text-coffee-700">{cafe.description}</p>
           )}
-        </div>
-      </header>
+        </section>
 
-      <main className="max-w-3xl mx-auto px-4 mt-6 space-y-6">
+        <div className="space-y-6">
         {/* Quick actions */}
         <section className="grid grid-cols-2 gap-3">
           {showTakeaway && (
@@ -220,17 +236,16 @@ export function CafeLobby({ cafe }: { cafe: Cafe }) {
           </section>
         )}
 
-        {/* Footer info */}
-        <section className="pt-3 border-t border-coffee-100 text-xs text-coffee-500 flex flex-wrap items-center justify-between gap-2">
-          {cafe.phone && (
-            <a href={`tel:${cafe.phone}`} className="inline-flex items-center gap-1 hover:text-coffee-800">
-              <Phone className="h-3 w-3" /> {cafe.phone}
-            </a>
-          )}
-          <span className="inline-flex items-center gap-1">
-            <Clock className="h-3 w-3" /> Live orders · powered by CafeQR Pro
-          </span>
-        </section>
+          {/* Footer info */}
+          <section className="pt-3 border-t border-coffee-100 text-xs text-coffee-500 flex flex-wrap items-center justify-between gap-2">
+            <span>Live orders · powered by CafeQR Pro</span>
+            {cafe.phone && (
+              <a href={`tel:${cafe.phone}`} className="inline-flex items-center gap-1 hover:text-coffee-800">
+                <Phone className="h-3 w-3" /> {cafe.phone}
+              </a>
+            )}
+          </section>
+        </div>
       </main>
     </div>
   );

@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input, Textarea } from '@/components/ui/input';
+import { ImagePicker } from '@/components/ui/image-picker';
+import { BaileysPair } from './baileys-pair';
 import { toast } from '@/components/ui/toaster';
 
 type Tab = 'profile' | 'tax' | 'whatsapp' | 'payment' | 'branding';
@@ -137,18 +139,42 @@ export function SettingsClient({ cafe }: { cafe: any }) {
         </div>
 
         {tab === 'profile' && (
-          <div className="grid md:grid-cols-2 gap-4">
-            <Field l="Cafe name" v={form.name} on={(v: string) => setForm({ ...form, name: v })} />
-            <Field l="Email" v={form.email} on={(v: string) => setForm({ ...form, email: v })} />
-            <Field l="Phone" v={form.phone} on={(v: string) => setForm({ ...form, phone: v })} />
-            <Field l="WhatsApp number" v={form.whatsappNo} on={(v: string) => setForm({ ...form, whatsappNo: v })} />
-            <Field l="GST number" v={form.gstNumber} on={(v: string) => setForm({ ...form, gstNumber: v })} />
-            <Field l="FSSAI number" v={form.fssaiNumber} on={(v: string) => setForm({ ...form, fssaiNumber: v })} />
-            <Field l="City" v={form.city} on={(v: string) => setForm({ ...form, city: v })} />
-            <Field l="Address" v={form.address} on={(v: string) => setForm({ ...form, address: v })} className="md:col-span-2" />
-            <Field l="Description" v={form.description} on={(v: string) => setForm({ ...form, description: v })} multiline className="md:col-span-2" />
-            <Field l="Logo URL" v={form.logoUrl} on={(v: string) => setForm({ ...form, logoUrl: v })} />
-            <Field l="Cover image URL" v={form.coverUrl} on={(v: string) => setForm({ ...form, coverUrl: v })} />
+          <div className="space-y-4">
+            <div className="grid md:grid-cols-[auto,1fr] gap-4 items-start">
+              <div>
+                <label className="label">Logo</label>
+                <ImagePicker
+                  value={form.logoUrl}
+                  onChange={(v) => setForm({ ...form, logoUrl: v })}
+                  aspect="square"
+                  maxSize={256}
+                  placeholder="Cafe logo"
+                  hint="Square crop, ~256px. JPG/PNG."
+                />
+              </div>
+              <div>
+                <label className="label">Cover banner</label>
+                <ImagePicker
+                  value={form.coverUrl}
+                  onChange={(v) => setForm({ ...form, coverUrl: v })}
+                  aspect="cover"
+                  maxSize={1600}
+                  placeholder="Cover banner (16:6)"
+                  hint="Wide banner shown on the public page. Long edge resized to ~1600px."
+                />
+              </div>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              <Field l="Cafe name" v={form.name} on={(v: string) => setForm({ ...form, name: v })} />
+              <Field l="Email" v={form.email} on={(v: string) => setForm({ ...form, email: v })} />
+              <Field l="Phone" v={form.phone} on={(v: string) => setForm({ ...form, phone: v })} />
+              <Field l="WhatsApp number" v={form.whatsappNo} on={(v: string) => setForm({ ...form, whatsappNo: v })} />
+              <Field l="GST number" v={form.gstNumber} on={(v: string) => setForm({ ...form, gstNumber: v })} />
+              <Field l="FSSAI number" v={form.fssaiNumber} on={(v: string) => setForm({ ...form, fssaiNumber: v })} />
+              <Field l="City" v={form.city} on={(v: string) => setForm({ ...form, city: v })} />
+              <Field l="Address" v={form.address} on={(v: string) => setForm({ ...form, address: v })} className="md:col-span-2" />
+              <Field l="Description" v={form.description} on={(v: string) => setForm({ ...form, description: v })} multiline className="md:col-span-2" />
+            </div>
           </div>
         )}
 
@@ -244,23 +270,24 @@ export function SettingsClient({ cafe }: { cafe: any }) {
             )}
 
             {settings.whatsappProvider === 'baileys' && (
-              <div className="md:col-span-2 rounded-2xl border border-amber-200 bg-amber-50/60 p-4 space-y-2 text-sm">
-                <div className="font-semibold text-coffee-900">Baileys (self-hosted) setup</div>
-                <p className="text-coffee-700">
-                  Baileys needs the worker service deployed alongside your app. Once running, set
-                  <code className="mx-1 px-1.5 py-0.5 bg-white rounded border border-coffee-200">BAILEYS_WORKER_URL</code>
-                  in your env, then visit the worker's <code className="mx-1 px-1.5 py-0.5 bg-white rounded border border-coffee-200">/qr</code> endpoint
-                  to scan the pairing QR with the cafe's WhatsApp.
-                </p>
-                <Field
-                  l="Session ID (optional, default: 'default')"
-                  v={settings.baileysSessionId}
-                  on={(v: string) => setSettings({ ...settings, baileysSessionId: v })}
-                  placeholder="cafe-mocha-main"
-                />
-                <p className="text-xs text-coffee-600">
-                  See <code>worker/baileys-server.ts</code> in this repo for the reference implementation.
-                </p>
+              <div className="md:col-span-2 space-y-3">
+                <BaileysPair sessionId={settings.baileysSessionId || cafe.id} />
+                <details className="rounded-xl border border-coffee-200 bg-white p-3 text-xs text-coffee-600">
+                  <summary className="cursor-pointer font-semibold text-coffee-800">Advanced — session ID</summary>
+                  <div className="mt-2 space-y-2">
+                    <Field
+                      l="Session ID"
+                      v={settings.baileysSessionId}
+                      on={(v: string) => setSettings({ ...settings, baileysSessionId: v })}
+                      placeholder={cafe.id}
+                    />
+                    <p>
+                      Defaults to your cafe id. Auth state lives at <code>/tmp/cafeqr-baileys/&lt;id&gt;</code>
+                      on the server. Container restarts wipe it — re-pair if that happens. To survive
+                      restarts mount a Railway volume at that path.
+                    </p>
+                  </div>
+                </details>
               </div>
             )}
 
