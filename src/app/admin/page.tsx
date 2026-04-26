@@ -62,8 +62,8 @@ export default async function AdminOverview() {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
         {[
           { l: 'Platform Payment', s: 'UPI + IMAP for subscriptions', href: '/admin/site?tab=payment', i: IndianRupee, hot: !site.platformUpiId },
+          { l: 'Subscriptions',    s: 'Verify, cancel, scan now',      href: '/admin/subscriptions',     i: Bell,        hot: false },
           { l: 'Email / SMTP',     s: 'Outbound mail config',         href: '/admin/site?tab=email',   i: Mail,        hot: !site.smtpHost },
-          { l: 'Branding',         s: 'Site name, tagline, support',   href: '/admin/site?tab=branding', i: Globe,       hot: false },
           { l: 'Plans',            s: 'Pricing & feature limits',      href: '/admin/plans',             i: CreditCard,  hot: false },
           { l: 'Cafes',            s: 'Suspend, reassign, manage',     href: '/admin/cafes',             i: Coffee,      hot: false },
           { l: 'Site content',     s: 'Marketing copy JSON',           href: '/admin/site?tab=content',  i: FileText,    hot: false },

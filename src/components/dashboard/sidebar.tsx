@@ -34,6 +34,7 @@ export function DashboardSidebar({ role, cafeName, isAdmin }: { role: string; ca
     { href: '/admin/cafes', label: 'Cafes', icon: Coffee },
     { href: '/admin/users', label: 'Users', icon: Users },
     { href: '/admin/plans', label: 'Plans', icon: CreditCard },
+    { href: '/admin/subscriptions', label: 'Subscriptions', icon: Receipt },
     { href: '/admin/site', label: 'Site & Email', icon: Globe },
   ];
 
