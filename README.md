@@ -38,49 +38,167 @@
 
 ---
 
-## 🚀 Quick start (local)
+## 🚀 Local development
 
-### 1. Prerequisites
+> **New here?** See [SETUP.md](./SETUP.md) for a quick-start checklist and troubleshooting guide.
 
-- Node 20+ and npm
-- PostgreSQL 14+ (local) — or use Railway/Neon/Supabase free DB
+### Prerequisites
 
-### 2. Install & configure
+| Tool | Version | Notes |
+|------|---------|-------|
+| Node.js | 18+ (20 recommended) | [nodejs.org](https://nodejs.org) |
+| npm | 9+ | Bundled with Node.js |
+| PostgreSQL | 14+ | Local install **or** Docker (see below) **or** a free cloud DB |
+
+You do **not** need PostgreSQL installed locally if you use Docker or a cloud provider.
+
+---
+
+### Step 1 — Clone & install
 
 ```bash
-# 1. Install
+git clone https://github.com/your-org/cafeqr-pro.git
+cd cafeqr-pro
 npm install
-
-# 2. Copy env template
-cp .env.example .env
-
-# 3. Edit .env and set DATABASE_URL + NEXTAUTH_SECRET (any 32-char random)
-#    On macOS/Linux:
-#    openssl rand -base64 32
 ```
 
-### 3. Run migrations & seed
+---
+
+### Step 2 — Configure environment
 
 ```bash
-# Sync Prisma client + run first migration
-npm run db:push     # OR for proper migration history: npm run db:migrate
+cp .env.example .env
+```
 
-# Seed plans, super admin, and a demo cafe with sample menu
+Open `.env` and fill in the required values. At minimum you need:
+
+| Variable | What to put |
+|----------|-------------|
+| `DATABASE_URL` | Your PostgreSQL connection string (see options below) |
+| `NEXTAUTH_SECRET` | A random 32-byte secret (see generation instructions below) |
+| `NEXTAUTH_URL` | `http://localhost:3000` for local dev |
+| `APP_URL` | `http://localhost:3000` for local dev |
+| `ENCRYPTION_KEY` | A random 32-byte hex key (see generation instructions below) |
+| `SUPER_ADMIN_EMAIL` | Email for the super-admin account created by the seed |
+| `SUPER_ADMIN_PASSWORD` | Password for the super-admin account |
+
+#### Database options
+
+**Option A — Local PostgreSQL**
+
+If you have PostgreSQL installed:
+
+```bash
+# Create the database
+createdb cafeqr
+```
+
+```env
+DATABASE_URL="postgresql://postgres:password@localhost:5432/cafeqr?schema=public"
+```
+
+**Option B — Docker (no local PostgreSQL needed)**
+
+```bash
+docker run -d \
+  --name cafeqr-postgres \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=cafeqr \
+  -p 5432:5432 \
+  postgres:16-alpine
+```
+
+```env
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/cafeqr?schema=public"
+```
+
+**Option C — Free cloud database**
+
+| Provider | Free tier | Notes |
+|----------|-----------|-------|
+| [Neon](https://neon.tech) | ✅ 0.5 GB | Serverless Postgres, instant setup |
+| [Supabase](https://supabase.com) | ✅ 500 MB | Postgres + extras |
+| [Railway](https://railway.app) | ✅ $5 credit | Same platform as production |
+
+Copy the connection string from your provider's dashboard and paste it as `DATABASE_URL`.
+
+#### Generating secrets
+
+```bash
+# NEXTAUTH_SECRET — base64-encoded random string
+openssl rand -base64 32
+
+# ENCRYPTION_KEY — 64 hex characters (32 bytes)
+openssl rand -hex 32
+```
+
+On Windows (PowerShell):
+
+```powershell
+# NEXTAUTH_SECRET
+[Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Maximum 256 }))
+
+# ENCRYPTION_KEY
+-join ((1..32) | ForEach-Object { '{0:x2}' -f (Get-Random -Maximum 256) })
+```
+
+Or use the online generator at [generate-secret.vercel.app](https://generate-secret.vercel.app/32).
+
+---
+
+### Step 3 — Set up the database
+
+```bash
+# Push the Prisma schema to your database (creates all tables)
+npm run db:push
+
+# Seed the database with plans, a super-admin account, and a demo cafe
 npm run db:seed
 ```
 
+> **Tip:** Use `npm run db:migrate` instead of `db:push` if you want a proper
+> migration history tracked in `prisma/migrations/`. For local dev, `db:push`
+> is faster and simpler.
+
 The seed creates:
 
-- **Super admin** → `admin@cafeqr.pro` / `ChangeMe@123` *(or whatever you set in `.env`)*
-- **Demo cafe owner** → `owner@mocha.cafe` / `Owner@123`
-- A demo cafe **Cafe Mocha** with 5 tables, 5 categories, 12 menu items, 3 plans
-- Public menu lives at `http://localhost:3000/cafe/cafe-mocha`
+| Account | Email | Password |
+|---------|-------|----------|
+| Super admin | *(your `SUPER_ADMIN_EMAIL`)* | *(your `SUPER_ADMIN_PASSWORD`)* |
+| Demo cafe owner | `owner@mocha.cafe` | `Owner@123` |
 
-### 4. Start dev server
+It also creates **Cafe Mocha** — a demo cafe with 5 tables, 5 categories, 12 menu items, and 3 subscription plans.
+
+---
+
+### Step 4 — Start the dev server
 
 ```bash
 npm run dev
 # → http://localhost:3000
+```
+
+| URL | What you'll find |
+|-----|-----------------|
+| `http://localhost:3000` | Public landing page |
+| `http://localhost:3000/login` | Login (use super-admin or demo owner credentials) |
+| `http://localhost:3000/dashboard` | Cafe owner dashboard |
+| `http://localhost:3000/admin` | Super-admin panel |
+| `http://localhost:3000/cafe/cafe-mocha` | Demo customer menu |
+
+---
+
+### Useful dev commands
+
+```bash
+npm run dev          # Start Next.js dev server with hot reload
+npm run db:push      # Sync Prisma schema → database (no migration files)
+npm run db:migrate   # Create a new migration and apply it
+npm run db:seed      # Seed plans, super-admin, and demo cafe
+npm run db:studio    # Open Prisma Studio (visual DB browser) at localhost:5555
+npm run build        # Production build
+npm run lint         # ESLint
 ```
 
 ---
@@ -261,10 +379,34 @@ prisma/
 
 ## 🛟 Troubleshooting
 
-- **Prisma migration fails** — `npm run db:push` instead of `migrate` for first-time dev.
-- **Build error: cannot find module `@prisma/client`** — run `npm install` again, or `npm run postinstall`.
-- **Customer OTP** — in development, the API returns the OTP in the response so you can auto-fill. In prod, switch `WHATSAPP_PROVIDER` to `cloud_api` or `baileys` to actually deliver.
-- **Email not sending** — SMTP is optional; if vars not set, the app skips sends gracefully.
+**`Cannot find module '@prisma/client'`**
+Run `npm install` then `npm run postinstall` (which runs `prisma generate`).
+
+**`Error: P1001 — Can't reach database server`**
+Your `DATABASE_URL` is wrong or the database isn't running. Double-check the host, port, username, and password. If using Docker, make sure the container is running (`docker ps`).
+
+**`Error: P3005 — The database schema is not empty`**
+Use `npm run db:push --force-reset` to wipe and recreate all tables (⚠️ destroys all data), or use `npm run db:migrate` to apply incremental migrations.
+
+**Prisma migration fails on first run**
+Try `npm run db:push` instead of `db:migrate` — it's simpler for a fresh database with no migration history.
+
+**`NEXTAUTH_SECRET` error / session not working**
+Make sure `NEXTAUTH_SECRET` is set in `.env` and is at least 32 characters. Generate one with `openssl rand -base64 32`.
+
+**`ENCRYPTION_KEY` must be 64 hex characters**
+Generate a valid key with `openssl rand -hex 32` and paste the output (no quotes, no spaces) as the value.
+
+**Customer OTP not arriving**
+In development, the OTP is returned directly in the API response body so you can fill it in manually — no WhatsApp delivery needed. In production, set `WHATSAPP_PROVIDER=cloud_api` and configure `WHATSAPP_CLOUD_TOKEN` + `WHATSAPP_CLOUD_PHONE_ID`.
+
+**Email not sending**
+SMTP is optional. If the `SMTP_*` variables are not set, the app skips email sends silently. Check your SMTP credentials and make sure `SMTP_HOST` is reachable.
+
+**Build error on Railway / production**
+The build command runs `prisma generate && next build`. Make sure `DATABASE_URL` is set as an environment variable in your Railway service before deploying.
+
+> See [SETUP.md](./SETUP.md) for a full troubleshooting guide and database connection examples.
 
 ---
 
