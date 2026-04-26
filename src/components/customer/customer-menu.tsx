@@ -1,8 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
-import { Search, ShoppingCart, X, Plus, Minus, Coffee, Leaf, Drumstick, Flame, Star, MapPin, Phone, Clock } from 'lucide-react';
+import {
+  Search, ShoppingCart, X, Plus, Minus, Coffee, Leaf, Drumstick, Flame, Star,
+  MapPin, Phone, Clock, ChevronDown, ChevronUp, Menu as MenuIcon,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input, Textarea } from '@/components/ui/input';
 import { calcCart, type CartItem } from '@/lib/order-utils';
@@ -29,10 +32,14 @@ type CafeWithMenu = {
 
 export function CustomerMenu({ cafe, table }: { cafe: CafeWithMenu; table: any }) {
   const [search, setSearch] = useState('');
-  const [activeCat, setActiveCat] = useState<string>('all');
+  const [showSearch, setShowSearch] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showCart, setShowCart] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [showMenuJump, setShowMenuJump] = useState(false);
+  // Track which sections are expanded — collapsible like Swiggy.
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
   // Persist cart per table in localStorage
   const cartKey = `cart_${cafe.slug}_${table?.code ?? 'walkin'}`;
@@ -46,15 +53,38 @@ export function CustomerMenu({ cafe, table }: { cafe: CafeWithMenu; table: any }
     localStorage.setItem(cartKey, JSON.stringify(cart));
   }, [cart, cartKey]);
 
-  const allItems = useMemo(() => cafe.categories.flatMap((c) => c.items.map((i) => ({ ...i, _cat: c.name }))), [cafe.categories]);
-  const filtered = useMemo(() => {
-    let items = activeCat === 'all' ? allItems : (cafe.categories.find((c) => c.id === activeCat)?.items ?? []);
-    if (search) {
-      const q = search.toLowerCase();
-      items = items.filter((i) => i.name.toLowerCase().includes(q) || i.description?.toLowerCase().includes(q));
-    }
-    return items;
-  }, [activeCat, allItems, cafe.categories, search]);
+  // Filter items per section by the search query so each category that has
+  // matches keeps its header.
+  const sections = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return cafe.categories
+      .map((c) => ({
+        ...c,
+        items: q
+          ? c.items.filter(
+              (i) =>
+                i.name.toLowerCase().includes(q) ||
+                (i.description ?? '').toLowerCase().includes(q)
+            )
+          : c.items,
+      }))
+      .filter((c) => c.items.length > 0);
+  }, [search, cafe.categories]);
+
+  const totalMatchedItems = sections.reduce((s, c) => s + c.items.length, 0);
+
+  function jumpTo(catId: string) {
+    setShowMenuJump(false);
+    setCollapsed((c) => ({ ...c, [catId]: false }));
+    requestAnimationFrame(() => {
+      const el = sectionRefs.current[catId];
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+
+  function toggleSection(catId: string) {
+    setCollapsed((c) => ({ ...c, [catId]: !c[catId] }));
+  }
 
   const totals = calcCart(cart, cafe.settings, 'DINE_IN');
 
@@ -96,11 +126,13 @@ export function CustomerMenu({ cafe, table }: { cafe: CafeWithMenu; table: any }
 
   return (
     <div className="min-h-screen bg-cream-50 pb-32">
-      {/* Hero header */}
+      {/* Hero header — short on desktop, the cover image (if any) does the
+          heavy lifting; lots of empty brown gradient on a 1080p screen
+          looked dead. */}
       <div className="relative">
-        <div className="h-44 md:h-56 bg-coffee-gradient relative overflow-hidden">
+        <div className="h-40 sm:h-32 md:h-36 bg-coffee-gradient relative overflow-hidden">
           {cafe.coverUrl && (
-            <Image src={cafe.coverUrl} alt="" fill className="object-cover opacity-30" />
+            <Image src={cafe.coverUrl} alt="" fill className="object-cover opacity-40" />
           )}
           <div className="absolute inset-0 bg-pattern opacity-20" />
         </div>
@@ -130,42 +162,100 @@ export function CustomerMenu({ cafe, table }: { cafe: CafeWithMenu; table: any }
         </div>
       </div>
 
-      {/* Search */}
-      <div className="container max-w-3xl mt-5">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-coffee-400" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search dishes…"
-            className="pl-9 bg-white"
-          />
+      {/* Sticky compact top bar — name + delivery hint on the left, search
+          icon on the right. Mirrors Swiggy's restaurant page header. */}
+      <div className="sticky top-0 z-30 bg-cream-50/95 backdrop-blur border-b border-coffee-100">
+        <div className="container max-w-3xl py-2.5 flex items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-coffee-900 truncate text-sm">{cafe.name}</div>
+            <div className="text-[11px] text-coffee-500 truncate">
+              {table ? `Table ${table.number}` : 'Takeaway'}
+              {' · '}
+              <span className="text-emerald-700">Open</span>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowSearch((s) => !s)}
+            className="h-9 w-9 grid place-items-center rounded-full border border-coffee-200 bg-white text-coffee-700 hover:bg-cream-100"
+            aria-label="Search"
+          >
+            <Search className="h-4 w-4" />
+          </button>
         </div>
-      </div>
-
-      {/* Category chips */}
-      <div className="container max-w-3xl mt-4 sticky top-0 z-30 -mx-4 px-4 py-3 bg-cream-50/90 backdrop-blur">
-        <div className="flex gap-2 overflow-x-auto scroll-snap-x scrollbar-none -mx-4 px-4 pb-1">
-          <CategoryChip active={activeCat === 'all'} onClick={() => setActiveCat('all')}>
-            All ({allItems.length})
-          </CategoryChip>
-          {cafe.categories.map((c) => (
-            <CategoryChip key={c.id} active={activeCat === c.id} onClick={() => setActiveCat(c.id)}>
-              {c.name} ({c.items.length})
-            </CategoryChip>
-          ))}
-        </div>
-      </div>
-
-      {/* Items grid */}
-      <div className="container max-w-3xl mt-2 space-y-3">
-        {filtered.length === 0 && (
-          <div className="card-warm text-center text-coffee-600">No items match your search.</div>
+        {showSearch && (
+          <div className="container max-w-3xl pb-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-coffee-400" />
+              <Input
+                autoFocus
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search dishes…"
+                className="pl-9 bg-white"
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-coffee-400 hover:text-coffee-700"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
         )}
-        {filtered.map((it) => (
-          <MenuItemCard key={it.id} item={it} onAdd={() => setSelectedItem(it)} />
-        ))}
       </div>
+
+      {/* Sections — single column even on PC, like Swiggy. Each category is a
+          collapsible block; the floating MENU button below jumps to a section. */}
+      <div className="container max-w-3xl mt-3 space-y-3">
+        {sections.length === 0 ? (
+          <div className="card-warm text-center text-coffee-600">No items match your search.</div>
+        ) : (
+          sections.map((section) => {
+            const isCollapsed = !!collapsed[section.id];
+            return (
+              <section
+                key={section.id}
+                ref={(el) => { sectionRefs.current[section.id] = el; }}
+                className="bg-white rounded-2xl border border-coffee-100 overflow-hidden scroll-mt-20"
+              >
+                <button
+                  onClick={() => toggleSection(section.id)}
+                  className="w-full flex items-center justify-between px-4 py-3.5 text-left hover:bg-cream-50 transition"
+                >
+                  <span className="font-bold text-coffee-900 text-base">
+                    {section.name} <span className="text-coffee-500 font-normal">({section.items.length})</span>
+                  </span>
+                  {isCollapsed ? <ChevronDown className="h-4 w-4 text-coffee-500" /> : <ChevronUp className="h-4 w-4 text-coffee-500" />}
+                </button>
+                {!isCollapsed && (
+                  <div className="divide-y divide-coffee-100">
+                    {section.items.map((it: any) => (
+                      <MenuItemCard key={it.id} item={it} onAdd={() => setSelectedItem(it)} />
+                    ))}
+                  </div>
+                )}
+              </section>
+            );
+          })
+        )}
+      </div>
+
+      {/* Floating MENU button (bottom-right). Tapping opens a category-jump
+          sheet so the customer can leap to a section without scrolling. */}
+      {sections.length > 1 && (
+        <button
+          onClick={() => setShowMenuJump(true)}
+          className="fixed bottom-4 right-4 z-40 h-14 w-14 rounded-full bg-coffee-900 text-cream-50 shadow-coffee flex items-center justify-center hover:scale-105 active:scale-95 transition"
+          aria-label="Menu sections"
+        >
+          <div className="flex flex-col items-center gap-0.5">
+            <MenuIcon className="h-4 w-4" />
+            <span className="text-[9px] font-semibold tracking-wider">MENU</span>
+          </div>
+        </button>
+      )}
 
       {/* Sticky cart */}
       {cart.length > 0 && (
@@ -177,6 +267,38 @@ export function CustomerMenu({ cafe, table }: { cafe: CafeWithMenu; table: any }
           <span>{totals.itemCount} {totals.itemCount === 1 ? 'item' : 'items'} · {formatCurrency(totals.totalAmount)}</span>
           <span className="opacity-80">View cart →</span>
         </button>
+      )}
+
+      {/* Category jump sheet (Swiggy-style — slides up from bottom). */}
+      {showMenuJump && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center p-4"
+          onClick={() => setShowMenuJump(false)}
+        >
+          <div
+            className="w-full max-w-md bg-coffee-900 text-cream-50 rounded-2xl overflow-hidden animate-fade-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 py-3 flex items-center justify-between border-b border-white/10">
+              <span className="font-bold tracking-wider text-xs uppercase opacity-90">Menu · {totalMatchedItems} items</span>
+              <button onClick={() => setShowMenuJump(false)} className="opacity-70 hover:opacity-100">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="max-h-[55vh] overflow-y-auto divide-y divide-white/10">
+              {sections.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => jumpTo(c.id)}
+                  className="w-full flex items-center justify-between px-5 py-3 hover:bg-white/5 transition"
+                >
+                  <span className="text-sm">{c.name}</span>
+                  <span className="text-sm opacity-70">{c.items.length}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Item detail modal */}
@@ -206,71 +328,92 @@ export function CustomerMenu({ cafe, table }: { cafe: CafeWithMenu; table: any }
   );
 }
 
-function CategoryChip({ active, children, onClick }: any) {
-  return (
-    <button
-      onClick={onClick}
-      className={`shrink-0 snap-start rounded-full px-4 py-1.5 text-sm font-semibold whitespace-nowrap transition ${
-        active ? 'bg-coffee-700 text-cream-50' : 'bg-white border border-coffee-200 text-coffee-700'
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
+/** Swiggy-style menu row: text left, image right with the ADD button
+ *  overlapping the bottom of the image. Lives inside a section card so it
+ *  shares dividers with siblings. */
 function MenuItemCard({ item, onAdd }: { item: any; onAdd: () => void }) {
-  const price = item.discountedPrice ?? item.price;
+  const isVeg = item.diet === 'VEG' || item.diet === 'VEGAN';
+  const customisable = (item.variants?.length ?? 0) > 0 || (item.addons?.length ?? 0) > 0;
+  const soldOut = item.inStock === false;
+
   return (
-    <button
-      onClick={item.inStock === false ? undefined : onAdd}
-      disabled={item.inStock === false}
-      className={`w-full card-warm flex gap-4 transition text-left ${
-        item.inStock === false
-          ? 'opacity-60 cursor-not-allowed'
-          : 'hover:-translate-y-0.5 active:scale-[0.99]'
-      }`}
-    >
+    <div className={`flex gap-4 px-4 pt-4 ${customisable && !soldOut ? 'pb-9' : 'pb-6'} ${soldOut ? 'opacity-60' : ''}`}>
       <div className="flex-1 min-w-0">
+        {/* Veg / non-veg square indicator */}
         <div className="flex items-center gap-2 mb-1">
-          {item.diet === 'VEG' || item.diet === 'VEGAN' ? (
-            <span className="veg-dot" title="Veg" />
-          ) : (
-            <span className="nonveg-dot" title="Non-veg" />
+          <span
+            className={`inline-flex items-center justify-center h-3.5 w-3.5 border-2 ${
+              isVeg ? 'border-emerald-600' : 'border-rose-600'
+            }`}
+            title={isVeg ? 'Veg' : 'Non-veg'}
+          >
+            <span className={`h-1.5 w-1.5 rounded-full ${isVeg ? 'bg-emerald-600' : 'bg-rose-600'}`} />
+          </span>
+          {item.isPopular && (
+            <span className="inline-flex items-center gap-1 text-amber-600 text-[11px] font-semibold">
+              <Star className="h-3 w-3 fill-amber-500 text-amber-500" /> Bestseller
+            </span>
           )}
           {item.spicy === 'HOT' || item.spicy === 'EXTRA_HOT' ? (
-            <Flame className="h-3.5 w-3.5 text-rose-500" />
+            <Flame className="h-3 w-3 text-rose-500" />
           ) : null}
-          {item.isPopular && <span className="pill-amber"><Star className="h-3 w-3 fill-amber-500 text-amber-500" />Bestseller</span>}
-          {!item.inStock && <span className="pill-rose">Out of stock</span>}
         </div>
-        <div className="font-bold text-coffee-900 leading-tight">{item.name}</div>
-        {item.description && <div className="text-xs text-coffee-600 mt-1 line-clamp-2">{item.description}</div>}
-        <div className="mt-2 flex items-center gap-2">
+
+        <div className="font-semibold text-coffee-900 leading-snug">{item.name}</div>
+
+        <div className="mt-1 flex items-center gap-2">
           {item.discountedPrice ? (
             <>
-              <span className="font-bold text-coffee-900">{formatCurrency(item.discountedPrice)}</span>
-              <span className="text-sm text-coffee-400 line-through">{formatCurrency(item.price)}</span>
+              <span className="font-semibold text-coffee-900">{formatCurrency(item.discountedPrice)}</span>
+              <span className="text-xs text-coffee-400 line-through">{formatCurrency(item.price)}</span>
             </>
           ) : (
-            <span className="font-bold text-coffee-900">{formatCurrency(price)}</span>
+            <span className="font-semibold text-coffee-900">{formatCurrency(item.price)}</span>
           )}
-          {item.prepMinutes && <span className="text-[11px] text-coffee-500">· {item.prepMinutes} min</span>}
+          {item.prepMinutes ? (
+            <span className="text-[11px] text-coffee-500">· {item.prepMinutes} min</span>
+          ) : null}
         </div>
+
+        {item.description && (
+          <div className="text-xs text-coffee-600 mt-1.5 line-clamp-2">{item.description}</div>
+        )}
       </div>
-      <div className="relative shrink-0">
-        <div className="h-24 w-24 md:h-28 md:w-28 rounded-xl bg-coffee-gradient grid place-items-center overflow-hidden">
+
+      {/* Image + overlapping ADD button */}
+      <div className="relative shrink-0 w-28 sm:w-32">
+        <div className="h-28 sm:h-32 rounded-xl bg-coffee-gradient grid place-items-center overflow-hidden">
           {item.imageUrl ? (
-            <Image src={item.imageUrl} alt={item.name} width={112} height={112} className="object-cover h-full w-full" />
+            <Image
+              src={item.imageUrl}
+              alt={item.name}
+              width={128}
+              height={128}
+              className="object-cover h-full w-full"
+            />
           ) : (
-            <Coffee className="h-7 w-7 text-cream-50" />
+            <Coffee className="h-8 w-8 text-cream-50/70" />
           )}
         </div>
-        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-white text-coffee-800 border border-coffee-200 rounded-full px-3 py-1 text-xs font-bold shadow-soft flex items-center gap-1">
-          <Plus className="h-3 w-3" /> ADD
-        </div>
+        {soldOut ? (
+          <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-white text-rose-600 border border-rose-200 rounded-md px-4 py-1.5 text-xs font-bold shadow-soft uppercase tracking-wider whitespace-nowrap">
+            Sold out
+          </div>
+        ) : (
+          <button
+            onClick={onAdd}
+            className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-white text-emerald-700 border border-emerald-200 rounded-md px-5 py-1.5 text-sm font-bold shadow-soft hover:bg-emerald-50 active:scale-95 transition uppercase tracking-wider"
+          >
+            Add
+          </button>
+        )}
+        {customisable && !soldOut && (
+          <div className="absolute -bottom-7 left-0 right-0 text-center text-[10px] text-coffee-500">
+            Customisable
+          </div>
+        )}
       </div>
-    </button>
+    </div>
   );
 }
 
