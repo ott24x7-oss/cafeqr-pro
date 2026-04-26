@@ -12,6 +12,7 @@ import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
 import { prisma } from './prisma';
 import { decrypt } from './crypto';
+import { onPaymentConfirmed } from './post-payment';
 
 export interface VerifyResult {
   scanned: number;
@@ -155,6 +156,13 @@ export async function verifyFromGmail(cafeId: string): Promise<VerifyResult> {
           ref,
           emailDate: emailAt.toISOString(),
         });
+
+        // Fire-and-forget: send PDF invoice + log notification. Failures are
+        // captured in the post-payment lock so this won't block the loop.
+        onPaymentConfirmed(matchPayment.orderId).catch((e) =>
+          result.errors.push(`post-payment ${matchPayment.orderId}: ${e?.message ?? e}`)
+        );
+
         // Avoid double-matching this email's pending row.
         const idx = pending.indexOf(matchPayment);
         if (idx >= 0) pending.splice(idx, 1);

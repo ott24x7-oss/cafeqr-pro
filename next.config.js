@@ -25,6 +25,7 @@ const nextConfig = {
       'imapflow',
       'mailparser',
       'pino',
+      'pdfkit',
     ],
   },
   webpack: (config, { isServer }) => {
@@ -36,6 +37,7 @@ const nextConfig = {
         imapflow: false,
         mailparser: false,
         pino: false,
+        pdfkit: false,
       };
     }
     return config;

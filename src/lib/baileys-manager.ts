@@ -158,6 +158,7 @@ export async function sendBaileysInProcess(opts: {
   to: string;
   message: string;
   imageUrl?: string;
+  document?: { buffer: Buffer; fileName: string; mimetype?: string };
 }): Promise<{ ok: boolean; error?: string }> {
   const id = opts.sessionId || 'default';
   let sess = sessions.get(id);
@@ -176,7 +177,14 @@ export async function sendBaileysInProcess(opts: {
   }
   const jid = `${opts.to.replace(/\D/g, '')}@s.whatsapp.net`;
   try {
-    if (opts.imageUrl) {
+    if (opts.document) {
+      await sess.sock.sendMessage(jid, {
+        document: opts.document.buffer,
+        mimetype: opts.document.mimetype ?? 'application/pdf',
+        fileName: opts.document.fileName,
+        caption: opts.message,
+      });
+    } else if (opts.imageUrl) {
       await sess.sock.sendMessage(jid, {
         image: { url: opts.imageUrl },
         caption: opts.message,

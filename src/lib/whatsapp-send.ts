@@ -23,6 +23,14 @@ export interface SendOpts {
   config?: CafeWAConfig;
   /** Optional image URL — sent as the message media with `message` as caption. */
   imageUrl?: string;
+  /** Optional PDF/document attachment. Cloud API needs a public URL; Baileys
+   *  ships the buffer in-protocol. */
+  document?: {
+    buffer?: Buffer;
+    url?: string;
+    fileName: string;
+    mimetype?: string;
+  };
 }
 
 function maybeDecrypt(v?: string | null): string | undefined {
@@ -34,7 +42,7 @@ function maybeDecrypt(v?: string | null): string | undefined {
   return v;
 }
 
-export async function sendMessage({ to, message, provider, config, imageUrl }: SendOpts): Promise<SendResult> {
+export async function sendMessage({ to, message, provider, config, imageUrl, document }: SendOpts): Promise<SendResult> {
   const link = waLink(to, message);
   const eff: WAProvider = (provider ?? config?.provider ?? 'manual') as WAProvider;
 
@@ -47,19 +55,33 @@ export async function sendMessage({ to, message, provider, config, imageUrl }: S
       const token   = maybeDecrypt(config?.cloudToken)   ?? process.env.WHATSAPP_CLOUD_TOKEN;
       const phoneId = maybeDecrypt(config?.cloudPhoneId) ?? process.env.WHATSAPP_CLOUD_PHONE_ID;
       if (!token || !phoneId) return { ok: false, provider: eff, error: 'Cloud API not configured', link };
-      const body = imageUrl
-        ? {
-            messaging_product: 'whatsapp',
-            to: normalizePhone(to),
-            type: 'image',
-            image: { link: imageUrl, caption: message },
-          }
-        : {
-            messaging_product: 'whatsapp',
-            to: normalizePhone(to),
-            type: 'text',
-            text: { body: message },
-          };
+
+      // Cloud API document delivery requires a publicly-fetchable URL — we
+      // don't have media-upload wired up yet. If we got a Buffer-only doc,
+      // fall back to a text message with the link.
+      let body: any;
+      if (document?.url) {
+        body = {
+          messaging_product: 'whatsapp',
+          to: normalizePhone(to),
+          type: 'document',
+          document: { link: document.url, filename: document.fileName, caption: message },
+        };
+      } else if (imageUrl) {
+        body = {
+          messaging_product: 'whatsapp',
+          to: normalizePhone(to),
+          type: 'image',
+          image: { link: imageUrl, caption: message },
+        };
+      } else {
+        body = {
+          messaging_product: 'whatsapp',
+          to: normalizePhone(to),
+          type: 'text',
+          text: { body: message },
+        };
+      }
       const res = await fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
         method: 'POST',
         headers: {
@@ -86,6 +108,9 @@ export async function sendMessage({ to, message, provider, config, imageUrl }: S
           to: normalizePhone(to),
           message,
           imageUrl,
+          document: document?.buffer
+            ? { buffer: document.buffer, fileName: document.fileName, mimetype: document.mimetype }
+            : undefined,
         });
         return { ok: r.ok, provider: eff, link, error: r.error };
       } catch (e: any) {
@@ -104,6 +129,9 @@ export async function sendMessage({ to, message, provider, config, imageUrl }: S
           to: normalizePhone(to),
           message,
           imageUrl,
+          document: document?.buffer
+            ? { fileName: document.fileName, mimetype: document.mimetype, base64: document.buffer.toString('base64') }
+            : undefined,
         }),
       });
       if (!res.ok) return { ok: false, provider: eff, error: await res.text(), link };
