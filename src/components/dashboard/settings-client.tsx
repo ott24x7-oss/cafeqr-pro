@@ -85,6 +85,7 @@ export function SettingsClient({ cafe }: { cafe: any }) {
   const [testTo, setTestTo] = useState(form.whatsappNo || '');
   const [testing, setTesting] = useState(false);
   const [imapTesting, setImapTesting] = useState(false);
+  const [imapResult, setImapResult] = useState<any>(null);
   const [newNotifyNumber, setNewNotifyNumber] = useState('');
 
   async function save() {
@@ -101,6 +102,7 @@ export function SettingsClient({ cafe }: { cafe: any }) {
 
   async function testImap() {
     setImapTesting(true);
+    setImapResult(null);
     try {
       // Save the latest settings first so the test endpoint sees the password
       // the user just typed in (instead of the SENTINEL stub).
@@ -111,8 +113,12 @@ export function SettingsClient({ cafe }: { cafe: any }) {
       });
       const r = await fetch('/api/dashboard/payments/test-imap', { method: 'POST' });
       const data = await r.json().catch(() => ({}));
+      setImapResult(data);
       if (data.ok) {
-        toast.success(`IMAP OK — ${data.inboxCount ?? 0} messages in INBOX`, `${data.latencyMs}ms · ${data.user}`);
+        const note = (data.filter?.sender || data.filter?.subject)
+          ? `Filter matched ${data.filteredCount}/${data.last24hCount} of last-24h emails`
+          : `${data.last24hCount} emails in last 24h (no filter set)`;
+        toast.success(`IMAP OK — ${data.inboxCount ?? 0} in INBOX`, note);
       } else {
         toast.error('IMAP failed', data.error ?? 'Check credentials');
       }
@@ -515,6 +521,67 @@ export function SettingsClient({ cafe }: { cafe: any }) {
                   Test connection
                 </Button>
               </div>
+
+              {imapResult && (
+                <div className={`rounded-xl border p-3 text-xs ${imapResult.ok ? 'border-coffee-200 bg-white' : 'border-rose-200 bg-rose-50'}`}>
+                  {!imapResult.ok ? (
+                    <div className="text-rose-700">
+                      <div className="font-semibold">Connection failed</div>
+                      <div className="mt-1 break-words">{imapResult.error}</div>
+                      <div className="mt-2 text-coffee-600">
+                        Tip: with 2-factor on, paste a 16-char Gmail{' '}
+                        <a className="underline" href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer">app password</a>,
+                        not the regular Gmail password.
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 text-coffee-800">
+                      <div className="flex flex-wrap gap-3 items-center">
+                        <span className="pill bg-emerald-100 text-emerald-800">Connected</span>
+                        <span className="text-coffee-600">INBOX: <b>{imapResult.inboxCount}</b></span>
+                        <span className="text-coffee-600">Last 24h: <b>{imapResult.last24hCount}</b></span>
+                        {(imapResult.filter?.sender || imapResult.filter?.subject) && (
+                          <span className={`text-coffee-700 ${imapResult.filteredCount === 0 ? 'text-rose-700 font-semibold' : ''}`}>
+                            Matched filter: <b>{imapResult.filteredCount}</b>
+                          </span>
+                        )}
+                      </div>
+
+                      {(imapResult.filter?.sender || imapResult.filter?.subject) && imapResult.filteredCount === 0 && (
+                        <div className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-amber-900">
+                          Your filter (<b>{imapResult.filter.sender || 'any sender'}</b>
+                          {imapResult.filter.subject ? ` + subject contains "${imapResult.filter.subject}"` : ''})
+                          matched 0 emails in the last 24h. Pick a sender from the list below — or clear both filters
+                          to let the matcher scan every recent email and rely on amount + UTR matching.
+                        </div>
+                      )}
+
+                      {imapResult.recent?.length > 0 && (
+                        <div>
+                          <div className="font-semibold text-coffee-900 mb-1">Recent senders (last 24h):</div>
+                          <div className="space-y-1 max-h-48 overflow-y-auto">
+                            {imapResult.recent.map((r: any, i: number) => (
+                              <button
+                                key={i}
+                                type="button"
+                                onClick={() => setSettings((s) => ({ ...s, gmailSenderFilter: r.from }))}
+                                className="w-full text-left rounded-md border border-coffee-100 bg-cream-50 px-2 py-1.5 hover:bg-cream-100 transition"
+                                title="Click to use this sender as the filter"
+                              >
+                                <div className="font-mono text-[11px] text-coffee-900 truncate">{r.from || '(no sender)'}</div>
+                                <div className="text-[11px] text-coffee-600 truncate">{r.subject || '(no subject)'}</div>
+                              </button>
+                            ))}
+                          </div>
+                          <p className="text-[10px] text-coffee-500 mt-1">
+                            Click a row to copy that sender into the Sender filter, then Save changes.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
