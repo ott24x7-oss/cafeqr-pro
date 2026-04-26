@@ -77,7 +77,14 @@ export default async function DashboardOverview() {
         <p className="text-coffee-600 text-sm">Here's what's happening at {cafe.name} today.</p>
       </div>
 
-      <CafeStoreLink slug={cafe.slug} cafeName={cafe.name} appUrl={appUrl} full={false} />
+      <CafeStoreLink
+        slug={cafe.slug}
+        cafeName={cafe.name}
+        appUrl={appUrl}
+        customDomain={cafe.customDomain}
+        customDomainStatus={cafe.customDomainStatus}
+        full={false}
+      />
 
       {cafe.status === 'TRIAL' && cafe.trialEndsAt && (
         <div className="card-warm border-amber-200 bg-amber-50 flex items-center gap-3">

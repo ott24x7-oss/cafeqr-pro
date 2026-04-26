@@ -15,7 +15,13 @@ export default async function TablesPage() {
   const appUrl = process.env.APP_URL || process.env.NEXTAUTH_URL || '';
   return (
     <div className="space-y-4 pb-20 md:pb-4">
-      <CafeStoreLink slug={cafe.slug} cafeName={cafe.name} appUrl={appUrl} />
+      <CafeStoreLink
+        slug={cafe.slug}
+        cafeName={cafe.name}
+        appUrl={appUrl}
+        customDomain={cafe.customDomain}
+        customDomainStatus={cafe.customDomainStatus}
+      />
       <TablesManager initialTables={tables} cafe={cafe} appUrl={appUrl} />
     </div>
   );

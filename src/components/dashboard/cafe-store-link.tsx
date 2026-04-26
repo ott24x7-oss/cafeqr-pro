@@ -10,11 +10,14 @@ interface Props {
   slug: string;
   cafeName: string;
   appUrl?: string;
+  /** When verified, the URL points at https://<customDomain>/ instead of /cafe/<slug>. */
+  customDomain?: string | null;
+  customDomainStatus?: string | null;
   /** When true (default) renders a full panel; pass false for the compact card. */
   full?: boolean;
 }
 
-export function CafeStoreLink({ slug, cafeName, appUrl, full = true }: Props) {
+export function CafeStoreLink({ slug, cafeName, appUrl, customDomain, customDomainStatus, full = true }: Props) {
   const [origin, setOrigin] = useState(appUrl ?? '');
   const [copied, setCopied] = useState(false);
   const [showQr, setShowQr] = useState(false);
@@ -23,7 +26,11 @@ export function CafeStoreLink({ slug, cafeName, appUrl, full = true }: Props) {
     if (!origin && typeof window !== 'undefined') setOrigin(window.location.origin);
   }, [origin]);
 
-  const url = useMemo(() => `${origin || ''}/cafe/${slug}`, [origin, slug]);
+  const usingCustom = !!customDomain && customDomainStatus === 'verified';
+  const url = useMemo(
+    () => usingCustom ? `https://${customDomain}` : `${origin || ''}/cafe/${slug}`,
+    [origin, slug, usingCustom, customDomain],
+  );
   const waMessage = encodeURIComponent(`Hi! Check out our menu and order online at ${cafeName}: ${url}`);
   const waShareLink = `https://wa.me/?text=${waMessage}`;
 

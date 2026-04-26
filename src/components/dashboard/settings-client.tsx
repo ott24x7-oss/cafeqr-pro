@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import {
   Coffee, MessageSquare, CreditCard, Save, Loader2, Send, Plus, X,
-  Mail, Lock, Eye, EyeOff, MailCheck,
+  Mail, Lock, Eye, EyeOff, MailCheck, Globe, Copy, Check, AlertCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input, Textarea } from '@/components/ui/input';
@@ -13,7 +13,7 @@ import { toast } from '@/components/ui/toaster';
 import { CURRENCIES } from '@/lib/utils';
 import { COUNTRY_DIAL } from '@/lib/whatsapp';
 
-type Tab = 'profile' | 'tax' | 'whatsapp' | 'payment' | 'branding';
+type Tab = 'profile' | 'tax' | 'whatsapp' | 'payment' | 'branding' | 'domain';
 const SENTINEL = '__unchanged__';
 
 // Sensible defaults for HDFC's UPI credit alerts (most common in India). The
@@ -187,6 +187,7 @@ export function SettingsClient({ cafe }: { cafe: any }) {
             { k: 'whatsapp', l: 'WhatsApp', i: MessageSquare },
             { k: 'payment', l: 'Payment', i: CreditCard },
             { k: 'branding', l: 'Branding', i: Coffee },
+            { k: 'domain', l: 'Custom Domain', i: Globe },
           ].map((t) => (
             <button
               key={t.k}
@@ -721,11 +722,167 @@ export function SettingsClient({ cafe }: { cafe: any }) {
           </div>
         )}
 
+        {tab === 'domain' && <CustomDomainSection cafe={cafe} />}
+
         <div className="border-t border-coffee-100 pt-4 mt-6 flex justify-end sticky bottom-0 bg-cream-50/95 backdrop-blur md:static md:bg-transparent -mx-3 md:mx-0 px-3 md:px-0 py-3 md:py-0">
           <Button onClick={save} disabled={loading} size="lg" className="w-full md:w-auto">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save changes
           </Button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function CustomDomainSection({ cafe }: { cafe: any }) {
+  const initial = cafe.customDomain ?? '';
+  const [host, setHost] = useState<string>(initial);
+  const [status, setStatus] = useState<string | null>(cafe.customDomainStatus ?? null);
+  const [note, setNote] = useState<string | null>(cafe.customDomainNote ?? null);
+  const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const target = 'cafe.watshop.in'; // CNAME target for cafe owners
+  const dirty = host.trim().toLowerCase() !== initial.toLowerCase();
+
+  async function submit() {
+    setBusy(true);
+    const r = await fetch('/api/dashboard/settings/custom-domain', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ domain: host.trim() }),
+    });
+    const data = await r.json().catch(() => ({} as any));
+    setBusy(false);
+    if (!r.ok) {
+      toast.error('Could not save', data.error ?? `HTTP ${r.status}`);
+      return;
+    }
+    if (data.cleared) {
+      setStatus(null); setNote(null);
+      toast.success('Custom domain cleared');
+      return;
+    }
+    setStatus(data.status ?? 'pending');
+    setNote(null);
+    toast.success('Request submitted', 'Add the CNAME below — we\'ll verify within 24h.');
+  }
+
+  async function clearDomain() {
+    if (!confirm('Remove the custom domain request?')) return;
+    setBusy(true);
+    const r = await fetch('/api/dashboard/settings/custom-domain', { method: 'DELETE' });
+    setBusy(false);
+    if (r.ok) {
+      setHost(''); setStatus(null); setNote(null);
+      toast.success('Cleared');
+    }
+  }
+
+  function copy(text: string) {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }
+
+  const statusPill = status === 'verified'
+    ? <span className="pill bg-emerald-100 text-emerald-700"><Check className="h-3 w-3" /> Live</span>
+    : status === 'failed'
+      ? <span className="pill bg-rose-100 text-rose-700"><AlertCircle className="h-3 w-3" /> Rejected</span>
+      : status === 'pending'
+        ? <span className="pill-amber">Pending verification</span>
+        : null;
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h3 className="font-bold text-coffee-900 flex items-center gap-2">
+          <Globe className="h-4 w-4 text-coffee-600" /> Custom domain
+        </h3>
+        <p className="helper">
+          Serve your menu from your own domain — e.g. <b>menu.your-cafe.com</b> instead of cafe.watshop.in/cafe/your-slug.
+          Free with any plan; we issue the SSL certificate.
+        </p>
+      </div>
+
+      <div className="rounded-2xl border border-coffee-200 bg-cream-50 p-4 space-y-3">
+        <div>
+          <label className="label">Your domain</label>
+          <div className="flex gap-2">
+            <Input
+              value={host}
+              onChange={(e) => setHost(e.target.value)}
+              placeholder="menu.your-cafe.com"
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
+            />
+            <Button onClick={submit} disabled={busy || !dirty || host.trim().length < 4}>
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              {initial ? 'Update' : 'Request'}
+            </Button>
+          </div>
+          {status && (
+            <div className="mt-2 flex items-center gap-2">
+              {statusPill}
+              {note && <span className="text-xs text-coffee-600">{note}</span>}
+            </div>
+          )}
+        </div>
+
+        {host && (
+          <div className="rounded-xl border border-coffee-100 bg-white p-3 space-y-2">
+            <div className="text-sm font-semibold text-coffee-900">Add this DNS record at your domain provider</div>
+            <div className="grid grid-cols-[80px,1fr,1fr] gap-2 text-xs">
+              <div className="font-semibold text-coffee-500 uppercase tracking-wider">Type</div>
+              <div className="font-semibold text-coffee-500 uppercase tracking-wider">Host / Name</div>
+              <div className="font-semibold text-coffee-500 uppercase tracking-wider">Value / Target</div>
+              <div className="font-mono">CNAME</div>
+              <div className="font-mono break-all">{host || 'menu.your-cafe.com'}</div>
+              <div className="font-mono break-all flex items-center gap-1">
+                {target}
+                <button
+                  type="button"
+                  className="text-coffee-400 hover:text-coffee-700 ml-auto"
+                  onClick={() => copy(target)}
+                  title="Copy"
+                >
+                  {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                </button>
+              </div>
+            </div>
+            <p className="helper">
+              Apex domains (no subdomain) won't work with CNAME — use a subdomain like
+              <b> menu</b>, <b>order</b> or <b>shop</b>. Cloudflare users can flatten CNAME at the apex with "CNAME flattening".
+            </p>
+          </div>
+        )}
+
+        {status === 'verified' && (
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+            Live at <a href={`https://${host}`} target="_blank" rel="noreferrer" className="font-semibold underline">https://{host}</a> — your store-link card now points here.
+          </div>
+        )}
+
+        {status === 'pending' && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            We'll verify the CNAME and issue an SSL cert within 24 hours. You'll get a notification when it goes live.
+          </div>
+        )}
+
+        {initial && (
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={clearDomain}
+              disabled={busy}
+              className="text-xs text-coffee-500 hover:text-rose-600 underline"
+            >
+              Remove custom domain
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
