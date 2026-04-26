@@ -12,6 +12,8 @@ import { prisma } from '@/lib/prisma';
 import { normalizePhone, waLink, configFromCafe } from '@/lib/whatsapp';
 import { sendOTP } from '@/lib/notify';
 
+export const runtime = 'nodejs';
+
 const otpStore = (globalThis as any).__cafeqr_otp ??= new Map<string, { otp: string; expiresAt: number }>();
 
 export async function POST(req: Request) {

@@ -5,13 +5,13 @@
  */
 import { prisma } from './prisma';
 import {
-  sendMessage,
   configFromCafe,
   generateOwnerOrderMessage,
   generateCustomerStatusMessage,
   type WACafe,
   type OrderForWA,
 } from './whatsapp';
+import { sendMessage } from './whatsapp-send';
 
 const APP_URL = process.env.APP_URL || process.env.NEXTAUTH_URL || '';
 

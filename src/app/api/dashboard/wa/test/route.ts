@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getOwnerCafe } from '@/lib/guards';
-import { sendMessage, configFromCafe, normalizePhone } from '@/lib/whatsapp';
+import { configFromCafe, normalizePhone } from '@/lib/whatsapp';
+import { sendMessage } from '@/lib/whatsapp-send';
+
+export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
   const { cafe } = await getOwnerCafe();

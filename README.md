@@ -286,15 +286,17 @@ Polls every cafe with Gmail credentials configured and auto-verifies UPI payment
 
 The cafe owner adds Gmail address + [app password](https://myaccount.google.com/apppasswords) under **Settings → Payment → Auto-verify**.
 
-#### Baileys WhatsApp worker (`worker/baileys-server.ts`)
+#### Baileys WhatsApp — in-built (default)
 
-Hosts WhatsApp-Web sockets so cafes that don't want Cloud API can pair their phone with a QR scan. The file is currently a scaffold — the comments at the top describe the remaining `@whiskeysockets/baileys` integration. The main app already calls this worker via `BAILEYS_WORKER_URL` when a cafe selects the `baileys` provider.
+Cafes that pick **Baileys** in Settings → WhatsApp can pair right from the dashboard with the in-built scanner. The Baileys session lives in the same Node process as Next.js (works because we run `next start`, not serverless). Auth state is persisted at `/tmp/cafeqr-baileys/<sessionId>/` — container restarts wipe it and require re-pairing.
 
-1. Railway → New service → start command: `npx tsx worker/baileys-server.ts`
-2. Mount a Railway volume at `/data` so pairing state survives restarts.
-3. Set `BAILEYS_WORKER_TOKEN` to a random secret. Add the same value + `BAILEYS_WORKER_URL=https://<this-service>.up.railway.app` to the main app's env.
+To survive restarts on Railway, mount a persistent volume at `/tmp/cafeqr-baileys` (Service → Settings → Volumes).
 
-For most cafes Cloud API is the recommended choice — official, no QR pairing, runs entirely inside Next.js.
+#### Baileys WhatsApp — external worker (optional)
+
+If you'd rather isolate Baileys to its own service (e.g. multi-replica main app), `worker/baileys-server.ts` is a scaffold for that path. Set `BAILEYS_WORKER_URL` and `BAILEYS_WORKER_TOKEN` and the main app will forward sends to it instead of using the in-process manager.
+
+For most cafes the official **Cloud API** path is still the easiest — no QR, no socket, no volume.
 
 ---
 

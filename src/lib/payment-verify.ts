@@ -7,6 +7,7 @@
  * messages matching the configured filters, parses amount + UTR/UPI ref, and
  * attempts to match each against pending Payment rows for the cafe.
  */
+import 'server-only';
 import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
 import { prisma } from './prisma';
