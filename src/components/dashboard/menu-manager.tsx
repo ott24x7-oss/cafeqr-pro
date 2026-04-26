@@ -228,7 +228,10 @@ function ItemModal({ cats, item, onClose, onSaved }: any) {
       const data = await r.json();
       onSaved(data.item);
       toast.success(item ? 'Updated' : 'Added');
-    } else toast.error('Failed');
+    } else {
+      const err = await r.json().catch(() => ({} as any));
+      toast.error('Could not save', err?.error ?? `HTTP ${r.status}`);
+    }
   }
 
   function set<K extends keyof typeof form>(k: K, v: any) {
