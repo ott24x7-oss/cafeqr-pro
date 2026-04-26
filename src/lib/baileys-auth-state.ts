@@ -91,9 +91,9 @@ export async function useDbAuthState(sessionId: string): Promise<{
               const value = await readFile<any>(sessionId, fileFor(type, id));
               if (!value) return;
               if (type === 'app-state-sync-key') {
-                out[id] = proto.Message.AppStateSyncKeyData.fromObject(value);
+                out[id] = proto.Message.AppStateSyncKeyData.fromObject(value) as any;
               } else {
-                out[id] = value;
+                out[id] = value as any;
               }
             })
           );
