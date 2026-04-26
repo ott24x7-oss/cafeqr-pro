@@ -108,11 +108,12 @@ export function generateCustomerStatusMessage(
 
 export function generatePaymentMessage(order: OrderForWA, cafe: WACafe, appUrl?: string) {
   const upi = cafe.settings?.upiId;
+  const amount = (order as any).payableAmount ?? order.totalAmount;
   return [
     `💳 *Payment Request — ${cafe.name}*`,
     '',
     `Order: *#${order.orderNumber}*`,
-    `Amount: *₹${order.totalAmount.toFixed(0)}*`,
+    `Amount: *₹${amount.toFixed(2)}*`,
     upi ? `\nUPI ID: \`${upi}\`` : null,
     appUrl ? `\nPay securely: ${appUrl}/pay/${order.id}` : null,
   ]

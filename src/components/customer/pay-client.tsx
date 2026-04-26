@@ -38,8 +38,12 @@ export function PayClient({ order: initialOrder }: { order: any }) {
 
   const isPaid = order.paymentStatus === 'PAID';
 
+  // Charge the unique paise-nonced amount when the order has one — that's
+  // what the IMAP matcher disambiguates against. Falls back to totalAmount
+  // for legacy orders created before the nonce existed.
+  const chargeAmount: number = order.payableAmount ?? order.totalAmount;
   const upiLink = upiId
-    ? `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(cafe.name)}&am=${order.totalAmount}&cu=INR&tn=${encodeURIComponent('Order ' + order.orderNumber)}`
+    ? `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(cafe.name)}&am=${chargeAmount}&cu=INR&tn=${encodeURIComponent('Order ' + order.orderNumber)}`
     : '';
 
   function clearTimers() {
@@ -121,7 +125,7 @@ export function PayClient({ order: initialOrder }: { order: any }) {
       const r = await fetch(`/api/orders/${order.id}/payment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transactionId: txn, amount: order.totalAmount, method: 'upi' }),
+        body: JSON.stringify({ transactionId: txn, amount: chargeAmount, method: 'upi' }),
       });
       if (!r.ok) throw new Error('failed');
       toast.success('Payment recorded', 'Owner will verify shortly.');
@@ -138,7 +142,12 @@ export function PayClient({ order: initialOrder }: { order: any }) {
         <div className="container py-8 text-center">
           <div className="text-cream-200/80 text-sm">Order #{order.orderNumber}</div>
           <h1 className="font-display text-3xl font-bold mt-1">{cafe.name}</h1>
-          <div className="text-2xl font-bold mt-3">{formatCurrency(order.totalAmount)}</div>
+          <div className="text-2xl font-bold mt-3">{formatCurrency(chargeAmount)}</div>
+          {order.payableAmount && order.payableAmount !== order.totalAmount && (
+            <div className="text-[11px] text-cream-200/80 mt-1">
+              ({formatCurrency(order.totalAmount)} + auto-verify tag)
+            </div>
+          )}
         </div>
       </div>
 

@@ -187,6 +187,9 @@ model CafeSettings {
   upiId           String?
   upiQrUrl        String?
   paymentEnabled  Boolean  @default(true)
+  // 'prepaid'  → customer pays from the QR / pay page during the order flow
+  // 'postpaid' → owner marks Served, bot auto-sends a pay link via WhatsApp
+  paymentTiming   String   @default("prepaid")
   paymentNote     String?
   // Auto-verify UPI payments by reading bank emails from the cafe's Gmail inbox
   gmailUser                  String?
@@ -348,6 +351,11 @@ model Order {
   deliveryAmount Float         @default(0)
   discountAmount Float         @default(0)
   totalAmount    Float         @default(0)
+  // Same as totalAmount + a small unique paise nonce (1-99 paise). Only this
+  // figure is what the customer is asked to pay — IMAP credit alerts match
+  // on it directly, eliminating ambiguity when several pending orders share
+  // the same rounded total.
+  payableAmount  Float?
   couponCode     String?
   paymentStatus  PaymentStatus @default(UNPAID)
   assignedTo     String?

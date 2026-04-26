@@ -45,6 +45,13 @@ export async function POST(req: Request) {
     const totals = calcCart(body.items, cafe.settings, body.type);
     const orderNumber = genOrderNumber();
 
+    // Add a 1–99 paise nonce so each order has a unique amount on the wire.
+    // The IMAP matcher uses this to disambiguate concurrent payments that
+    // would otherwise share the same rounded total (e.g. two ₹178.50 orders
+    // → one becomes ₹178.87, the other ₹178.13).
+    const noncePaise = Math.floor(Math.random() * 99) + 1; // 1..99
+    const payableAmount = Math.round((totals.totalAmount + noncePaise / 100) * 100) / 100;
+
     const order = await prisma.order.create({
       data: {
         orderNumber,
@@ -61,6 +68,7 @@ export async function POST(req: Request) {
         deliveryAmount: totals.deliveryAmount,
         discountAmount: totals.discountAmount,
         totalAmount: totals.totalAmount,
+        payableAmount,
         status: 'NEW',
         statusHistory: [{ status: 'NEW', at: new Date().toISOString() }] as any,
         items: {

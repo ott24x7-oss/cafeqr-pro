@@ -67,6 +67,7 @@ export function SettingsClient({ cafe }: { cafe: any }) {
     upiId: cafe.settings?.upiId ?? '',
     upiQrUrl: cafe.settings?.upiQrUrl ?? '',
     paymentEnabled: cafe.settings?.paymentEnabled ?? true,
+    paymentTiming: (cafe.settings?.paymentTiming ?? 'prepaid') as 'prepaid' | 'postpaid',
     paymentNote: cafe.settings?.paymentNote ?? '',
     gmailUser: cafe.settings?.gmailUser ?? '',
     gmailAppPassword: cafe.settings?.gmailAppPassword ?? '',
@@ -456,6 +457,49 @@ export function SettingsClient({ cafe }: { cafe: any }) {
             <div className="md:col-span-2 flex items-center gap-2 text-sm">
               <input type="checkbox" checked={settings.paymentEnabled} onChange={(e) => setSettings({ ...settings, paymentEnabled: e.target.checked })} className="accent-coffee-700" />
               Show "Pay Now" button to customers
+            </div>
+
+            <div className="md:col-span-2 rounded-2xl border border-coffee-200 bg-white p-4">
+              <div className="font-semibold text-coffee-900 mb-1">When does the customer pay?</div>
+              <p className="helper mb-3">
+                Postpaid sends a pay-link WhatsApp the moment you mark the order <b>Served</b> — handy for sit-down service.
+              </p>
+              <div className="grid sm:grid-cols-2 gap-2">
+                {[
+                  {
+                    v: 'prepaid',
+                    title: 'Pay before order served',
+                    desc: 'Customer pays from the QR / pay page during the order. The "Send feedback" button on the order detail screen lets you fire the review link manually as the customer leaves.',
+                  },
+                  {
+                    v: 'postpaid',
+                    title: 'Pay after order served',
+                    desc: 'When you mark the order Served, the bot WhatsApps the customer a payment link. After they pay, they automatically get the invoice + thank-you + review link in one message.',
+                  },
+                ].map((opt) => {
+                  const active = settings.paymentTiming === opt.v;
+                  return (
+                    <label
+                      key={opt.v}
+                      className={`flex items-start gap-3 px-3 py-3 rounded-xl border cursor-pointer transition ${
+                        active ? 'border-coffee-700 bg-cream-50 ring-2 ring-coffee-200' : 'border-coffee-200 bg-white hover:bg-cream-50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="paymentTiming"
+                        checked={active}
+                        onChange={() => setSettings({ ...settings, paymentTiming: opt.v as any })}
+                        className="accent-coffee-700 mt-1"
+                      />
+                      <span className="min-w-0">
+                        <span className="font-semibold text-coffee-900 text-sm">{opt.title}</span>
+                        <span className="block text-[11px] text-coffee-600 mt-0.5">{opt.desc}</span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
             </div>
             <Field l="UPI ID" v={settings.upiId} on={(v: string) => setSettings({ ...settings, upiId: v })} placeholder="cafe@hdfc" />
             <Field l="UPI QR image URL" v={settings.upiQrUrl} on={(v: string) => setSettings({ ...settings, upiQrUrl: v })} placeholder="https://…" />

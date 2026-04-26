@@ -214,8 +214,12 @@ function formatDate(d: Date): string {
   });
 }
 
-/** Convenience: build InvoiceData from a Prisma order row. */
+/** Convenience: build InvoiceData from a Prisma order row. The grand-total
+ *  printed on the receipt is what the customer actually paid — i.e. the
+ *  paise-nonced `payableAmount` when set. The pre-rounding totalAmount is
+ *  kept on the row for the cafe's own analytics. */
 export function invoiceDataFromOrder(order: any): InvoiceData {
+  const paid = order.payableAmount ?? order.totalAmount;
   return {
     orderNumber: order.orderNumber,
     cafeName: order.cafe?.name ?? 'Cafe',
@@ -240,7 +244,7 @@ export function invoiceDataFromOrder(order: any): InvoiceData {
     packingAmount: order.packingAmount,
     deliveryAmount: order.deliveryAmount,
     discountAmount: order.discountAmount,
-    totalAmount: order.totalAmount,
+    totalAmount: paid,
     paymentStatus: order.paymentStatus,
     paymentMethod: order.payment?.method,
     transactionId: order.payment?.transactionId,

@@ -309,7 +309,11 @@ export async function verifyFromGmail(cafeId: string): Promise<VerifyResult> {
 
       const emailAt = m.date;
       const matchPayment = pending.find((p) => {
-        if (Math.abs(p.amount - amount) > 0.5) return false;
+        // Prefer the per-order paise-nonced payable amount (matches almost
+        // exactly), fall back to the order total. ±0.5 tolerance handles
+        // minor rounding by some banks.
+        const target = p.order.payableAmount ?? p.amount;
+        if (Math.abs(target - amount) > 0.5) return false;
         if (p.transactionId && p.transactionId.toUpperCase() === ref.toUpperCase()) return true;
         const diffMin = (emailAt.getTime() - p.createdAt.getTime()) / 60000;
         return diffMin >= -2 && diffMin <= windowMin;

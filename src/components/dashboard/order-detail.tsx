@@ -2,13 +2,12 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Printer, MessageSquare, FileDown, CheckCircle2, Receipt as ReceiptIcon } from 'lucide-react';
+import { ArrowLeft, Printer, MessageSquare, FileDown, CheckCircle2, Receipt as ReceiptIcon, Star, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency, formatDate, ORDER_STATUS_COLORS, ORDER_STATUS_LABELS } from '@/lib/utils';
 import {
   generateCustomerStatusMessage,
   generatePaymentMessage,
-  generateReviewMessage,
   waLink,
 } from '@/lib/whatsapp';
 import { billHtml } from '@/lib/invoice';
@@ -16,6 +15,7 @@ import { toast } from '@/components/ui/toaster';
 
 export function OrderDetailClient({ order, cafe }: { order: any; cafe: any }) {
   const [busy, setBusy] = useState(false);
+  const [reviewSending, setReviewSending] = useState(false);
 
   function printBill() {
     const html = billHtml({
@@ -97,15 +97,34 @@ export function OrderDetailClient({ order, cafe }: { order: any; cafe: any }) {
     } else toast.error('Failed');
   }
 
+  async function sendFeedbackLink() {
+    setReviewSending(true);
+    const r = await fetch(`/api/dashboard/orders/${order.id}/send-review`, { method: 'POST' });
+    const data = await r.json().catch(() => ({} as any));
+    setReviewSending(false);
+    if (r.ok && data.ok) {
+      toast.success('Feedback link sent', `via ${data.provider}`);
+    } else {
+      toast.error('Could not send feedback', data.error ?? '');
+    }
+  }
+
+  // Manual wa.me fallbacks — only used when the cafe hasn't paired the bot
+  // (provider = manual). Once Cloud API or Baileys is wired up, the
+  // automatic flow handles status updates and the dashboard buttons that
+  // matter most are 'Mark as paid' and 'Send feedback'.
   const customerWa = order.customerPhone
     ? waLink(order.customerPhone, generateCustomerStatusMessage(order, cafe, order.status, window.location.origin))
     : '';
   const payWa = order.customerPhone
     ? waLink(order.customerPhone, generatePaymentMessage(order, cafe, window.location.origin))
     : '';
-  const reviewWa = order.customerPhone
-    ? waLink(order.customerPhone, generateReviewMessage(order, cafe, window.location.origin))
-    : '';
+
+  const reviewBtnVisible =
+    !!order.customerPhone &&
+    !!cafe.settings?.googleReviewUrl?.trim() &&
+    cafe.settings?.reviewEnabled !== false &&
+    (order.status === 'COMPLETED' || order.status === 'SERVED' || order.paymentStatus === 'PAID');
 
   return (
     <div className="space-y-4">
@@ -193,10 +212,17 @@ export function OrderDetailClient({ order, cafe }: { order: any; cafe: any }) {
                   <Button variant="wa" className="w-full"><MessageSquare className="h-4 w-4" /> Send payment link</Button>
                 </a>
               )}
-              {reviewWa && (order.status === 'COMPLETED' || order.status === 'SERVED') && (
-                <a href={reviewWa} target="_blank" rel="noreferrer">
-                  <Button variant="wa" className="w-full"><MessageSquare className="h-4 w-4" /> Review request</Button>
-                </a>
+              {reviewBtnVisible && (
+                <Button
+                  variant="wa"
+                  className="w-full"
+                  onClick={sendFeedbackLink}
+                  disabled={reviewSending}
+                  title="Send the customer the cafe's Google review link via the bot"
+                >
+                  {reviewSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Star className="h-4 w-4" />}
+                  Send feedback link
+                </Button>
               )}
               <Link href={`/order/${order.id}`} target="_blank">
                 <Button variant="outline" className="w-full"><ReceiptIcon className="h-4 w-4" /> Customer view</Button>

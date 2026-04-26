@@ -15,6 +15,7 @@ import {
   generateOwnerOrderMessage,
   generateCustomerStatusMessage,
   generateCustomerOrderReceivedMessage,
+  generatePaymentMessage,
   type WACafe,
   type OrderForWA,
 } from './whatsapp';
@@ -78,11 +79,32 @@ export async function notifyCustomerStatus(orderId: string, status: string) {
     if (!order || !order.cafe) return;
     const cafe = order.cafe as WACafe;
     if (!order.customerPhone) return;
-    if (!customerWantsStatus(cafe, status)) return;
 
     const config = configFromCafe(cafe);
-    const message = generateCustomerStatusMessage(order as OrderForWA, cafe, status, APP_URL);
-    await sendMessage({ to: order.customerPhone, message, config });
+
+    // Standard status ping (gated by the cafe's per-status preferences).
+    if (customerWantsStatus(cafe, status)) {
+      const message = generateCustomerStatusMessage(order as OrderForWA, cafe, status, APP_URL);
+      await sendMessage({ to: order.customerPhone, message, config });
+    }
+
+    // Postpaid flow: when the order is Served, follow up with a pay-link
+    // WhatsApp (UPI ID in caption + UPI QR as the message media when set).
+    if (
+      status === 'SERVED' &&
+      cafe.settings?.paymentTiming === 'postpaid' &&
+      cafe.settings?.paymentEnabled !== false &&
+      order.paymentStatus !== 'PAID' &&
+      cafe.settings?.upiId
+    ) {
+      const payMsg = generatePaymentMessage(order as OrderForWA, cafe, APP_URL);
+      await sendMessage({
+        to: order.customerPhone,
+        message: payMsg,
+        config,
+        imageUrl: cafe.settings?.upiQrUrl ?? undefined,
+      });
+    }
   } catch (e) {
     console.error('[notify.customerStatus]', e);
   }

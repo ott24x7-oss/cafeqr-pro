@@ -70,20 +70,25 @@ export async function onPaymentConfirmed(orderId: string): Promise<PaymentConfir
 
   const config = configFromCafe(cafe);
 
-  // Single combined caption — payment confirmation + invoice (the PDF
-  // attached) + the cafe-configured Google review link. We deliberately
-  // never auto-fill /review/<id> here; if no link is set the line is
-  // simply omitted.
+  // Caption layout:
+  //   – Always: payment confirmation + thank-you + total + invoice PDF.
+  //   – Only when paymentTiming = 'postpaid': also include the cafe's review
+  //     link, since the customer is leaving right after paying. For prepaid
+  //     the review link is fired separately by the owner via the
+  //     "Send feedback" button on the order detail page (when the customer
+  //     actually leaves, not while they're still eating).
   const reviewUrl = cafe.settings?.googleReviewUrl?.trim();
+  const isPostpaid = cafe.settings?.paymentTiming === 'postpaid';
+  const paidAmount = (order as any).payableAmount ?? order.totalAmount;
   const message = [
     `🧾 *Payment received — ${cafe.name}*`,
     '',
-    `Order *#${order.orderNumber}* is paid. Thank you!`,
-    `Total: ₹${order.totalAmount.toFixed(0)}`,
+    `Order *#${order.orderNumber}* is paid. Thank you for visiting! 🙏`,
+    `Amount: ₹${paidAmount.toFixed(2)}`,
     APP_URL ? `View online: ${APP_URL}/order/${order.id}` : null,
     '',
-    'Invoice attached above 👆',
-    reviewUrl ? `\n⭐ Loved your visit? Drop a quick review:\n${reviewUrl}` : null,
+    'Your invoice is attached above 👆',
+    (isPostpaid && reviewUrl) ? `\n⭐ Loved your visit? Drop a quick review:\n${reviewUrl}` : null,
   ].filter(Boolean).join('\n');
 
   const result = await sendMessage({

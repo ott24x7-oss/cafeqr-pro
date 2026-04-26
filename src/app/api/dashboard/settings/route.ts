@@ -53,7 +53,7 @@ export async function POST(req: Request) {
     'whatsappProvider', 'notifyOwnerWA', 'notifyCustomerWA', 'notifyOnStatuses',
     'waCloudPhoneId', 'baileysSessionId', 'notifyNumbers',
     'gmailUser', 'gmailSenderFilter', 'gmailSubjectFilter', 'paymentMatchWindowMinutes',
-    'upiId', 'upiQrUrl', 'paymentEnabled', 'paymentNote',
+    'upiId', 'upiQrUrl', 'paymentEnabled', 'paymentTiming', 'paymentNote',
     'reviewEnabled', 'googleReviewUrl', 'primaryColor', 'accentColor',
     'enableSound', 'language',
   ]);
@@ -69,6 +69,10 @@ export async function POST(req: Request) {
     );
   } else {
     delete plain.notifyOnStatuses;
+  }
+
+  if (plain.paymentTiming !== undefined) {
+    plain.paymentTiming = plain.paymentTiming === 'postpaid' ? 'postpaid' : 'prepaid';
   }
 
   // Secrets — encrypted at rest. Use SENTINEL from client when leaving alone.
