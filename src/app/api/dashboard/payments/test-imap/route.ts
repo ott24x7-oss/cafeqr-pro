@@ -79,7 +79,7 @@ export async function POST() {
       for (const uid of lastFew) {
         try {
           const msg = await client.fetchOne(uid as any, { envelope: true });
-          if (!msg?.envelope) continue;
+          if (!msg || !msg.envelope) continue;
           filteredSamples.push({
             date: msg.envelope.date ? new Date(msg.envelope.date as any).toISOString() : null,
             from: (msg.envelope.from?.[0]?.address ?? '') || '',
@@ -95,7 +95,7 @@ export async function POST() {
     for (const uid of allUids.slice(-12)) {
       try {
         const msg = await client.fetchOne(uid as any, { envelope: true });
-        if (!msg?.envelope) continue;
+        if (!msg || !msg.envelope) continue;
         recent.push({
           date: msg.envelope.date ? new Date(msg.envelope.date as any).toISOString() : null,
           from: (msg.envelope.from?.[0]?.address ?? '') || '',
