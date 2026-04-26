@@ -16,6 +16,8 @@ const nextConfig = {
   },
   experimental: {
     serverActions: { allowedOrigins: ['*'] },
+    // Boot hook — re-opens persisted Baileys sessions on Node start.
+    instrumentationHook: true,
     // Baileys + IMAP libs use Node built-ins; keep them out of the bundler so
     // they're loaded as plain CJS at runtime on the server.
     serverComponentsExternalPackages: [

@@ -491,7 +491,22 @@ model Notification {
   @@index([cafeId])
 }
 
-// ─── 17. COUPON ───────────────────────────────────────────────────────────
+// ─── 17. BAILEYS AUTH (per-session, per-file blob) ───────────────────────
+// Mirrors what Baileys' `useMultiFileAuthState` writes to disk so paired
+// WhatsApp sessions survive container restarts and Railway redeploys.
+model BaileysAuthFile {
+  id        String   @id @default(cuid())
+  sessionId String
+  file      String
+  data      String   // BufferJSON-serialised state for this slot
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@unique([sessionId, file])
+  @@index([sessionId])
+}
+
+// ─── 18. COUPON ───────────────────────────────────────────────────────────
 model Coupon {
   id            String   @id @default(cuid())
   cafeId        String

@@ -1,30 +1,27 @@
 /**
  * In-process Baileys session manager.
  *
- * Pattern adapted from a production Baileys deployment — static named
- * imports (Next.js `serverComponentsExternalPackages` keeps the package out
- * of the client bundle), real pino logger, the `[name, browser, version]`
- * tuple form for the device label, and a short post-connect settle so the
- * first QR/open event lands before we return to the caller.
- *
- * Persistence: /tmp/cafeqr-baileys/<sessionId>/ via Baileys'
- * `useMultiFileAuthState`. Container restart wipes /tmp; mount a Railway
- * volume there to survive deploys.
+ * Auth state is persisted to PostgreSQL via `useDbAuthState` so paired
+ * WhatsApp sessions survive container restarts and Railway redeploys.
+ * Hydration on Node boot is wired up in `instrumentation.ts` — we call
+ * `hydrateAllSessions()` there so the moment a deploy lands, every
+ * previously-paired cafe reconnects without anyone clicking anything.
  */
 import 'server-only';
 import {
   default as makeWASocket,
   DisconnectReason,
   fetchLatestBaileysVersion,
-  useMultiFileAuthState,
   type WASocket,
 } from '@whiskeysockets/baileys';
-import path from 'path';
-import fs from 'fs';
-import fsp from 'fs/promises';
-import os from 'os';
 import qrcode from 'qrcode';
 import pino from 'pino';
+import {
+  useDbAuthState,
+  hasStoredCreds,
+  deleteAllAuthFiles,
+  listSessionsWithCreds,
+} from './baileys-auth-state';
 
 type ConnState = 'idle' | 'connecting' | 'qr' | 'open' | 'close';
 
@@ -39,16 +36,9 @@ interface SessionState {
   reconnectTimer: NodeJS.Timeout | null;
 }
 
-const ROOT = path.join(os.tmpdir(), 'cafeqr-baileys');
-try { fs.mkdirSync(ROOT, { recursive: true }); } catch {}
-
 const G = globalThis as any;
 const sessions: Map<string, SessionState> = G.__cafeqr_baileys_sessions ??= new Map();
 const log: pino.Logger = G.__cafeqr_baileys_log ??= pino({ level: process.env.BAILEYS_LOG_LEVEL || 'info' });
-
-function dirFor(id: string) {
-  return path.join(ROOT, id.replace(/[^A-Za-z0-9_-]/g, '_'));
-}
 
 function emptySession(id: string): SessionState {
   return {
@@ -63,7 +53,7 @@ async function setQr(sess: SessionState, qr: string | null) {
 
 export async function startSession(id: string, opts?: { force?: boolean }): Promise<SessionState> {
   if (opts?.force) {
-    await logoutSession(id, /* keepRecord */ false);
+    await logoutSession(id);
   }
 
   let sess = sessions.get(id);
@@ -79,9 +69,7 @@ export async function startSession(id: string, opts?: { force?: boolean }): Prom
   sess.startedAt = Date.now();
 
   try {
-    const sessionPath = dirFor(id);
-    await fsp.mkdir(sessionPath, { recursive: true });
-    const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
+    const { state, saveCreds } = await useDbAuthState(id);
 
     let version: any = undefined;
     try { ({ version } = await fetchLatestBaileysVersion()); } catch (e: any) {
@@ -123,13 +111,13 @@ export async function startSession(id: string, opts?: { force?: boolean }): Prom
 
         const loggedOut = code === DisconnectReason.loggedOut;
         if (loggedOut) {
-          try { fs.rmSync(sessionPath, { recursive: true, force: true }); } catch {}
+          await deleteAllAuthFiles(id).catch(() => {});
           sess!.phone = null;
           await setQr(sess!, null);
           sessions.delete(id);
           return;
         }
-        // Auto-reconnect with small jitter for non-logout closes.
+        // Auto-reconnect with small jitter for any other close.
         if (sess!.reconnectTimer) clearTimeout(sess!.reconnectTimer);
         const delay = 3000 + Math.random() * 4000;
         sess!.reconnectTimer = setTimeout(() => {
@@ -153,15 +141,15 @@ export function getSession(id: string): SessionState | null {
   return sessions.get(id) ?? null;
 }
 
-export async function logoutSession(id: string, keepRecord = false): Promise<boolean> {
+export async function logoutSession(id: string): Promise<boolean> {
   const sess = sessions.get(id);
   if (sess?.sock) {
     try { await sess.sock.logout(); } catch {}
     try { sess.sock.end(undefined); } catch {}
   }
   if (sess?.reconnectTimer) clearTimeout(sess.reconnectTimer);
-  try { fs.rmSync(dirFor(id), { recursive: true, force: true }); } catch {}
-  if (!keepRecord) sessions.delete(id);
+  await deleteAllAuthFiles(id).catch(() => {});
+  sessions.delete(id);
   return true;
 }
 
@@ -173,8 +161,9 @@ export async function sendBaileysInProcess(opts: {
 }): Promise<{ ok: boolean; error?: string }> {
   const id = opts.sessionId || 'default';
   let sess = sessions.get(id);
-  // Auto-resume if a saved auth state exists on disk and we haven't started.
-  if (!sess && fs.existsSync(dirFor(id))) {
+  // Auto-resume if creds exist in the DB but we haven't booted this session
+  // yet (e.g. immediately after a deploy, before instrumentation finished).
+  if (!sess && (await hasStoredCreds(id))) {
     sess = await startSession(id);
     const t0 = Date.now();
     while (sess.state !== 'open' && Date.now() - t0 < 8000) {
@@ -210,4 +199,26 @@ export function publicSession(sess: SessionState | null) {
     error: sess.lastError,
     ageMs: Date.now() - sess.startedAt,
   };
+}
+
+/** Boot-time: re-open every previously paired session. Idempotent. */
+export async function hydrateAllSessions(): Promise<{ count: number }> {
+  if (G.__cafeqr_baileys_hydrated) return { count: 0 };
+  G.__cafeqr_baileys_hydrated = true;
+  try {
+    const ids = await listSessionsWithCreds();
+    if (ids.length === 0) {
+      log.info('baileys: nothing to hydrate (no stored sessions)');
+      return { count: 0 };
+    }
+    log.info({ count: ids.length }, 'baileys: hydrating saved sessions');
+    // Kick them off in parallel — Baileys only needs a brief moment to settle.
+    await Promise.all(
+      ids.map((id) => startSession(id).catch((e) => log.error({ id, err: e?.message }, 'hydrate failed')))
+    );
+    return { count: ids.length };
+  } catch (e: any) {
+    log.error({ err: e?.message }, 'hydrateAllSessions failed');
+    return { count: 0 };
+  }
 }
