@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import {
-  Save, Loader2, Eye, EyeOff, Send, Globe, Mail, FileText,
+  Save, Loader2, Eye, EyeOff, Send, Globe, Mail, FileText, Lock, ShieldCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input, Textarea } from '@/components/ui/input';
@@ -12,7 +12,13 @@ const SENTINEL = '__unchanged__';
 
 type Tab = 'branding' | 'email' | 'content';
 
-export function SiteSettingsClient({ initial }: { initial: any }) {
+interface InfraInfo {
+  phpMailerUrl: string;
+  phpMailerKeySet: boolean;
+  imapRelayUrl: string;
+}
+
+export function SiteSettingsClient({ initial, infra }: { initial: any; infra?: InfraInfo }) {
   const [tab, setTab] = useState<Tab>('branding');
   const [form, setForm] = useState({
     siteName: initial.siteName ?? 'CafeQR Pro',
@@ -169,6 +175,33 @@ export function SiteSettingsClient({ initial }: { initial: any }) {
                 Send test email
               </Button>
             </div>
+
+            {infra && (
+              <div className="md:col-span-2 rounded-2xl border border-coffee-200 bg-cream-50 p-4 space-y-2 mt-2">
+                <div className="flex items-center gap-2 font-semibold text-coffee-900 text-sm">
+                  <ShieldCheck className="h-4 w-4 text-emerald-700" /> Mail fallback (auto-managed)
+                </div>
+                <p className="text-xs text-coffee-600">
+                  When SMTP isn't configured, fails to connect, or your host blocks port 587 (Railway frequently does
+                  for Gmail) — outgoing mail is routed through this PHP relay automatically. URL is set via the
+                  <code className="mx-1 px-1.5 py-0.5 bg-white rounded border border-coffee-200">PHP_MAILER_URL</code> env var
+                  and is non-editable from the dashboard on purpose.
+                </p>
+                <div>
+                  <label className="label">PHP mailer URL</label>
+                  <div className="flex items-center gap-2">
+                    <Input value={infra.phpMailerUrl} readOnly className="bg-white !cursor-default" />
+                    <span className={`pill text-[10px] ${infra.phpMailerKeySet ? 'bg-emerald-100 text-emerald-800' : 'bg-coffee-100 text-coffee-700'}`}>
+                      <Lock className="h-3 w-3" /> {infra.phpMailerKeySet ? 'Auth on' : 'No shared key'}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <label className="label">IMAP relay URL (auto-derived)</label>
+                  <Input value={infra.imapRelayUrl} readOnly className="bg-white !cursor-default" />
+                </div>
+              </div>
+            )}
           </div>
         )}
 
