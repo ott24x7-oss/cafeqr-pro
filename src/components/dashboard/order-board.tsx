@@ -3,12 +3,11 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import Link from 'next/link';
 import {
-  CheckCircle2, Clock, ChefHat, Bell, MessageSquare, X,
+  CheckCircle2, Clock, ChefHat, Bell, X,
   History, Volume2, VolumeX, Zap,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency, timeAgo } from '@/lib/utils';
-import { generateCustomerStatusMessage, waLink, generateOwnerOrderMessage } from '@/lib/whatsapp';
 import { toast } from '@/components/ui/toaster';
 
 const COLUMNS: { key: string; label: string; tone: string; icon: any; nextLabel?: string }[] = [
@@ -249,13 +248,6 @@ export function OrderBoard({ initialOrders, cafe }: { initialOrders: any[]; cafe
 }
 
 function OrderDetailDrawer({ order, cafe, onClose, onUpdate }: any) {
-  const customerWa = order.customerPhone
-    ? waLink(order.customerPhone, generateCustomerStatusMessage(order, cafe, NEXT_STATUS[order.status] ?? order.status, typeof window !== 'undefined' ? window.location.origin : ''))
-    : '';
-  const ownerWa = cafe.whatsappNo
-    ? waLink(cafe.whatsappNo, generateOwnerOrderMessage(order, cafe))
-    : '';
-
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-end md:items-center justify-end" onClick={onClose}>
       <div className="w-full md:max-w-md bg-cream-50 rounded-t-3xl md:rounded-l-3xl md:rounded-r-none max-h-[92vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
@@ -302,19 +294,6 @@ function OrderDetailDrawer({ order, cafe, onClose, onUpdate }: any) {
               <Button variant="destructive" size="lg" onClick={() => { if (confirm('Cancel this order?')) onUpdate('CANCELLED'); }}>
                 Cancel
               </Button>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            {customerWa && order.customerPhone && (
-              <a href={customerWa} target="_blank" rel="noreferrer">
-                <Button variant="wa" className="w-full"><MessageSquare className="h-4 w-4" /> Notify customer</Button>
-              </a>
-            )}
-            {ownerWa && (
-              <a href={ownerWa} target="_blank" rel="noreferrer">
-                <Button variant="wa" className="w-full"><MessageSquare className="h-4 w-4" /> Forward to owner</Button>
-              </a>
             )}
           </div>
 
