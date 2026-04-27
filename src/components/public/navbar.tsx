@@ -27,7 +27,12 @@ export function PublicNavbar() {
             height={36}
             priority
             className="h-9 w-auto"
+            // data-brand-logo / data-brand-name are picked up by
+            // /js/branding.js so the super admin can swap the lockup and
+            // the visually-hidden brand text from /admin/branding.
+            data-brand-logo
           />
+          <span className="sr-only" data-brand-name>WatShop Cafe</span>
         </Link>
 
         <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-coffee-700">

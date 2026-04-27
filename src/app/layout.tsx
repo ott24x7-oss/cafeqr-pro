@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import Script from 'next/script';
 import { Inter, Playfair_Display, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { Providers } from '@/components/providers';
@@ -77,6 +78,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={inter.className}>
         <Providers>{children}</Providers>
         <Toaster />
+        {/* Runtime branding patcher — fetches /api/branding (60s cache) and
+            rewrites elements tagged data-brand-logo / data-brand-name /
+            data-brand-tagline / data-brand-footer plus the --brand-primary
+            CSS var. Targets only marked elements, so admin chrome and the
+            per-cafe menu views (which carry their own tenant branding) are
+            unaffected. */}
+        <Script src="/js/branding.js" strategy="afterInteractive" />
       </body>
     </html>
   );

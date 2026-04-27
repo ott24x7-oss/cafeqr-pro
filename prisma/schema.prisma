@@ -558,6 +558,24 @@ model SiteSettings {
   updatedBy   String?
 }
 
+// ─── PLATFORM BRANDING (global, single row keyed by id='singleton') ─────
+// Lets the super admin override the WatShop Cafe marketing site logo /
+// brand text / footer / primary color without a redeploy. The runtime
+// patcher at /js/branding.js fetches /api/branding (60s public cache) and
+// rewrites elements tagged with data-brand-logo / data-brand-name /
+// data-brand-tagline / data-brand-footer.
+// NOTE: This is for the PLATFORM site only — per-cafe branding lives on
+// Cafe.logoUrl + CafeSettings.primaryColor and is unaffected.
+model PlatformBranding {
+  id           String   @id @default("singleton")
+  logoDataUrl  String   @default("")
+  brandName    String   @default("")
+  tagline      String   @default("")
+  footerText   String   @default("")
+  primaryColor String   @default("")
+  updatedAt    DateTime @updatedAt
+}
+
 // ─── 17. BAILEYS AUTH (per-session, per-file blob) ───────────────────────
 // Mirrors what Baileys' `useMultiFileAuthState` writes to disk so paired
 // WhatsApp sessions survive container restarts and Railway redeploys.

@@ -7,14 +7,20 @@ export function PublicFooter() {
       <div className="container py-14 grid gap-8 md:grid-cols-4">
         <div className="md:col-span-2">
           <Link href="/" className="flex items-center gap-2">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-coffee-gradient text-cream-50">
+            {/* The footer mark is a styled span (no <img>), so the runtime
+                patcher will treat it as a background-image target if the
+                admin uploads a custom logo. */}
+            <span
+              className="grid h-9 w-9 place-items-center rounded-xl bg-coffee-gradient text-cream-50 bg-cover bg-center"
+              data-brand-logo
+            >
               <Coffee className="h-5 w-5" />
             </span>
-            <span className="font-display text-xl font-bold tracking-tight text-coffee-900">
+            <span className="font-display text-xl font-bold tracking-tight text-coffee-900" data-brand-name>
               CafeQR <span className="text-caramel">Pro</span>
             </span>
           </Link>
-          <p className="mt-3 max-w-sm text-sm text-coffee-600">
+          <p className="mt-3 max-w-sm text-sm text-coffee-600" data-brand-tagline>
             The all-in-one QR ordering platform built for cafes, restaurants and cloud kitchens. Take orders without an
             app, manage everything from one dashboard.
           </p>
@@ -38,7 +44,7 @@ export function PublicFooter() {
           </ul>
         </div>
       </div>
-      <div className="border-t border-coffee-100 py-5 text-center text-xs text-coffee-500">
+      <div className="border-t border-coffee-100 py-5 text-center text-xs text-coffee-500" data-brand-footer>
         © {new Date().getFullYear()} CafeQR Pro. Brewed with ☕
       </div>
     </footer>

@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import {
   LayoutDashboard, ListOrdered, Utensils, QrCode, CreditCard, Star, Users, Settings, BarChart3, Receipt,
-  Coffee, LogOut, Bell, Shield, Tag, History, Globe,
+  Coffee, LogOut, Bell, Shield, Tag, History, Globe, Palette,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -36,6 +36,7 @@ export function DashboardSidebar({ role, cafeName, isAdmin }: { role: string; ca
     { href: '/admin/plans', label: 'Plans', icon: CreditCard },
     { href: '/admin/subscriptions', label: 'Subscriptions', icon: Receipt },
     { href: '/admin/site', label: 'Site & Email', icon: Globe },
+    { href: '/admin/branding', label: 'Frontend Branding', icon: Palette },
   ];
 
   const nav = isAdmin ? adminNav : ownerNav;
