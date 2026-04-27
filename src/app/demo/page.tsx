@@ -149,20 +149,24 @@ export default function DemoPage() {
  */
 function PhoneMock({ src }: { src: string }) {
   return (
-    <div className="relative">
-      {/* Side buttons */}
-      <div className="hidden md:block absolute top-24 -left-1 h-12 w-1 bg-coffee-800 rounded-l" />
-      <div className="hidden md:block absolute top-44 -left-1 h-20 w-1 bg-coffee-800 rounded-l" />
-      <div className="hidden md:block absolute top-32 -right-1 h-16 w-1 bg-coffee-800 rounded-r" />
+    // Fluid width, capped at 340px so the chassis still reads as a phone on
+    // wide desktops. Aspect ratio drives the height so nothing overflows on
+    // narrow viewports (iPhone SE @ 320px etc.).
+    <div className="relative w-full max-w-[340px] mx-auto">
+      {/* Side buttons — purely cosmetic, hidden below md so they don't poke
+          out past the screen edge on cramped mobile widths. */}
+      <div className="hidden md:block absolute top-[18%] -left-1 h-12 w-1 bg-coffee-800 rounded-l" />
+      <div className="hidden md:block absolute top-[32%] -left-1 h-20 w-1 bg-coffee-800 rounded-l" />
+      <div className="hidden md:block absolute top-[24%] -right-1 h-16 w-1 bg-coffee-800 rounded-r" />
 
       {/* Outer chassis */}
-      <div className="rounded-[44px] bg-coffee-900 p-2.5 shadow-coffee">
+      <div className="rounded-[40px] sm:rounded-[44px] bg-coffee-900 p-2 sm:p-2.5 shadow-coffee">
         {/* Inner bezel */}
-        <div className="rounded-[36px] bg-black p-1.5 overflow-hidden">
-          {/* Screen */}
-          <div className="relative rounded-[30px] overflow-hidden bg-cream-50" style={{ width: 320, height: 640 }}>
+        <div className="rounded-[32px] sm:rounded-[36px] bg-black p-1 sm:p-1.5 overflow-hidden">
+          {/* Screen — aspect ratio matches the previous 320×640 (1:2). */}
+          <div className="relative rounded-[26px] sm:rounded-[30px] overflow-hidden bg-cream-50 w-full aspect-[1/2]">
             {/* Notch */}
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 h-5 w-24 bg-black rounded-full z-10" />
+            <div className="absolute top-1.5 left-1/2 -translate-x-1/2 h-4 sm:h-5 w-20 sm:w-24 bg-black rounded-full z-10" />
             <iframe
               src={src}
               title="Cafe DK live demo"
