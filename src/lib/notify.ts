@@ -76,6 +76,7 @@ export async function notifyNewOrder(orderId: string) {
         `Order *#${order.orderNumber}*  ·  ₹${order.totalAmount.toFixed(0)}`,
         order.customerName ? `Customer: ${order.customerName}` : null,
         order.customerPhone ? `Phone: ${order.customerPhone}` : null,
+        (order as any).customerAddress ? `Address: ${(order as any).customerAddress}` : null,
         order.customerNote ? `Note: ${order.customerNote}` : null,
         '',
         '*Items:*',

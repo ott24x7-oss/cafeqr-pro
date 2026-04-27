@@ -20,11 +20,18 @@ const schema = z.object({
   cafeSlug: z.string(),
   tableCode: z.string().optional(),
   type: z.enum(['DINE_IN', 'TAKEAWAY', 'DELIVERY']).default('DINE_IN'),
-  customerName: z.string().optional(),
-  customerPhone: z.string().optional(),
+  // Customer identity is now required on every order — the cafe owner
+  // wanted name + verified phone for callbacks and notifications. Address
+  // is required only for DELIVERY (refined below).
+  customerName: z.string().min(1, 'Name is required'),
+  customerPhone: z.string().min(7, 'WhatsApp number is required'),
+  customerAddress: z.string().optional(),
   customerNote: z.string().optional(),
   items: z.array(cartItemSchema).min(1),
-});
+}).refine(
+  (d) => d.type !== 'DELIVERY' || (d.customerAddress && d.customerAddress.trim().length >= 6),
+  { message: 'Delivery address is required', path: ['customerAddress'] },
+);
 
 export async function POST(req: Request) {
   try {
@@ -60,6 +67,7 @@ export async function POST(req: Request) {
         type: body.type,
         customerName: body.customerName,
         customerPhone: body.customerPhone,
+        customerAddress: body.customerAddress,
         customerNote: body.customerNote,
         subtotal: totals.subtotal,
         taxAmount: totals.taxAmount,

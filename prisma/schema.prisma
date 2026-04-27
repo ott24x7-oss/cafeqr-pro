@@ -357,6 +357,7 @@ model Order {
   tableId        String?
   customerName   String?
   customerPhone  String?
+  customerAddress String?  // Required when type=DELIVERY — captured at checkout.
   customerNote   String?
   internalNote   String?
   type           OrderType     @default(DINE_IN)

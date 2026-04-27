@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { X, Plus, Minus, Trash2, Loader2, MessageSquare } from 'lucide-react';
+import { X, Plus, Minus, Trash2, Loader2, MessageSquare, MapPin, Bike } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input, Textarea } from '@/components/ui/input';
 import { calcCart, type CartItem } from '@/lib/order-utils';
@@ -30,11 +30,36 @@ export function CustomerCart({
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [phoneVerified, setPhoneVerified] = useState(false);
+  const [address, setAddress] = useState('');
   const [note, setNote] = useState('');
-  const [type, setType] = useState<'DINE_IN' | 'TAKEAWAY'>(table ? 'DINE_IN' : 'TAKEAWAY');
+
+  // Pick a sensible default order type. Walk-ins go takeaway; tables default
+  // to dine-in unless dine-in is disabled. If the cafe only does delivery
+  // (rare but possible), start there.
+  const defaultType: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY' = (() => {
+    if (table && cafe.settings?.acceptDineIn !== false) return 'DINE_IN';
+    if (cafe.settings?.acceptTakeaway !== false) return 'TAKEAWAY';
+    if (cafe.settings?.acceptDelivery) return 'DELIVERY';
+    return 'TAKEAWAY';
+  })();
+  const [type, setType] = useState<'DINE_IN' | 'TAKEAWAY' | 'DELIVERY'>(defaultType);
   const [submitting, setSubmitting] = useState(false);
 
   const totals = calcCart(cart, cafe.settings, type);
+
+  // Build the visible order-type buttons from the cafe's settings. When only
+  // one mode is enabled we still show a single label so the customer knows
+  // what's happening.
+  const typeOptions: { v: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY'; l: string; icon: any }[] = [
+    cafe.settings?.acceptDineIn !== false && table ? { v: 'DINE_IN' as const, l: 'Dine in', icon: null } : null,
+    cafe.settings?.acceptTakeaway !== false ? { v: 'TAKEAWAY' as const, l: 'Takeaway', icon: null } : null,
+    cafe.settings?.acceptDelivery ? { v: 'DELIVERY' as const, l: 'Delivery', icon: Bike } : null,
+  ].filter(Boolean) as any;
+
+  const nameValid = name.trim().length >= 2;
+  const phoneValid = phoneVerified;
+  const addressValid = type !== 'DELIVERY' || address.trim().length >= 6;
+  const canPlace = nameValid && phoneValid && addressValid && cart.length > 0 && !submitting;
 
   async function requestOtp() {
     if (!phone || phone.replace(/\D/g, '').length < 10) {
@@ -67,14 +92,18 @@ export function CustomerCart({
 
   async function placeOrder() {
     if (!cart.length) return;
+    if (!nameValid) return toast.error('Please enter your name');
+    if (!phoneValid) return toast.error('Please verify your WhatsApp number');
+    if (!addressValid) return toast.error('Please enter a delivery address');
     setSubmitting(true);
     try {
       const payload = {
         cafeSlug: cafe.slug,
         tableCode: table?.code,
         type,
-        customerName: name || undefined,
-        customerPhone: phoneVerified ? phone : undefined,
+        customerName: name.trim(),
+        customerPhone: phone,
+        customerAddress: type === 'DELIVERY' ? address.trim() : undefined,
         customerNote: note || undefined,
         items: cart,
       };
@@ -133,17 +162,15 @@ export function CustomerCart({
             </div>
           ))}
 
-          {cafe.settings?.acceptDineIn && cafe.settings?.acceptTakeaway && (
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { v: 'DINE_IN', l: 'Dine in' },
-                { v: 'TAKEAWAY', l: 'Takeaway' },
-              ].map((t) => (
+          {typeOptions.length > 1 && (
+            <div className={`grid gap-2 ${typeOptions.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+              {typeOptions.map((t) => (
                 <button
                   key={t.v}
-                  onClick={() => setType(t.v as any)}
-                  className={`rounded-xl border p-3 text-sm font-semibold ${type === t.v ? 'border-coffee-700 bg-cream-100 text-coffee-900' : 'border-coffee-200 bg-white text-coffee-600'}`}
+                  onClick={() => setType(t.v)}
+                  className={`rounded-xl border p-3 text-sm font-semibold flex items-center justify-center gap-1.5 ${type === t.v ? 'border-coffee-700 bg-cream-100 text-coffee-900' : 'border-coffee-200 bg-white text-coffee-600'}`}
                 >
+                  {t.icon && <t.icon className="h-3.5 w-3.5" />}
                   {t.l}
                 </button>
               ))}
@@ -151,14 +178,29 @@ export function CustomerCart({
           )}
 
           <div className="card-warm !p-4">
-            <div className="text-xs font-semibold text-coffee-700 mb-2">YOUR DETAILS</div>
+            <div className="text-xs font-semibold text-coffee-700 mb-2">YOUR DETAILS *</div>
             <div className="grid gap-2.5">
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name (optional)" />
+              <div>
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Your name *"
+                  aria-invalid={!nameValid}
+                />
+                {!nameValid && name.length > 0 && (
+                  <div className="text-xs text-rose-600 mt-1">Please enter at least 2 characters</div>
+                )}
+              </div>
 
               {!phoneVerified ? (
                 <div>
                   <div className="flex gap-2">
-                    <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="WhatsApp number" inputMode="tel" />
+                    <Input
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="WhatsApp number *"
+                      inputMode="tel"
+                    />
                     <Button variant="wa" onClick={requestOtp} disabled={otpSent}>
                       <MessageSquare className="h-4 w-4" /> {otpSent ? 'Sent' : 'Verify'}
                     </Button>
@@ -169,11 +211,30 @@ export function CustomerCart({
                       <Button onClick={verifyOtp}>Confirm</Button>
                     </div>
                   )}
-                  <div className="helper">We'll send order updates here.</div>
+                  <div className="helper">Required — we'll send order updates here. {!phoneVerified && phone && <span className="text-rose-600 font-semibold">Please verify before placing the order.</span>}</div>
                 </div>
               ) : (
                 <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-sm text-emerald-800 flex items-center gap-2">
                   ✓ Verified · {phone}
+                </div>
+              )}
+
+              {type === 'DELIVERY' && (
+                <div>
+                  <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800 mb-2">
+                    <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                    <span>Delivery address is needed so the rider can find you.</span>
+                  </div>
+                  <Textarea
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="Delivery address with landmark *"
+                    aria-invalid={!addressValid}
+                    rows={3}
+                  />
+                  {!addressValid && address.length > 0 && (
+                    <div className="text-xs text-rose-600 mt-1">Address looks too short</div>
+                  )}
                 </div>
               )}
 
@@ -186,6 +247,7 @@ export function CustomerCart({
             {totals.taxAmount > 0 && <Row l={`Tax (${cafe.settings?.taxPercent ?? 0}%)`} v={formatCurrency(totals.taxAmount)} />}
             {totals.serviceAmount > 0 && <Row l="Service charge" v={formatCurrency(totals.serviceAmount)} />}
             {totals.packingAmount > 0 && <Row l="Packing" v={formatCurrency(totals.packingAmount)} />}
+            {totals.deliveryAmount > 0 && <Row l="Delivery" v={formatCurrency(totals.deliveryAmount)} />}
             <div className="border-t border-coffee-100 pt-2 mt-1">
               <Row l={<span className="font-bold text-coffee-900">Total</span>} v={<span className="font-bold text-lg text-coffee-900">{formatCurrency(totals.totalAmount)}</span>} />
             </div>
@@ -194,12 +256,20 @@ export function CustomerCart({
           <Button
             size="lg"
             className="w-full"
-            disabled={submitting || cart.length === 0}
+            disabled={!canPlace}
             onClick={placeOrder}
           >
             {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             Place order · {formatCurrency(totals.totalAmount)}
           </Button>
+          {!canPlace && cart.length > 0 && !submitting && (
+            <p className="helper text-center text-rose-600">
+              {!nameValid ? 'Add your name to continue.'
+                : !phoneValid ? 'Verify your WhatsApp number to continue.'
+                  : !addressValid ? 'Add a delivery address to continue.'
+                    : ''}
+            </p>
+          )}
           <p className="helper text-center">By placing the order, you confirm the items above.</p>
         </div>
       </div>
