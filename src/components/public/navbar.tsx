@@ -10,6 +10,7 @@ export function PublicNavbar() {
   const [open, setOpen] = useState(false);
   const links = [
     { href: '/how-it-works', label: 'How it works' },
+    { href: '/demo', label: 'Demo' },
     { href: '/for-customers', label: 'For customers' },
     { href: '/for-owners', label: 'For owners' },
     { href: '/pricing', label: 'Pricing' },
