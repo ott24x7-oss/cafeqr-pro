@@ -4,37 +4,47 @@
 
 @layer base {
   :root {
-    --background: 38 60% 98%;
-    --foreground: 24 35% 18%;
-    --primary: 23 32% 30%;
-    --primary-foreground: 38 60% 98%;
-    --secondary: 32 38% 90%;
-    --secondary-foreground: 24 35% 18%;
-    --muted: 32 30% 94%;
-    --muted-foreground: 24 12% 45%;
-    --accent: 30 50% 65%;
-    --accent-foreground: 24 35% 18%;
+    /* WatShop brand tokens */
+    --background: 40 33% 98%;
+    --foreground: 160 25% 9%;
+    --primary: 160 25% 9%;
+    --primary-foreground: 40 33% 98%;
+    --secondary: 40 28% 94%;
+    --secondary-foreground: 160 25% 9%;
+    --muted: 40 28% 94%;
+    --muted-foreground: 165 9% 39%;
+    --accent: 150 58% 49%;
+    --accent-foreground: 40 33% 98%;
     --destructive: 0 70% 55%;
     --destructive-foreground: 0 0% 100%;
-    --border: 32 30% 86%;
-    --input: 32 30% 88%;
-    --ring: 23 32% 30%;
+    --border: 40 20% 88%;
+    --input: 40 20% 88%;
+    --ring: 150 58% 49%;
+    --card: 0 0% 100%;
+    --card-foreground: 160 25% 9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 160 25% 9%;
     --radius: 0.85rem;
   }
   .dark {
-    --background: 24 30% 8%;
-    --foreground: 38 50% 95%;
-    --primary: 30 50% 65%;
-    --primary-foreground: 24 30% 8%;
-    --secondary: 24 18% 18%;
-    --secondary-foreground: 38 50% 95%;
-    --muted: 24 18% 14%;
-    --muted-foreground: 32 18% 65%;
-    --accent: 30 50% 60%;
-    --accent-foreground: 24 30% 8%;
-    --border: 24 18% 22%;
-    --input: 24 18% 22%;
-    --ring: 30 50% 65%;
+    /* WatShop brand tokens — dark mode */
+    --background: 160 25% 9%;
+    --foreground: 40 33% 98%;
+    --primary: 150 58% 49%;
+    --primary-foreground: 160 25% 9%;
+    --secondary: 160 20% 14%;
+    --secondary-foreground: 40 33% 98%;
+    --muted: 160 20% 14%;
+    --muted-foreground: 165 9% 65%;
+    --accent: 150 58% 49%;
+    --accent-foreground: 160 25% 9%;
+    --border: 160 18% 20%;
+    --input: 160 18% 20%;
+    --ring: 150 58% 49%;
+    --card: 160 22% 12%;
+    --card-foreground: 40 33% 98%;
+    --popover: 160 22% 12%;
+    --popover-foreground: 40 33% 98%;
   }
 
   * { @apply border-border; }

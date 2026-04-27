@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useState } from 'react';
-import { Coffee, Menu, X } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
 
@@ -18,13 +19,15 @@ export function PublicNavbar() {
   return (
     <header className="sticky top-0 z-50 backdrop-blur bg-cream-50/85 border-b border-coffee-100">
       <div className="container flex h-16 items-center justify-between">
-        <Link href="/" className="flex items-center gap-2">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-coffee-gradient text-cream-50 shadow-soft">
-            <Coffee className="h-5 w-5" />
-          </span>
-          <span className="font-display text-xl font-bold tracking-tight text-coffee-900">
-            CafeQR <span className="text-caramel">Pro</span>
-          </span>
+        <Link href="/" className="flex items-center gap-2" aria-label="WatShop Cafe — home">
+          <Image
+            src="/watshop-cafe-lockup.svg"
+            alt="WatShop Cafe"
+            width={160}
+            height={36}
+            priority
+            className="h-9 w-auto"
+          />
         </Link>
 
         <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-coffee-700">
