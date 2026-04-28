@@ -55,7 +55,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#0F1F1A',
+  themeColor: '#3E2D24',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
@@ -73,7 +73,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-        <link rel="mask-icon" href="/favicon.svg" color="#34C77B" />
+        <link rel="mask-icon" href="/favicon.svg" color="#6B4E3D" />
       </head>
       <body className={inter.className}>
         <Providers>{children}</Providers>

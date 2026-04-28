@@ -23,10 +23,10 @@ export function PublicNavbar() {
           <Image
             src="/watshop-cafe-lockup.svg"
             alt="WatShop Cafe"
-            width={160}
+            width={36}
             height={36}
             priority
-            className="h-9 w-auto"
+            className="h-9 w-9"
             // data-brand-logo / data-brand-name are picked up by
             // /js/branding.js so the super admin can swap the lockup and
             // the visually-hidden brand text from /admin/branding.
