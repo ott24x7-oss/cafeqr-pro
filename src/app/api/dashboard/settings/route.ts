@@ -61,7 +61,15 @@ export async function POST(req: Request) {
     'enableSound', 'language',
     'country', 'deliveryPartnerPhone',
     'invoiceTemplate',
+    'loyaltyEnabled', 'loyaltyPercent',
   ]);
+
+  // Clamp loyalty percent to a sane band so a typo can't gift the cafe owner
+  // a 1000% earn rate. 0–50% is plenty of headroom.
+  if (plain.loyaltyPercent !== undefined) {
+    const v = Number(plain.loyaltyPercent);
+    plain.loyaltyPercent = Number.isFinite(v) ? Math.max(0, Math.min(50, v)) : 0;
+  }
 
   // Whitelist the values we'll accept for notifyOnStatuses so a tampered
   // payload can't sneak random strings into the array column.

@@ -12,6 +12,7 @@ import { renderInvoicePdf, invoiceDataFromOrder } from './invoice-pdf';
 import { configFromCafe, type WACafe } from './whatsapp';
 import { sendMessage } from './whatsapp-send';
 import { customerWantsStatus } from './notify';
+import { awardLoyaltyForOrder } from './loyalty';
 
 const APP_URL = process.env.APP_URL || process.env.NEXTAUTH_URL || '';
 
@@ -39,6 +40,10 @@ export async function onPaymentConfirmed(orderId: string): Promise<PaymentConfir
 
   // Mark to dedupe before any await — small race window is acceptable here.
   sentLock.add(orderId);
+
+  // Credit loyalty points before notifications fire — idempotent in DB so
+  // safe even if invoice delivery later retries via a fresh call.
+  await awardLoyaltyForOrder(orderId).catch(() => { /* never block payment notifications on points */ });
 
   // Also drop a Notification row so the dashboard surfaces this even when
   // the bot can't deliver (e.g. no customer phone).

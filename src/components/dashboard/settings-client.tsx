@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import {
   Coffee, MessageSquare, CreditCard, Save, Loader2, Send, Plus, X,
-  Mail, Lock, Eye, EyeOff, MailCheck, Globe, Copy, Check, AlertCircle,
+  Mail, Lock, Eye, EyeOff, MailCheck, Globe, Copy, Check, AlertCircle, Star,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input, Textarea } from '@/components/ui/input';
@@ -13,7 +13,7 @@ import { toast } from '@/components/ui/toaster';
 import { CURRENCIES } from '@/lib/utils';
 import { COUNTRY_DIAL } from '@/lib/whatsapp';
 
-type Tab = 'profile' | 'tax' | 'whatsapp' | 'payment' | 'branding' | 'domain';
+type Tab = 'profile' | 'tax' | 'whatsapp' | 'payment' | 'loyalty' | 'branding' | 'domain';
 const SENTINEL = '__unchanged__';
 
 // Sensible defaults for HDFC's UPI credit alerts (most common in India). The
@@ -88,6 +88,8 @@ export function SettingsClient({ cafe }: { cafe: any }) {
     enableSound: cafe.settings?.enableSound ?? true,
     country: (cafe.settings?.country ?? 'IN') as string,
     deliveryPartnerPhone: cafe.settings?.deliveryPartnerPhone ?? '',
+    loyaltyEnabled: cafe.settings?.loyaltyEnabled ?? false,
+    loyaltyPercent: cafe.settings?.loyaltyPercent ?? 5,
   });
 
   const [loading, setLoading] = useState(false);
@@ -186,6 +188,7 @@ export function SettingsClient({ cafe }: { cafe: any }) {
             { k: 'tax', l: 'Tax & Charges', i: CreditCard },
             { k: 'whatsapp', l: 'WhatsApp', i: MessageSquare },
             { k: 'payment', l: 'Payment', i: CreditCard },
+            { k: 'loyalty', l: 'Loyalty', i: Star },
             { k: 'branding', l: 'Branding', i: Coffee },
             { k: 'domain', l: 'Custom Domain', i: Globe },
           ].map((t) => (
@@ -704,6 +707,69 @@ export function SettingsClient({ cafe }: { cafe: any }) {
                   )}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {tab === 'loyalty' && (
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-coffee-100 bg-cream-50 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="font-bold text-coffee-900 flex items-center gap-2">
+                    <Star className="h-4 w-4 text-caramel-dark" /> Loyalty programme
+                  </div>
+                  <p className="helper">
+                    Award points on paid online orders. Customers see their balance after they log in
+                    on your cafe page. 1 point = 1 {form.currency || 'INR'}.
+                  </p>
+                </div>
+                <label className="inline-flex items-center gap-2 cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4"
+                    checked={settings.loyaltyEnabled}
+                    onChange={(e) => setSettings({ ...settings, loyaltyEnabled: e.target.checked })}
+                  />
+                  <span className="text-sm font-medium text-coffee-800">{settings.loyaltyEnabled ? 'On' : 'Off'}</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="label">Earn rate (% of subtotal)</label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min={0}
+                    max={50}
+                    step={0.5}
+                    value={settings.loyaltyPercent}
+                    onChange={(e) => setSettings({ ...settings, loyaltyPercent: Number(e.target.value) })}
+                    disabled={!settings.loyaltyEnabled}
+                  />
+                  <span className="text-sm text-coffee-700">%</span>
+                </div>
+                <p className="helper">
+                  Example: at 5%, an order with subtotal ₹600 credits 30 points. Capped at 50%.
+                </p>
+              </div>
+              <div className="rounded-xl bg-cream-100 p-4">
+                <div className="text-xs uppercase tracking-wide text-coffee-500">Preview</div>
+                <div className="mt-1 font-display text-2xl font-bold text-coffee-900">
+                  {settings.loyaltyEnabled
+                    ? `${Math.round(600 * (settings.loyaltyPercent || 0) / 100)} pts`
+                    : '— pts'}
+                </div>
+                <div className="text-xs text-coffee-600">on a ₹600 order</div>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-coffee-100 bg-white p-3 text-xs text-coffee-600 leading-relaxed">
+              Points credit automatically once the customer's payment is confirmed (paymentStatus = PAID).
+              They never credit twice for the same order. View customer balances and the points ledger
+              under <b>Loyalty</b> in the sidebar.
             </div>
           </div>
         )}

@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import {
   LayoutDashboard, ListOrdered, Utensils, QrCode, CreditCard, Star, Users, Settings, BarChart3, Receipt,
-  Coffee, LogOut, Bell, Shield, Tag, History, Globe, Palette,
+  Coffee, LogOut, Bell, Shield, Tag, History, Globe, Palette, Award,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -23,6 +23,7 @@ export function DashboardSidebar({ role, cafeName, isAdmin }: { role: string; ca
     { href: '/dashboard/payments', label: 'Payments', icon: CreditCard },
     { href: '/dashboard/reviews', label: 'Reviews', icon: Star },
     { href: '/dashboard/coupons', label: 'Coupons', icon: Tag },
+    { href: '/dashboard/loyalty', label: 'Loyalty', icon: Award },
     { href: '/dashboard/staff', label: 'Staff', icon: Users },
     { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
     { href: '/dashboard/billing', label: 'Billing', icon: Receipt },

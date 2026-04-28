@@ -84,6 +84,12 @@ enum NotifKind {
   SYSTEM
 }
 
+enum LoyaltyTxnType {
+  EARN
+  REDEEM
+  ADJUST
+}
+
 // ─── 1. USERS ─────────────────────────────────────────────────────────────
 model User {
   id            String    @id @default(cuid())
@@ -158,6 +164,7 @@ model Cafe {
   reviews      Review[]
   coupons      Coupon[]
   subscriptions Subscription[]
+  loyaltyAccounts LoyaltyAccount[]
 
   @@index([ownerId])
 }
@@ -224,6 +231,11 @@ model CafeSettings {
   smtpUser        String?
   smtpPass        String?  // encrypted
   smtpFrom        String?
+  // Loyalty programme: when enabled, paid online orders credit
+  // round(subtotal * loyaltyPercent / 100) points to a LoyaltyAccount
+  // keyed by (cafeId, customerPhone). 1 point = 1 unit of cafe currency.
+  loyaltyEnabled  Boolean  @default(false)
+  loyaltyPercent  Float    @default(5.0)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -611,4 +623,44 @@ model Coupon {
   cafe          Cafe     @relation(fields: [cafeId], references: [id], onDelete: Cascade)
 
   @@unique([cafeId, code])
+}
+
+// ─── 19. LOYALTY ──────────────────────────────────────────────────────────
+// One account per (cafe, customer phone). Points are integer amounts in
+// the cafe's currency unit (1 point = ₹1 by default). EARN rows are
+// created automatically by the post-payment hook when CafeSettings
+// loyaltyEnabled is true; REDEEM/ADJUST are manual for now.
+model LoyaltyAccount {
+  id                String                @id @default(cuid())
+  cafeId            String
+  phone             String
+  name              String?
+  points            Int                   @default(0)
+  lifetimeEarned    Int                   @default(0)
+  lifetimeRedeemed  Int                   @default(0)
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  cafe              Cafe                  @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  transactions      LoyaltyTransaction[]
+
+  @@unique([cafeId, phone])
+  @@index([cafeId])
+  @@index([phone])
+}
+
+model LoyaltyTransaction {
+  id          String          @id @default(cuid())
+  accountId   String
+  type        LoyaltyTxnType
+  points      Int
+  orderId     String?         // cross-ref to Order; not a hard FK so deleting orders won't cascade points away
+  note        String?
+  createdAt   DateTime        @default(now())
+
+  account     LoyaltyAccount  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, orderId, type]) // dedupe EARN per order
+  @@index([accountId])
+  @@index([orderId])
 }

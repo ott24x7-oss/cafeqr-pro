@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useMemo, useState } from 'react';
 import {
-  Coffee, MapPin, Phone, Search, ShoppingBag, Truck, Users, Clock, Star, ChevronRight, Sparkles, Utensils, Flame,
+  Coffee, MapPin, Phone, Search, ShoppingBag, Truck, Users, Clock, Star, ChevronRight, Sparkles, Utensils, Flame, User,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { formatCurrency } from '@/lib/utils';
@@ -100,6 +100,16 @@ export function CafeLobby({ cafe }: { cafe: Cafe }) {
           )}
           <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/5 to-black/30" />
         </div>
+        {/* Customer account entry point — sign in to track orders, see
+            history and check loyalty points. Lives in the hero overlay so
+            it's discoverable from the cafe storefront without needing a
+            full nav bar. */}
+        <Link
+          href={`/cafe/${cafe.slug}/account`}
+          className="absolute top-3 right-3 inline-flex items-center gap-1.5 rounded-full bg-white/90 backdrop-blur px-3 py-1.5 text-xs font-semibold text-coffee-800 shadow-soft hover:bg-white"
+        >
+          <User className="h-3.5 w-3.5" /> My account
+        </Link>
       </header>
 
       <main className="max-w-3xl mx-auto px-4 -mt-16 sm:-mt-20 relative space-y-5">
