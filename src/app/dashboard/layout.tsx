@@ -5,7 +5,6 @@ import { getOwnerCafe } from '@/lib/guards';
 import { DashboardSidebar, MobileBottomNav } from '@/components/dashboard/sidebar';
 import { Button } from '@/components/ui/button';
 import { NotificationsBell } from '@/components/dashboard/notifications-bell';
-import { ThemeToggle } from '@/components/theme-toggle';
 
 export const dynamic = 'force-dynamic';
 
@@ -58,7 +57,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
                   <AlertCircle className="h-3 w-3" /> Trial · {Math.max(0, Math.ceil((new Date(cafe.trialEndsAt).getTime() - Date.now()) / 86400000))}d left
                 </Link>
               )}
-              <ThemeToggle />
               <NotificationsBell cafeId={cafe.id} />
             </div>
           </div>

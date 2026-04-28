@@ -5,7 +5,6 @@ import Image from 'next/image';
 import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ThemeToggle } from '@/components/theme-toggle';
 
 export function PublicNavbar() {
   const [open, setOpen] = useState(false);
@@ -44,7 +43,6 @@ export function PublicNavbar() {
         </nav>
 
         <div className="hidden md:flex items-center gap-2">
-          <ThemeToggle />
           <Link href="/login">
             <Button variant="ghost" size="sm">Login</Button>
           </Link>
@@ -54,7 +52,6 @@ export function PublicNavbar() {
         </div>
 
         <div className="md:hidden flex items-center gap-1">
-          <ThemeToggle />
           <button className="p-2" onClick={() => setOpen((o) => !o)} aria-label="menu">
             {open ? <X /> : <Menu />}
           </button>
