@@ -763,6 +763,10 @@ export function SettingsClient({ cafe }: { cafe: any }) {
                   <p className="helper">
                     Award points on paid online orders. Customers see their balance after they log in
                     on your cafe page. 1 point = 1 {form.currency || 'INR'}.
+                    <span className="block text-coffee-400 mt-0.5">
+                      हर paid order पर ग्राहक को points मिलते हैं। वो login करके अपना balance देख
+                      सकते हैं। 1 point = 1 {form.currency || 'INR'}।
+                    </span>
                   </p>
                 </div>
                 <label className="inline-flex items-center gap-2 cursor-pointer shrink-0">
@@ -794,6 +798,9 @@ export function SettingsClient({ cafe }: { cafe: any }) {
                 </div>
                 <p className="helper">
                   Example: at 5%, an order with subtotal ₹600 credits 30 points. Capped at 50%.
+                  <span className="block text-coffee-400 mt-0.5">
+                    जैसे 5% पर ₹600 के order पर 30 points मिलेंगे। ज़्यादा से ज़्यादा 50% तक रख सकते हैं।
+                  </span>
                 </p>
               </div>
               <div className="rounded-xl bg-cream-100 p-4">
@@ -817,15 +824,28 @@ export function SettingsClient({ cafe }: { cafe: any }) {
 
         {tab === 'branding' && (
           <div className="grid md:grid-cols-2 gap-4">
+            <div className="md:col-span-2 rounded-xl bg-cream-100 border border-coffee-100 p-3 text-sm leading-relaxed">
+              <div className="text-coffee-800">
+                These colours show on your cafe's customer-facing menu page.
+              </div>
+              <div className="text-coffee-600 text-[13px]">
+                ये रंग आपके cafe के menu page पर ग्राहकों को दिखेंगे।
+              </div>
+            </div>
             <div>
               <label className="label">Primary colour</label>
               <Input type="color" value={settings.primaryColor} onChange={(e) => setSettings({ ...settings, primaryColor: e.target.value })} className="h-12" />
+              <p className="helper text-coffee-400">Buttons, headings — main colour</p>
             </div>
             <div>
               <label className="label">Accent colour</label>
               <Input type="color" value={settings.accentColor} onChange={(e) => setSettings({ ...settings, accentColor: e.target.value })} className="h-12" />
+              <p className="helper text-coffee-400">Highlights, prices — accent</p>
             </div>
-            <p className="md:col-span-2 helper">Custom branding requires a Pro plan or higher.</p>
+            <p className="md:col-span-2 helper">
+              Custom branding requires a Pro plan or higher.
+              <span className="block text-coffee-400">अपने रंग सेट करने के लिए Pro plan ज़रूरी है।</span>
+            </p>
           </div>
         )}
 
@@ -910,6 +930,10 @@ function CustomDomainSection({ cafe }: { cafe: any }) {
         <p className="helper">
           Serve your menu from your own domain — e.g. <b>menu.your-cafe.com</b> instead of cafe.watshop.in/cafe/your-slug.
           Free with any plan; we issue the SSL certificate.
+          <span className="block text-coffee-400 mt-0.5">
+            अपना खुद का domain (जैसे <b>menu.your-cafe.com</b>) use कर सकते हैं — किसी भी plan पर
+            मुफ़्त। SSL certificate हम लगाएंगे।
+          </span>
         </p>
       </div>
 
