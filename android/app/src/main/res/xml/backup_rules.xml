@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- Don't auto-backup the WebView cache + cookies; user data lives on
+         the server. Persist only the small SharedPreferences for the cached
+         app config so the app boots offline after an OS-restore too. -->
+    <include domain="sharedpref" path="watshop_app_config.xml" />
+</full-backup-content>

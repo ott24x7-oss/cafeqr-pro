@@ -1,0 +1,21 @@
+<resources>
+    <!-- Default brand colors. The remote config can override
+         splashBackgroundColor + primaryColor at runtime; these are the
+         baked-in fallbacks shown before the first config fetch lands. -->
+    <color name="brand_primary">#22C55E</color>
+    <color name="brand_primary_dark">#16A34A</color>
+    <color name="brand_on_primary">#FFFFFF</color>
+
+    <color name="splash_background">#0B0F14</color>
+    <color name="splash_text">#F1F5F9</color>
+
+    <color name="surface_light">#FFFFFF</color>
+    <color name="surface_dark">#0F172A</color>
+
+    <color name="text_primary_light">#0F172A</color>
+    <color name="text_primary_dark">#F1F5F9</color>
+    <color name="text_secondary_light">#475569</color>
+    <color name="text_secondary_dark">#94A3B8</color>
+
+    <color name="error_red">#DC2626</color>
+</resources>

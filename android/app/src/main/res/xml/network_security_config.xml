@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Production policy: HTTPS only for our domain. The default user-cert trust
+  anchor is excluded so user-installed CAs cannot intercept our traffic.
+  Add a debug-overrides block for local cleartext if you ever need it; this
+  file ships locked down for Play Store review.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">cafe.watshop.in</domain>
+        <domain includeSubdomains="true">watshop.in</domain>
+    </domain-config>
+</network-security-config>

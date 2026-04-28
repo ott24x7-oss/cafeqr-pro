@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Vector "WC" monogram used by the system splash screen. Replace with a
+     proper splash logo once branding is final. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+    <path
+        android:fillColor="#22C55E"
+        android:pathData="M60,8 C30.7,8 7,31.7 7,60 C7,89.3 30.7,113 60,113 C89.3,113 112,89.3 112,60 C112,31.7 89.3,8 60,8 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M37,42 L46,42 L51,73 L57,42 L65,42 L71,73 L75,42 L84,42 L77,82 L67,82 L61,52 L56,82 L46,82 Z" />
+</vector>

@@ -1,0 +1,38 @@
+<resources>
+    <!-- Display name on the launcher. Override at runtime via remote config
+         (see WebViewActivity.title), but Play Store still shows this. -->
+    <string name="app_name">WatShop Cafe</string>
+
+    <!-- Splash -->
+    <string name="splash_tagline">QR Ordering for Cafes</string>
+
+    <!-- Generic -->
+    <string name="retry">Retry</string>
+    <string name="exit">Exit</string>
+    <string name="cancel">Cancel</string>
+    <string name="open_play_store">Open Play Store</string>
+
+    <!-- Error / offline -->
+    <string name="error_title">No internet connection</string>
+    <string name="error_subtitle">Check your network and try again. Your last session is saved.</string>
+
+    <!-- Maintenance -->
+    <string name="maintenance_title">We\'ll be right back</string>
+    <string name="maintenance_default">App is under maintenance. Please try again later.</string>
+
+    <!-- Force update -->
+    <string name="update_title">Update required</string>
+    <string name="update_subtitle">A newer version of the app is available. Please update to continue.</string>
+
+    <!-- Back-press confirmation dialog -->
+    <string name="exit_dialog_title">Close app?</string>
+    <string name="exit_dialog_message">You\'re at the start of your browsing session. Close the app?</string>
+
+    <!-- WebView permission rationale shown when the website asks for
+         camera/location and the device hasn't granted it yet. -->
+    <string name="permission_camera_rationale">This site needs your camera to scan QR codes.</string>
+    <string name="permission_location_rationale">This site needs your location to suggest nearby cafes.</string>
+
+    <!-- File chooser title -->
+    <string name="file_chooser_title">Choose a file</string>
+</resources>

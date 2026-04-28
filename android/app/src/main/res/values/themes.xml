@@ -1,0 +1,26 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Base app theme. Material3 DayNight gives us auto light/dark just by
+         honoring the system flag. Status bar matches the surface so the
+         WebView sits flush. -->
+    <style name="Theme.WatShopCafe" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/brand_primary</item>
+        <item name="colorPrimaryVariant">@color/brand_primary_dark</item>
+        <item name="colorOnPrimary">@color/brand_on_primary</item>
+        <item name="colorAccent">@color/brand_primary</item>
+
+        <item name="android:windowLightStatusBar" tools:targetApi="m">true</item>
+        <item name="android:statusBarColor">?attr/colorSurface</item>
+        <item name="android:navigationBarColor">?attr/colorSurface</item>
+    </style>
+
+    <!-- Splash theme. We rely on the AndroidX SplashScreen API so the
+         transition from system splash to MainActivity is seamless even on
+         API 23 devices that get the compat backport. -->
+    <style name="Theme.WatShopCafe.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
+        <item name="windowSplashScreenAnimationDuration">300</item>
+        <item name="postSplashScreenTheme">@style/Theme.WatShopCafe</item>
+    </style>
+</resources>

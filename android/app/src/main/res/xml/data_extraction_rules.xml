@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+ data extraction rules. Mirror backup_rules. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="sharedpref" path="watshop_app_config.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="sharedpref" path="watshop_app_config.xml" />
+    </device-transfer>
+</data-extraction-rules>

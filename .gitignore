@@ -11,3 +11,19 @@ public/sw.js
 public/workbox-*.js
 public/fallback-*.js
 _reference
+
+# TypeScript incremental build cache
+tsconfig.tsbuildinfo
+
+# Android signing material — must NEVER be committed
+*.keystore
+*.jks
+keystore.properties
+android/local.properties
+
+# IDE / OS
+.idea/
+.vscode/
+
+# Locally downloaded debug APKs (built by GitHub Actions)
+apks/
