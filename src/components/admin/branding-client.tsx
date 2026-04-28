@@ -4,15 +4,17 @@
 // browser so the server never deals with multipart and storage stays in a
 // single Postgres row. The runtime patcher at /js/branding.js applies the
 // saved values to every public/marketing page on next load — admin chrome
-// is intentionally left alone.
+// is intentionally left alone. App-mockup fields (icon, splash, APK URLs)
+// are read server-side by the landing page so they render with no flash.
 
 import { useState } from 'react';
-import { Save, Loader2, Upload, RotateCcw, Image as ImageIcon, Palette } from 'lucide-react';
+import { Save, Loader2, Upload, RotateCcw, Image as ImageIcon, Palette, Smartphone, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui/toaster';
 
-const LOGO_MAX_BYTES = 614400; // keep in lockstep with the API guard
+const LOGO_MAX_BYTES = 614400;     // logo + app icon — keep in sync with API
+const SPLASH_MAX_BYTES = 1258291;  // splash gets a larger cap
 const ALLOWED_TYPES = ['image/svg+xml', 'image/png', 'image/jpeg', 'image/webp'];
 
 interface Initial {
@@ -21,25 +23,32 @@ interface Initial {
   tagline: string;
   footerText: string;
   primaryColor: string;
+  appIconDataUrl: string;
+  splashImageDataUrl: string;
+  apkUrlGoogle: string;
+  apkUrlAmazon: string;
 }
+
+type ImageField = 'logoDataUrl' | 'appIconDataUrl' | 'splashImageDataUrl';
 
 export function BrandingClient({ initial }: { initial: Initial }) {
   const [form, setForm] = useState<Initial>({ ...initial });
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [uploading, setUploading] = useState<ImageField | null>(null);
 
-  async function onPickLogo(file: File) {
+  async function pickImage(file: File, field: ImageField, max: number) {
     if (!ALLOWED_TYPES.includes(file.type)) {
       toast.error('Unsupported image', 'Use SVG, PNG, JPEG or WebP.');
       return;
     }
     // Soft-cap raw bytes so the base64 result stays under the API limit
-    // (base64 ~= 4/3 of source). 450 KB raw → ~600 KB encoded.
-    if (file.size > 460000) {
-      toast.error('Image too large', 'Keep under ~450 KB so it fits the data URL limit.');
+    // (base64 ~= 4/3 of source).
+    const rawCap = Math.floor(max * 0.75);
+    if (file.size > rawCap) {
+      toast.error('Image too large', `Keep under ~${Math.round(rawCap / 1024)} KB.`);
       return;
     }
-    setUploading(true);
+    setUploading(field);
     try {
       const dataUrl: string = await new Promise((resolve, reject) => {
         const r = new FileReader();
@@ -47,15 +56,15 @@ export function BrandingClient({ initial }: { initial: Initial }) {
         r.onload = () => resolve(String(r.result));
         r.readAsDataURL(file);
       });
-      if (dataUrl.length > LOGO_MAX_BYTES) {
-        toast.error('Encoded image too large', `${Math.round(dataUrl.length / 1024)} KB exceeds 600 KB limit.`);
+      if (dataUrl.length > max) {
+        toast.error('Encoded image too large', `${Math.round(dataUrl.length / 1024)} KB exceeds limit.`);
         return;
       }
-      setForm({ ...form, logoDataUrl: dataUrl });
+      setForm({ ...form, [field]: dataUrl });
     } catch (e: any) {
       toast.error('Could not read file', e?.message ?? '');
     } finally {
-      setUploading(false);
+      setUploading(null);
     }
   }
 
@@ -80,17 +89,14 @@ export function BrandingClient({ initial }: { initial: Initial }) {
     }
   }
 
-  function clearLogo() {
-    setForm({ ...form, logoDataUrl: '' });
-  }
-
   return (
     <div className="space-y-4 pb-20 md:pb-4">
       <div>
         <h1 className="font-display text-2xl md:text-3xl font-bold text-coffee-900">Frontend Branding</h1>
         <p className="text-coffee-600 text-sm">
-          Override the logo, brand name, tagline, footer note and primary color shown on the WatShop Cafe
-          marketing site (cafe.watshop.in). Per-cafe branding is unaffected.
+          Override the logo, brand name, tagline, footer note, primary color, app icon,
+          splash screen and APK download links shown on the WatShop Cafe marketing site
+          (cafe.watshop.in). Per-cafe branding is unaffected.
         </p>
       </div>
 
@@ -117,17 +123,17 @@ export function BrandingClient({ initial }: { initial: Initial }) {
                   className="hidden"
                   onChange={(e) => {
                     const f = e.target.files?.[0];
-                    if (f) onPickLogo(f);
+                    if (f) pickImage(f, 'logoDataUrl', LOGO_MAX_BYTES);
                     e.target.value = '';
                   }}
                 />
                 <span className="inline-flex items-center gap-1.5 rounded-xl bg-coffee-700 text-cream-50 px-3 py-2 text-sm font-medium hover:bg-coffee-800">
-                  {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  {uploading === 'logoDataUrl' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                   Choose image
                 </span>
               </label>
               {form.logoDataUrl && (
-                <Button type="button" variant="outline" size="sm" onClick={clearLogo}>
+                <Button type="button" variant="outline" size="sm" onClick={() => setForm({ ...form, logoDataUrl: '' })}>
                   <RotateCcw className="h-4 w-4" /> Use default
                 </Button>
               )}
@@ -200,6 +206,126 @@ export function BrandingClient({ initial }: { initial: Initial }) {
             Sets the CSS variable <code>--brand-primary</code> on <code>:root</code> and tints any element with
             <code> [data-brand-color]</code>.
           </p>
+        </section>
+
+        {/* App showcase — icon + splash + APK URLs (rendered on landing page) */}
+        <section className="space-y-4 border-t border-coffee-100 pt-5">
+          <div className="flex items-center gap-2 font-semibold text-coffee-900">
+            <Smartphone className="h-4 w-4" /> Mobile app showcase
+          </div>
+          <p className="text-xs text-coffee-600 -mt-2">
+            Renders on the marketing landing page next to the APK download buttons.
+            Leave any field blank to fall back to defaults / hide the element.
+          </p>
+
+          {/* App icon */}
+          <div className="grid md:grid-cols-[180px_1fr] gap-4 items-start">
+            <div className="rounded-2xl border border-dashed border-coffee-200 bg-cream-50 h-[140px] flex items-center justify-center overflow-hidden">
+              {form.appIconDataUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={form.appIconDataUrl} alt="App icon preview" className="h-[120px] w-[120px] object-contain rounded-3xl" />
+              ) : (
+                <span className="text-xs text-coffee-500 text-center px-2">No custom app icon<br/>(uses default mark)</span>
+              )}
+            </div>
+            <div className="space-y-2">
+              <div className="font-semibold text-coffee-900 text-sm">App icon</div>
+              <label className="inline-flex items-center gap-2 cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) pickImage(f, 'appIconDataUrl', LOGO_MAX_BYTES);
+                    e.target.value = '';
+                  }}
+                />
+                <span className="inline-flex items-center gap-1.5 rounded-xl bg-coffee-700 text-cream-50 px-3 py-2 text-sm font-medium hover:bg-coffee-800">
+                  {uploading === 'appIconDataUrl' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  Choose icon
+                </span>
+              </label>
+              {form.appIconDataUrl && (
+                <Button type="button" variant="outline" size="sm" onClick={() => setForm({ ...form, appIconDataUrl: '' })}>
+                  <RotateCcw className="h-4 w-4" /> Use default
+                </Button>
+              )}
+              <p className="helper">Square, ~512×512. PNG / WebP recommended. Max ~450 KB raw.</p>
+            </div>
+          </div>
+
+          {/* Splash */}
+          <div className="grid md:grid-cols-[180px_1fr] gap-4 items-start">
+            <div className="rounded-2xl border border-dashed border-coffee-200 bg-cream-50 h-[200px] flex items-center justify-center overflow-hidden">
+              {form.splashImageDataUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={form.splashImageDataUrl} alt="Splash preview" className="h-full w-full object-contain" />
+              ) : (
+                <span className="text-xs text-coffee-500 text-center px-2">No custom splash<br/>(uses gradient fallback)</span>
+              )}
+            </div>
+            <div className="space-y-2">
+              <div className="font-semibold text-coffee-900 text-sm">Splash screen</div>
+              <label className="inline-flex items-center gap-2 cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) pickImage(f, 'splashImageDataUrl', SPLASH_MAX_BYTES);
+                    e.target.value = '';
+                  }}
+                />
+                <span className="inline-flex items-center gap-1.5 rounded-xl bg-coffee-700 text-cream-50 px-3 py-2 text-sm font-medium hover:bg-coffee-800">
+                  {uploading === 'splashImageDataUrl' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  Choose splash
+                </span>
+              </label>
+              {form.splashImageDataUrl && (
+                <Button type="button" variant="outline" size="sm" onClick={() => setForm({ ...form, splashImageDataUrl: '' })}>
+                  <RotateCcw className="h-4 w-4" /> Use default
+                </Button>
+              )}
+              <p className="helper">Tall, ~1080×1920 (9:16). PNG / WebP. Max ~900 KB raw.</p>
+            </div>
+          </div>
+
+          {/* APK URLs */}
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="label">
+                <Download className="h-3 w-3 inline -mt-0.5 mr-1" /> Google APK URL
+              </label>
+              <Input
+                value={form.apkUrlGoogle}
+                onChange={(e) => setForm({ ...form, apkUrlGoogle: e.target.value })}
+                placeholder="/downloads/app-google-debug.apk"
+                maxLength={500}
+              />
+              <p className="helper">
+                Path or full URL where the Google Play / generic Android APK is hosted.
+                Self-hosted: place the file under <code>public/downloads/</code>.
+                Leave blank to hide the Google download button.
+              </p>
+            </div>
+            <div>
+              <label className="label">
+                <Download className="h-3 w-3 inline -mt-0.5 mr-1" /> Amazon APK URL
+              </label>
+              <Input
+                value={form.apkUrlAmazon}
+                onChange={(e) => setForm({ ...form, apkUrlAmazon: e.target.value })}
+                placeholder="/downloads/app-amazon-debug.apk"
+                maxLength={500}
+              />
+              <p className="helper">
+                Path or full URL for the Amazon Appstore / Fire devices variant.
+                Leave blank to hide the Amazon download button.
+              </p>
+            </div>
+          </div>
         </section>
 
         <div className="border-t border-coffee-100 pt-4 flex justify-end">

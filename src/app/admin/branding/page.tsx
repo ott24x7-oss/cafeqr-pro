@@ -13,6 +13,10 @@ export default async function AdminBrandingPage() {
     tagline: row?.tagline ?? '',
     footerText: row?.footerText ?? '',
     primaryColor: row?.primaryColor ?? '',
+    appIconDataUrl: row?.appIconDataUrl ?? '',
+    splashImageDataUrl: row?.splashImageDataUrl ?? '',
+    apkUrlGoogle: row?.apkUrlGoogle ?? '',
+    apkUrlAmazon: row?.apkUrlAmazon ?? '',
   };
   return <BrandingClient initial={initial} />;
 }

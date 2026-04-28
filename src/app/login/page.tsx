@@ -67,7 +67,7 @@ function LoginInner() {
             <span data-brand-name>CafeQR Pro</span>
           </Link>
           <h1 className="font-display text-3xl font-bold text-coffee-900">Sign in</h1>
-          <p className="mt-1 text-sm text-coffee-600">Owner, staff or super admin — all sign in here.</p>
+          <p className="mt-1 text-sm text-coffee-600">Sign in to manage your cafe.</p>
 
           <form onSubmit={onSubmit} className="mt-6 space-y-4">
             <div>

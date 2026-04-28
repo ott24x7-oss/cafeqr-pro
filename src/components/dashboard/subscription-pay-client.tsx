@@ -156,8 +156,8 @@ export function SubscriptionPayClient({
 
             {!platform.upiId ? (
               <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
-                Platform UPI is not set yet. Ask the SaaS admin to configure it under
-                Super Admin → Site → Platform Payment.
+                Online payment isn't enabled yet. Please contact the platform team
+                so they can finish setting it up.
               </div>
             ) : (
               <>

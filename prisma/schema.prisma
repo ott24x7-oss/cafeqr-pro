@@ -585,36 +585,15 @@ model PlatformBranding {
   tagline      String   @default("")
   footerText   String   @default("")
   primaryColor String   @default("")
+  // Mobile-app showcase: an icon + splash image rendered on the marketing
+  // home page next to APK download buttons. Both are stored as base64 data
+  // URLs (same convention as logoDataUrl). APK URLs are plain strings — the
+  // file itself is hosted out-of-band (public/downloads, CDN, Play Store).
+  appIconDataUrl    String   @default("")
+  splashImageDataUrl String  @default("")
+  apkUrlGoogle      String   @default("")
+  apkUrlAmazon      String   @default("")
   updatedAt    DateTime @updatedAt
-}
-
-// ─── MOBILE APP CONFIG (global, single row keyed by id='singleton') ─────
-// Drives the Android companion app at runtime. The app fetches
-// /api/mobile-app/config on launch, caches the JSON locally, and uses the
-// values to render its splash screen, brand colors, maintenance / force-
-// update gates and Play Store deep-link. Logo and splash logo binaries are
-// stored as base64 data URLs and re-served by /api/mobile-app/assets/[name]
-// so the device gets a stable HTTPS URL it can prefetch and cache.
-// PNG / JPG / WebP only, ≤ 2 MB per image.
-model MobileAppConfig {
-  id                    String   @id @default("singleton")
-  appName               String   @default("WatShop Cafe")
-  logoData              String   @default("")        // base64 data URL — app icon shown in WebView header / about
-  splashLogoData        String   @default("")        // base64 data URL — large logo shown on the launch splash
-  splashBackgroundColor String   @default("#0B0F14")
-  primaryColor          String   @default("#22C55E")
-  tagline               String   @default("QR Ordering for Cafes")
-  maintenanceMode       Boolean  @default(false)
-  maintenanceMessage    String   @default("App is under maintenance. Please try again later.")
-  forceUpdate           Boolean  @default(false)
-  minimumVersionCode    Int      @default(1)
-  // Two store URLs because the app is published in both stores. The
-  // Android client picks the right one at runtime by inspecting the
-  // installer package (com.amazon.venezia → Amazon, com.android.vending →
-  // Play). Amazon is the primary distribution channel for Fire OS devices.
-  amazonAppstoreUrl     String   @default("https://www.amazon.com/gp/mas/dl/android?p=com.watshop.cafe")
-  playStoreUrl          String   @default("https://play.google.com/store/apps/details?id=com.watshop.cafe")
-  updatedAt             DateTime @updatedAt
 }
 
 // ─── 17. BAILEYS AUTH (per-session, per-file blob) ───────────────────────

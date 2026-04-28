@@ -21,6 +21,12 @@ export async function GET() {
     tagline: row?.tagline ?? '',
     footer: row?.footerText ?? '',
     primaryColor: row?.primaryColor ?? '',
+    // App-mockup fields. The landing page reads them server-side (not via
+    // the runtime patcher) so the icon/splash render with no flash.
+    appIcon: row?.appIconDataUrl ?? '',
+    splashImage: row?.splashImageDataUrl ?? '',
+    apkUrlGoogle: row?.apkUrlGoogle ?? '',
+    apkUrlAmazon: row?.apkUrlAmazon ?? '',
   };
   return NextResponse.json(body, {
     headers: {
