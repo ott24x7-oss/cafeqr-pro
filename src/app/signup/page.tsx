@@ -82,30 +82,44 @@ function SignupInner() {
             <span data-brand-name>CafeQR Pro</span>
           </Link>
           <h1 className="font-display text-3xl font-bold text-coffee-900">Create your cafe account</h1>
-          <p className="mt-1 text-sm text-coffee-600">Start free, no card required.</p>
+          <p className="mt-1 text-sm text-coffee-600">
+            Start free, no card required.
+            <span className="block text-coffee-500">मुफ़्त शुरू करें, कोई card नहीं चाहिए।</span>
+          </p>
 
           <form onSubmit={onSubmit} className="mt-6 space-y-3.5">
             <div>
               <label className="label">Cafe / Restaurant name</label>
               <Input required value={cafeName} onChange={(e) => setCafeName(e.target.value)} placeholder="Cafe Mocha" />
+              <p className="helper">
+                The name shown to customers on your menu page.
+                <span className="block text-coffee-400">वही नाम जो ग्राहक को आपके menu page पर दिखेगा।</span>
+              </p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="label">Your name</label>
                 <Input required value={name} onChange={(e) => setName(e.target.value)} placeholder="Riya" />
+                <p className="helper text-coffee-400">मालिक का नाम</p>
               </div>
               <div>
                 <label className="label">Phone</label>
                 <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="9876543210" />
+                <p className="helper text-coffee-400">WhatsApp number</p>
               </div>
             </div>
             <div>
               <label className="label">Email</label>
               <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@cafe.com" />
+              <p className="helper">
+                You'll use this to log in.
+                <span className="block text-coffee-400">यही login के लिए use होगा।</span>
+              </p>
             </div>
             <div>
               <label className="label">Password</label>
               <Input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 6 characters" />
+              <p className="helper text-coffee-400">कम से कम 6 अक्षर</p>
             </div>
             <Button type="submit" className="w-full" size="lg" disabled={loading}>
               {loading && <Loader2 className="h-4 w-4 animate-spin" />}

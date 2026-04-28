@@ -103,10 +103,26 @@ export function TablesManager({ initialTables, cafe, appUrl }: { initialTables: 
 
   return (
     <div className="space-y-4">
+      {tables.length === 0 && (
+        <div className="rounded-2xl bg-cream-100 border border-coffee-100 p-4 text-sm leading-relaxed">
+          <div className="font-semibold text-coffee-900">How tables &amp; QR codes work</div>
+          <div className="text-coffee-700 mt-1">
+            Each table you add gets its own QR code. Print it, place it on the table — when a
+            customer scans it, the menu opens already tagged with that table number.
+          </div>
+          <div className="text-coffee-600 mt-1">
+            हर table के लिए एक QR code बनेगा। उसे print करके table पर रखें — ग्राहक scan करेगा तो
+            menu उसी table number के साथ खुलेगा।
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="font-display text-2xl md:text-3xl font-bold text-coffee-900">Tables &amp; QR codes</h1>
-          <p className="text-coffee-600 text-sm">Generate, print and manage table QR codes</p>
+          <p className="text-coffee-600 text-sm">
+            Generate, print and manage table QR codes
+            <span className="text-coffee-500"> · टेबल के QR codes बनाएं और प्रिंट करें</span>
+          </p>
         </div>
         <Button onClick={printAll} variant="outline" disabled={!tables.length}>
           <Printer className="h-4 w-4" /> Print all

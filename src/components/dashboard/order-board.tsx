@@ -146,7 +146,10 @@ export function OrderBoard({ initialOrders, cafe }: { initialOrders: any[]; cafe
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="font-display text-2xl md:text-3xl font-bold text-coffee-900">Live orders</h1>
-          <p className="text-coffee-600 text-sm">Auto-refresh every 5s · {orders.length} active</p>
+          <p className="text-coffee-600 text-sm">
+            Auto-refresh every 5s · {orders.length} active
+            <span className="text-coffee-500"> · हर 5 सेकंड में अपडेट · {orders.length} active</span>
+          </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button

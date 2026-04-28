@@ -44,9 +44,17 @@ export default async function LoyaltyDashboard() {
             <Award className="h-6 w-6 text-caramel-dark" /> Loyalty
           </h1>
           <p className="text-coffee-600 text-sm">
-            {enabled
-              ? `Earn rate: ${percent}% of subtotal · 1 point = 1 ${cafe.currency || 'INR'}`
-              : 'Loyalty is disabled. Turn it on under Settings → Loyalty to start crediting points.'}
+            {enabled ? (
+              <>
+                Earn rate: {percent}% of subtotal · 1 point = 1 {cafe.currency || 'INR'}
+                <span className="text-coffee-500"> · हर paid order पर ग्राहक को {percent}% points मिलते हैं</span>
+              </>
+            ) : (
+              <>
+                Loyalty is disabled. Turn it on under Settings → Loyalty to start crediting points.
+                <span className="text-coffee-500"> · Settings → Loyalty में जाकर on करें।</span>
+              </>
+            )}
           </p>
         </div>
         <Link

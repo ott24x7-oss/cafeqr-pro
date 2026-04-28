@@ -6,6 +6,7 @@ import { formatCurrency } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { CafeStoreLink } from '@/components/dashboard/cafe-store-link';
 import { RevenueSparkline } from '@/components/dashboard/revenue-sparkline';
+import { SetupChecklist } from '@/components/dashboard/setup-checklist';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,7 +20,7 @@ export default async function DashboardOverview() {
   const sparkSince = new Date(Date.now() - 30 * 86400000);
   sparkSince.setHours(0, 0, 0, 0);
 
-  const [todayOrders, allTodayOrders, pendingOrders, completedToday, reviewAgg, latestOrders, topItems, sparkOrders] = await Promise.all([
+  const [todayOrders, allTodayOrders, pendingOrders, completedToday, reviewAgg, latestOrders, topItems, sparkOrders, menuItemCount, tableCount] = await Promise.all([
     prisma.order.aggregate({
       where: { cafeId: cafe.id, createdAt: { gte: since } },
       _sum: { totalAmount: true },
@@ -46,7 +47,43 @@ export default async function DashboardOverview() {
       where: { cafeId: cafe.id, createdAt: { gte: sparkSince }, status: { not: 'CANCELLED' } },
       select: { createdAt: true, totalAmount: true },
     }),
+    prisma.menuItem.count({ where: { cafeId: cafe.id } }),
+    prisma.table.count({ where: { cafeId: cafe.id } }),
   ]);
+
+  // First-time setup checklist — shown until everything is ✓.
+  const setupItems = [
+    {
+      done: Boolean(cafe.name && cafe.address && cafe.phone),
+      enLabel: 'Fill in cafe profile (name, address, phone)',
+      hiLabel: 'अपने कैफ़े की जानकारी भरें — नाम, पता, फ़ोन',
+      href: '/dashboard/settings',
+    },
+    {
+      done: Boolean(cafe.settings?.upiId || cafe.settings?.upiQrUrl),
+      enLabel: 'Set your UPI ID so customers can pay you',
+      hiLabel: 'UPI ID डालें ताकि ग्राहक पैसे भेज सकें',
+      href: '/dashboard/settings',
+    },
+    {
+      done: menuItemCount > 0,
+      enLabel: 'Add at least one menu item',
+      hiLabel: 'मेनू में कम से कम एक चीज़ जोड़ें',
+      href: '/dashboard/menu',
+    },
+    {
+      done: tableCount > 0,
+      enLabel: 'Create a table & generate its QR code',
+      hiLabel: 'टेबल बनाएं और उसका QR कोड निकालें',
+      href: '/dashboard/tables',
+    },
+    {
+      done: cafe.settings?.whatsappProvider !== undefined && cafe.settings?.whatsappProvider !== 'manual',
+      enLabel: 'Connect WhatsApp for live order alerts (optional)',
+      hiLabel: 'WhatsApp जोड़ें ताकि नए ऑर्डर तुरंत मिलें (वैकल्पिक)',
+      href: '/dashboard/settings',
+    },
+  ];
 
   // Bucket the last 30 days into per-day revenue totals (oldest → newest).
   const dayCount = 30;
@@ -74,8 +111,13 @@ export default async function DashboardOverview() {
     <div className="space-y-6 pb-20 md:pb-4">
       <div>
         <h1 className="font-display text-2xl md:text-3xl font-bold text-coffee-900">Dashboard</h1>
-        <p className="text-coffee-600 text-sm">Here's what's happening at {cafe.name} today.</p>
+        <p className="text-coffee-600 text-sm">
+          Here's what's happening at {cafe.name} today.
+          <span className="text-coffee-500"> · आज {cafe.name} में क्या हो रहा है।</span>
+        </p>
       </div>
+
+      <SetupChecklist items={setupItems} />
 
       <CafeStoreLink
         slug={cafe.slug}

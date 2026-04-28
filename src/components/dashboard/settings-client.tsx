@@ -178,7 +178,10 @@ export function SettingsClient({ cafe }: { cafe: any }) {
     <div className="space-y-4 pb-20 md:pb-4">
       <div>
         <h1 className="font-display text-2xl md:text-3xl font-bold text-coffee-900">Settings</h1>
-        <p className="text-coffee-600 text-sm">Manage your cafe profile, charges and integrations</p>
+        <p className="text-coffee-600 text-sm">
+          Manage your cafe profile, charges and integrations
+          <span className="text-coffee-500"> · कैफ़े की profile, charges और integrations यहाँ से manage करें</span>
+        </p>
       </div>
 
       <div className="card-warm">
@@ -287,9 +290,35 @@ export function SettingsClient({ cafe }: { cafe: any }) {
 
         {tab === 'tax' && (
           <div className="grid md:grid-cols-2 gap-4">
-            <Field l="Tax / GST %" v={settings.taxPercent} on={(v: string) => setSettings({ ...settings, taxPercent: Number(v) })} type="number" />
-            <Field l="Service charge %" v={settings.serviceCharge} on={(v: string) => setSettings({ ...settings, serviceCharge: Number(v) })} type="number" />
-            <Field l="Packing charge ₹ (takeaway)" v={settings.packingCharge} on={(v: string) => setSettings({ ...settings, packingCharge: Number(v) })} type="number" />
+            <div className="md:col-span-2 rounded-xl bg-cream-100 border border-coffee-100 p-3 text-sm leading-relaxed">
+              <div className="text-coffee-800">
+                These charges are added on top of the food price at checkout.
+              </div>
+              <div className="text-coffee-600 text-[13px]">
+                ये charges खाने के दाम के ऊपर checkout पर जुड़ते हैं।
+              </div>
+            </div>
+            <div>
+              <Field l="Tax / GST %" v={settings.taxPercent} on={(v: string) => setSettings({ ...settings, taxPercent: Number(v) })} type="number" />
+              <p className="helper">
+                Standard GST in India is 5% for most cafes.
+                <span className="block text-coffee-400">भारत में ज़्यादातर cafes के लिए 5% GST रहता है।</span>
+              </p>
+            </div>
+            <div>
+              <Field l="Service charge %" v={settings.serviceCharge} on={(v: string) => setSettings({ ...settings, serviceCharge: Number(v) })} type="number" />
+              <p className="helper">
+                Optional. 5–10% is common at sit-down cafes.
+                <span className="block text-coffee-400">वैकल्पिक। sit-down cafes में 5–10% आम है।</span>
+              </p>
+            </div>
+            <div>
+              <Field l="Packing charge ₹ (takeaway)" v={settings.packingCharge} on={(v: string) => setSettings({ ...settings, packingCharge: Number(v) })} type="number" />
+              <p className="helper">
+                Flat fee on takeaway orders only.
+                <span className="block text-coffee-400">सिर्फ़ takeaway पर लगता है।</span>
+              </p>
+            </div>
             <Field l="Delivery charge ₹" v={settings.deliveryCharge} on={(v: string) => setSettings({ ...settings, deliveryCharge: Number(v) })} type="number" />
             <div className="md:col-span-2 flex flex-wrap gap-3 text-sm">
               {[
@@ -354,6 +383,10 @@ export function SettingsClient({ cafe }: { cafe: any }) {
               </select>
               <p className="helper">
                 Cloud API = official, reliable, no QR. Baileys = WhatsApp-Web-style, requires the worker service deployed.
+                <span className="block text-coffee-400 mt-0.5">
+                  Cloud API = official और reliable। Baileys = WhatsApp Web की तरह QR scan करना पड़ता है।
+                  Manual में आपको हर बार खुद link tap करना होगा।
+                </span>
               </p>
             </div>
 
@@ -586,7 +619,15 @@ export function SettingsClient({ cafe }: { cafe: any }) {
                 })}
               </div>
             </div>
-            <Field l="UPI ID" v={settings.upiId} on={(v: string) => setSettings({ ...settings, upiId: v })} placeholder="cafe@hdfc" />
+            <div>
+              <Field l="UPI ID" v={settings.upiId} on={(v: string) => setSettings({ ...settings, upiId: v })} placeholder="cafe@hdfc" />
+              <p className="helper">
+                Format like <code>name@bank</code> — e.g. mocha@hdfcbank or 9876543210@paytm.
+                <span className="block text-coffee-400">
+                  जैसे <code>name@bank</code> — मतलब आपकी UPI ID। GPay/PhonePe/Paytm पर देख लें।
+                </span>
+              </p>
+            </div>
             <Field l="UPI QR image URL" v={settings.upiQrUrl} on={(v: string) => setSettings({ ...settings, upiQrUrl: v })} placeholder="https://…" />
             <Field l="Note shown to customer" v={settings.paymentNote} on={(v: string) => setSettings({ ...settings, paymentNote: v })} multiline className="md:col-span-2" placeholder="Pay using any UPI app and submit txn ID" />
             <Field l="Google review URL" v={settings.googleReviewUrl} on={(v: string) => setSettings({ ...settings, googleReviewUrl: v })} placeholder="https://g.page/your-cafe/review" className="md:col-span-2" />

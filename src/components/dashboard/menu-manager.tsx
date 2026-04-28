@@ -147,10 +147,26 @@ export function MenuManager({ categories: initialCats, items: initialItems }: { 
 
   return (
     <div className="space-y-4">
+      {items.length === 0 && (
+        <div className="rounded-2xl bg-cream-100 border border-coffee-100 p-4 text-sm leading-relaxed">
+          <div className="font-semibold text-coffee-900">How the menu works</div>
+          <div className="text-coffee-700 mt-1">
+            First create a <b>Category</b> (e.g. Coffee, Pastry), then add <b>Items</b> inside it.
+            Each item can have <b>Variants</b> (Half/Full) and <b>Add-ons</b> (extra shot, cheese).
+          </div>
+          <div className="text-coffee-600 mt-1">
+            पहले एक <b>Category</b> बनाएं (जैसे Coffee, Pastry), फिर उसमें <b>Items</b> जोड़ें।
+            हर item के <b>Variants</b> (Half/Full) और <b>Add-ons</b> (extra shot, cheese) भी हो सकते हैं।
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="font-display text-2xl md:text-3xl font-bold text-coffee-900">Menu</h1>
-          <p className="text-coffee-600 text-sm">{items.length} items in {cats.length} categories</p>
+          <p className="text-coffee-600 text-sm">
+            {items.length} items in {cats.length} categories
+            <span className="text-coffee-500"> · {cats.length} category में {items.length} चीज़ें</span>
+          </p>
         </div>
         <div className="flex gap-2 flex-wrap">
           <Button variant="outline" onClick={() => setShowBulkImport(true)}>
