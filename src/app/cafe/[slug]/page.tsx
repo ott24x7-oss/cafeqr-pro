@@ -75,7 +75,24 @@ export default async function CafeIndexPage({
   // missing strings collapse to ''. Date-like fields go to ISO so
   // serialisation is unambiguous.
   const safeCafe = {
-    ...cafe,
+    id: cafe.id,
+    slug: cafe.slug,
+    name: cafe.name,
+    description: cafe.description ?? null,
+    logoUrl: cafe.logoUrl ?? null,
+    coverUrl: cafe.coverUrl ?? null,
+    city: cafe.city ?? null,
+    address: cafe.address ?? null,
+    phone: cafe.phone ?? null,
+    currency: cafe.currency ?? 'INR',
+    status: cafe.status,
+    settings: cafe.settings ? {
+      acceptDineIn: !!cafe.settings.acceptDineIn,
+      acceptTakeaway: !!cafe.settings.acceptTakeaway,
+      acceptDelivery: !!cafe.settings.acceptDelivery,
+      primaryColor: cafe.settings.primaryColor ?? '#6B4E3D',
+      accentColor: cafe.settings.accentColor ?? '#D4A574',
+    } : null,
     tables: (cafe.tables ?? []).map((t) => ({
       id: t.id,
       number: String(t.number ?? ''),
@@ -86,9 +103,10 @@ export default async function CafeIndexPage({
       isOccupied: !!t.isOccupied,
     })),
     categories: (cafe.categories ?? []).map((c) => ({
-      ...c,
-      createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : c.createdAt,
-      updatedAt: c.updatedAt instanceof Date ? c.updatedAt.toISOString() : c.updatedAt,
+      id: c.id,
+      name: c.name,
+      slug: c.slug,
+      imageUrl: c.imageUrl ?? null,
       items: (c.items ?? []).map((i) => ({
         id: i.id,
         name: i.name ?? '',

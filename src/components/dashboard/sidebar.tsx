@@ -136,17 +136,28 @@ export function MobileBottomNav({ isAdmin }: { isAdmin?: boolean }) {
     { href: '/dashboard/tables', label: 'Tables', icon: QrCode },
   ];
   return (
-    <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-coffee-100 bg-white/95 backdrop-blur grid grid-cols-5 pb-[env(safe-area-inset-bottom)]">
+    // z-50 keeps the nav above modal-backdrops we don't own (e.g. Chrome
+    // mobile's password-autofill chip). Solid bg + thicker shadow so a
+    // transient autofill bar can't make individual cells invisible. py-2.5
+    // + min-h-[56px] gives a Material-guideline tappable height even when
+    // the OS UI eats some pixels.
+    <nav
+      className="md:hidden fixed bottom-0 inset-x-0 z-50 border-t-2 border-coffee-200 bg-white grid grid-cols-5 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_-12px_rgba(85,60,40,0.18)]"
+    >
       {shortcuts.map((it) => {
         const active = path === it.href || (it.href !== '/dashboard' && it.href !== '/admin' && path.startsWith(it.href));
         return (
           <Link
             key={it.href}
             href={it.href}
-            className={cn('flex flex-col items-center gap-0.5 py-2 text-xs', active ? 'text-coffee-900' : 'text-coffee-500')}
+            prefetch
+            className={cn(
+              'flex flex-col items-center justify-center gap-0.5 py-2.5 text-xs min-h-[56px]',
+              active ? 'text-coffee-900' : 'text-coffee-500',
+            )}
           >
             <it.icon className={cn('h-5 w-5', active && 'text-coffee-700')} />
-            <span className="text-[10px]">{it.label}</span>
+            <span className="text-[11px] font-medium">{it.label}</span>
           </Link>
         );
       })}
@@ -160,7 +171,8 @@ export function MobileBottomNav({ isAdmin }: { isAdmin?: boolean }) {
 
 /**
  * Hamburger button that opens [MobileNavDrawer]. Lives inside the bottom
- * nav so it's reachable with the user's thumb without contorting.
+ * nav so it's reachable with the user's thumb without contorting. Uses
+ * the same min-h + py- as the other cells so the bottom row looks even.
  */
 function MobileMenuButton({ isAdmin }: { isAdmin?: boolean }) {
   const [open, setOpen] = useState(false);
@@ -170,10 +182,10 @@ function MobileMenuButton({ isAdmin }: { isAdmin?: boolean }) {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Open menu"
-        className="flex flex-col items-center gap-0.5 py-2 text-xs text-coffee-500"
+        className="flex flex-col items-center justify-center gap-0.5 py-2.5 text-xs min-h-[56px] text-coffee-700"
       >
         <Menu className="h-5 w-5" />
-        <span className="text-[10px]">Menu</span>
+        <span className="text-[11px] font-medium">Menu</span>
       </button>
       {open && <MobileNavDrawer isAdmin={isAdmin} onClose={() => setOpen(false)} />}
     </>

@@ -75,18 +75,22 @@ export default async function AdminOverview() {
               c.hot ? 'ring-2 ring-amber-300 bg-amber-50/40' : ''
             }`}
           >
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-start gap-2.5">
               <div className={`h-9 w-9 grid place-items-center rounded-xl shrink-0 ${
                 c.hot ? 'bg-amber-100 text-amber-800' : 'bg-coffee-gradient text-cream-50'
               }`}>
                 <c.i className="h-4 w-4" />
               </div>
-              {/* Reserve right padding when the "Set up" badge is rendered so
-                  the truncated title doesn't slide underneath it on narrow
-                  cards (was rendering as "Em…" on the Email card on mobile). */}
-              <div className={`min-w-0 ${c.hot ? 'pr-6 sm:pr-12' : ''}`}>
-                <div className="font-semibold text-coffee-900 text-sm truncate">{c.l}</div>
-                <div className="text-[11px] text-coffee-500 truncate">{c.s}</div>
+              {/* Combine both fixes from the parallel branch: line-clamp-2
+                  on phone so two-word titles ("Platform Payment", "Site
+                  content") wrap to a second line instead of being cut off,
+                  AND reserve right padding when a "Set up" badge is
+                  rendered so the wrapped title doesn't slide underneath
+                  it. sm:truncate restores single-line on tablet+ where
+                  the cards are wider. */}
+              <div className={`min-w-0 flex-1 ${c.hot ? 'pr-6 sm:pr-12' : ''}`}>
+                <div className="font-semibold text-coffee-900 text-sm leading-tight line-clamp-2 sm:truncate sm:line-clamp-none">{c.l}</div>
+                <div className="text-[11px] text-coffee-500 mt-0.5 line-clamp-2 sm:truncate sm:line-clamp-none">{c.s}</div>
               </div>
             </div>
             {c.hot && (

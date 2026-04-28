@@ -36,7 +36,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <div className="min-h-screen flex bg-cream-50">
       <DashboardSidebar role={role} cafeName={cafe.name} />
-      <div className="flex-1 min-w-0 flex flex-col pb-16 md:pb-0">
+      <div className="flex-1 min-w-0 flex flex-col pb-24 md:pb-0">
         <header className="sticky top-0 z-30 border-b border-coffee-100 bg-white/85 backdrop-blur">
           <div className="px-4 md:px-6 h-14 flex items-center justify-between">
             <div className="md:hidden flex items-center gap-2">

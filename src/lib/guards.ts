@@ -1,20 +1,21 @@
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
+import { cache } from 'react';
 import { authOptions } from './auth';
 import { prisma } from './prisma';
 import type { UserRole } from '@prisma/client';
 
-export async function requireSession() {
+export const requireSession = cache(async () => {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect('/login');
   return session;
-}
+});
 
-export async function requireRole(roles: UserRole[]) {
+export const requireRole = cache(async (roles: UserRole[]) => {
   const session = await requireSession();
   if (!roles.includes(session.user.role)) redirect('/login');
   return session;
-}
+});
 
 export async function requireSuperAdmin() {
   return requireRole(['SUPER_ADMIN']);
@@ -25,7 +26,7 @@ export async function requireOwnerOrStaff() {
 }
 
 /** For dashboard pages — returns the cafe owned by current user. */
-export async function getOwnerCafe() {
+export const getOwnerCafe = cache(async () => {
   const session = await requireRole(['CAFE_OWNER', 'STAFF', 'SUPER_ADMIN']);
   if (session.user.role === 'STAFF') {
     const staff = await prisma.staff.findFirst({
@@ -40,4 +41,4 @@ export async function getOwnerCafe() {
     orderBy: { createdAt: 'asc' },
   });
   return { session, cafe, staffRole: null };
-}
+});

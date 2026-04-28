@@ -101,137 +101,114 @@ async function main() {
   });
   console.log(`   ✓ Super admin: ${admin.email}`);
 
-  // ── 3) Demo owner + cafe ────────────────────────────────────────────────
-  const ownerEmail = 'owner@mocha.cafe';
-  const ownerPass = 'Owner@123';
-  const owner = await prisma.user.upsert({
-    where: { email: ownerEmail },
-    update: {},
-    create: {
-      email: ownerEmail,
-      password: await bcrypt.hash(ownerPass, 12),
+  // ── 3) Demo owners + cafes ──────────────────────────────────────────────
+  const demos = [
+    {
+      email: 'owner@mocha.cafe',
       name: 'Riya Mehta',
-      phone: '9876543210',
-      role: 'CAFE_OWNER',
+      slug: 'cafe-mocha',
+      cafeName: 'Cafe Mocha',
+      color: '#6B4E3D',
     },
-  });
+    {
+      email: 'demo@cafeqr.pro',
+      name: 'Demo Owner',
+      slug: 'cafe-dk',
+      cafeName: 'Cafe DK',
+      color: '#1e293b',
+    },
+  ];
 
   const proPlan = await prisma.plan.findUnique({ where: { slug: 'pro' } });
 
-  const cafe = await prisma.cafe.upsert({
-    where: { slug: 'cafe-mocha' },
-    update: {},
-    create: {
-      slug: 'cafe-mocha',
-      name: 'Cafe Mocha',
-      description: 'Cosy neighbourhood cafe — speciality coffees, fresh pastries and all-day breakfast.',
-      address: '12, Brigade Road',
-      city: 'Bengaluru',
-      phone: '9876543210',
-      whatsappNo: '9876543210',
-      email: 'hello@mocha.cafe',
-      gstNumber: '29ABCDE1234F1Z5',
-      ownerId: owner.id,
-      planId: proPlan?.id,
-      status: 'TRIAL',
-      trialEndsAt: new Date(Date.now() + 14 * 86400000),
-      settings: {
-        create: {
-          taxPercent: 5,
-          serviceCharge: 5,
-          packingCharge: 10,
-          paymentEnabled: true,
-          reviewEnabled: true,
-          whatsappProvider: 'manual',
-          notifyOwnerWA: true,
-          notifyCustomerWA: true,
-          upiId: 'mocha@hdfcbank',
-          paymentNote: 'Pay using any UPI app and submit txn ID',
-          enableSound: true,
-          primaryColor: '#6B4E3D',
-          accentColor: '#D4A574',
+  for (const d of demos) {
+    const owner = await prisma.user.upsert({
+      where: { email: d.email },
+      update: {},
+      create: {
+        email: d.email,
+        password: await bcrypt.hash('Owner@123', 12),
+        name: d.name,
+        phone: '9876543210',
+        role: 'CAFE_OWNER',
+      },
+    });
+
+    const cafe = await prisma.cafe.upsert({
+      where: { slug: d.slug },
+      update: {},
+      create: {
+        slug: d.slug,
+        name: d.cafeName,
+        description: 'Demo cafe showing off QR ordering features.',
+        address: '123 Demo Street',
+        city: 'Bengaluru',
+        phone: '9876543210',
+        ownerId: owner.id,
+        planId: proPlan?.id,
+        status: 'TRIAL',
+        trialEndsAt: new Date(Date.now() + 14 * 86400000),
+        settings: {
+          create: {
+            primaryColor: d.color,
+            accentColor: '#D4A574',
+            paymentEnabled: true,
+            upiId: 'demo@upi',
+          },
         },
       },
-    },
-  });
+    });
 
-  await prisma.staff.upsert({
-    where: { cafeId_userId: { cafeId: cafe.id, userId: owner.id } },
-    update: {},
-    create: { cafeId: cafe.id, userId: owner.id, role: 'OWNER', joinedAt: new Date() },
-  });
-
-  console.log(`   ✓ Demo cafe: ${cafe.name} (login: ${ownerEmail} / ${ownerPass})`);
-
-  // ── 4) Tables ───────────────────────────────────────────────────────────
-  const existingTables = await prisma.table.count({ where: { cafeId: cafe.id } });
-  if (existingTables === 0) {
-    for (let i = 1; i <= 5; i++) {
-      const code = `TMOC-${i.toString().padStart(2, '0')}${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
-      await prisma.table.create({
-        data: { cafeId: cafe.id, number: String(i), capacity: i % 3 === 0 ? 2 : 4, code, area: i > 3 ? 'Outdoor' : 'Indoor' },
-      });
-    }
-    console.log('   ✓ 5 tables');
-  }
-
-  // ── 5) Categories + items ───────────────────────────────────────────────
-  const cats = [
-    { name: 'Coffee', slug: 'coffee' },
-    { name: 'Tea', slug: 'tea' },
-    { name: 'Pastry', slug: 'pastry' },
-    { name: 'Breakfast', slug: 'breakfast' },
-    { name: 'Mains', slug: 'mains' },
-  ];
-  const catMap: Record<string, string> = {};
-  for (let i = 0; i < cats.length; i++) {
-    const c = await prisma.category.upsert({
-      where: { cafeId_slug: { cafeId: cafe.id, slug: cats[i].slug } },
+    await prisma.staff.upsert({
+      where: { cafeId_userId: { cafeId: cafe.id, userId: owner.id } },
       update: {},
-      create: { cafeId: cafe.id, name: cats[i].name, slug: cats[i].slug, sortOrder: i },
+      create: { cafeId: cafe.id, userId: owner.id, role: 'OWNER', joinedAt: new Date() },
     });
-    catMap[cats[i].slug] = c.id;
-  }
 
-  const seedItems = [
-    { cat: 'coffee', name: 'Cappuccino', desc: 'Rich espresso, foamed milk, dusted with cocoa', price: 180, popular: true },
-    { cat: 'coffee', name: 'Cold Brew', desc: '12-hour slow-brewed, served chilled', price: 220 },
-    { cat: 'coffee', name: 'Espresso', desc: 'Single shot, intense and bold', price: 120 },
-    { cat: 'coffee', name: 'Latte', desc: 'Smooth espresso with steamed milk', price: 200 },
-    { cat: 'tea', name: 'Masala Chai', desc: 'House blend, slow-simmered', price: 80, popular: true },
-    { cat: 'tea', name: 'Green Tea', desc: 'Earthy, refreshing', price: 90 },
-    { cat: 'pastry', name: 'Almond Croissant', desc: 'Flaky pastry, almond cream filling', price: 180 },
-    { cat: 'pastry', name: 'Chocolate Muffin', desc: 'Triple-chocolate, baked fresh', price: 140 },
-    { cat: 'breakfast', name: 'Avocado Toast', desc: 'Sourdough, smashed avo, chilli flakes', price: 280, popular: true },
-    { cat: 'breakfast', name: 'Eggs Benedict', desc: 'Poached eggs, hollandaise, English muffin', price: 320, diet: 'EGG' },
-    { cat: 'mains', name: 'Truffle Pasta', desc: 'Hand-rolled tagliatelle, truffle, parmesan', price: 460 },
-    { cat: 'mains', name: 'Margherita Pizza', desc: 'San Marzano, fresh basil, mozzarella', price: 380 },
-  ];
+    // Tables
+    const existingTables = await prisma.table.count({ where: { cafeId: cafe.id } });
+    if (existingTables === 0) {
+      for (let i = 1; i <= 5; i++) {
+        const code = `${d.slug.slice(0, 3).toUpperCase()}-${i.toString().padStart(2, '0')}${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
+        await prisma.table.create({
+          data: { cafeId: cafe.id, number: String(i), capacity: i % 3 === 0 ? 2 : 4, code, area: i > 3 ? 'Outdoor' : 'Indoor' },
+        });
+      }
+    }
 
-  for (let i = 0; i < seedItems.length; i++) {
-    const it = seedItems[i];
-    const exists = await prisma.menuItem.findFirst({ where: { cafeId: cafe.id, name: it.name } });
-    if (exists) continue;
-    await prisma.menuItem.create({
-      data: {
-        cafeId: cafe.id,
-        categoryId: catMap[it.cat],
-        name: it.name,
-        description: it.desc,
-        price: it.price,
-        diet: (it.diet as any) ?? 'VEG',
-        prepMinutes: 10,
-        sortOrder: i,
-        isPopular: !!it.popular,
-      },
-    });
+    // Categories + items
+    const catCount = await prisma.category.count({ where: { cafeId: cafe.id } });
+    if (catCount === 0) {
+      const cats = [
+        { name: 'Coffee', slug: 'coffee' },
+        { name: 'Tea', slug: 'tea' },
+        { name: 'Pastry', slug: 'pastry' },
+      ];
+      for (let i = 0; i < cats.length; i++) {
+        const c = await prisma.category.create({
+          data: { cafeId: cafe.id, name: cats[i].name, slug: cats[i].slug, sortOrder: i },
+        });
+
+        // Add one item per category
+        await prisma.menuItem.create({
+          data: {
+            cafeId: cafe.id,
+            categoryId: c.id,
+            name: `${cats[i].name} Special`,
+            price: 100 + i * 50,
+            isPopular: i === 0,
+            inStock: true,
+          },
+        });
+      }
+    }
+
+    console.log(`   ✓ Demo cafe: ${cafe.name} (login: ${d.email} / Owner@123)`);
   }
-  console.log(`   ✓ ${seedItems.length} menu items`);
 
   console.log('\n🎉  Done!\n');
   console.log(`   Super admin → ${adminEmail} / ${adminPassword}`);
-  console.log(`   Demo owner  → ${ownerEmail} / ${ownerPass}`);
-  console.log(`   Public menu → /cafe/${cafe.slug}\n`);
+  console.log(`   Demo logins → owner@mocha.cafe / Owner@123, demo@cafeqr.pro / Owner@123`);
 }
 
 main()
