@@ -81,14 +81,18 @@ export default async function AdminOverview() {
               }`}>
                 <c.i className="h-4 w-4" />
               </div>
-              <div className="min-w-0">
+              {/* Reserve right padding when the "Set up" badge is rendered so
+                  the truncated title doesn't slide underneath it on narrow
+                  cards (was rendering as "Em…" on the Email card on mobile). */}
+              <div className={`min-w-0 ${c.hot ? 'pr-6 sm:pr-12' : ''}`}>
                 <div className="font-semibold text-coffee-900 text-sm truncate">{c.l}</div>
                 <div className="text-[11px] text-coffee-500 truncate">{c.s}</div>
               </div>
             </div>
             {c.hot && (
-              <span className="absolute top-1.5 right-1.5 pill text-[9px] bg-amber-100 text-amber-800">
-                <AlertCircle className="h-2.5 w-2.5" /> Set up
+              <span className="absolute top-1.5 right-1.5 pill text-[9px] bg-amber-100 text-amber-800 !px-1.5 sm:!px-2">
+                <AlertCircle className="h-2.5 w-2.5" />
+                <span className="hidden sm:inline">Set up</span>
               </span>
             )}
           </Link>
