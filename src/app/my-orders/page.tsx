@@ -25,7 +25,12 @@ export default function MyOrdersPage() {
     <div className="min-h-screen bg-cream-50 pb-12">
       <div className="bg-coffee-gradient text-cream-50">
         <div className="container py-8 text-center">
-          <Coffee className="mx-auto h-7 w-7" />
+          <span
+            className="mx-auto grid h-10 w-10 place-items-center rounded-2xl bg-white/15 bg-cover bg-center"
+            data-brand-logo
+          >
+            <Coffee className="h-6 w-6" data-brand-logo-icon />
+          </span>
           <h1 className="font-display text-2xl md:text-3xl font-bold mt-3">My orders</h1>
           <p className="text-cream-200/85 text-sm">Look up past orders by your WhatsApp number</p>
         </div>

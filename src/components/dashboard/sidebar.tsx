@@ -50,11 +50,20 @@ export function DashboardSidebar({ role, cafeName, isAdmin }: { role: string; ca
     <aside className="hidden md:flex md:flex-col w-60 shrink-0 border-r border-coffee-100 bg-white sticky top-0 h-screen">
       <div className="px-5 py-4 border-b border-coffee-100">
         <Link href="/dashboard" className="flex items-center gap-2">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-coffee-gradient text-cream-50">
-            {isAdmin ? <Shield className="h-5 w-5" /> : <Coffee className="h-5 w-5" />}
+          <span
+            className="grid h-9 w-9 place-items-center rounded-xl bg-coffee-gradient text-cream-50 bg-cover bg-center"
+            {...(!isAdmin ? { 'data-brand-logo': '' } : {})}
+          >
+            {isAdmin
+              ? <Shield className="h-5 w-5" />
+              : <Coffee className="h-5 w-5" data-brand-logo-icon />}
           </span>
           <div className="min-w-0">
-            <div className="font-display text-base font-bold text-coffee-900 truncate">{isAdmin ? 'Super Admin' : 'CafeQR Pro'}</div>
+            <div className="font-display text-base font-bold text-coffee-900 truncate">
+              {isAdmin
+                ? 'Super Admin'
+                : <span data-brand-name>CafeQR Pro</span>}
+            </div>
             {!isAdmin && cafeName && <div className="text-[11px] text-coffee-500 truncate">{cafeName}</div>}
           </div>
         </Link>

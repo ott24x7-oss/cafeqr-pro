@@ -408,7 +408,7 @@ export function CafeLobby({ cafe }: { cafe: Cafe }) {
 
           {/* Footer info */}
           <section className="pt-3 border-t border-coffee-100 text-xs text-coffee-500 flex flex-wrap items-center justify-between gap-2">
-            <span>Live orders · powered by CafeQR Pro</span>
+            <span>Live orders · powered by <span data-brand-name>CafeQR Pro</span></span>
             {cafe.phone && (
               <a href={`tel:${cafe.phone}`} className="inline-flex items-center gap-1 hover:text-coffee-800">
                 <Phone className="h-3 w-3" /> {cafe.phone}

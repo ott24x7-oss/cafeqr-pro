@@ -41,8 +41,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <header className="sticky top-0 z-30 border-b border-coffee-100 bg-white/85 backdrop-blur">
           <div className="px-4 md:px-6 h-14 flex items-center justify-between">
             <div className="md:hidden flex items-center gap-2">
-              <span className="grid h-8 w-8 place-items-center rounded-lg bg-coffee-gradient text-cream-50">
-                <Coffee className="h-4 w-4" />
+              <span
+                className="grid h-8 w-8 place-items-center rounded-lg bg-coffee-gradient text-cream-50 bg-cover bg-center"
+                data-brand-logo
+              >
+                <Coffee className="h-4 w-4" data-brand-logo-icon />
               </span>
               <span className="font-bold text-coffee-900 truncate max-w-[160px]">{cafe.name}</span>
             </div>

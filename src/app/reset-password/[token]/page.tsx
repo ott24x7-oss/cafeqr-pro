@@ -38,7 +38,13 @@ export default function ResetPasswordPage({ params }: { params: { token: string 
     <div className="min-h-screen grid place-items-center bg-cream-50 p-6">
       <div className="w-full max-w-md">
         <Link href="/" className="flex items-center gap-2 font-display text-xl font-bold text-coffee-900 mb-6">
-          <Coffee className="h-5 w-5" /> CafeQR Pro
+          <span
+            className="grid h-7 w-7 place-items-center rounded-lg bg-coffee-gradient text-cream-50 bg-cover bg-center"
+            data-brand-logo
+          >
+            <Coffee className="h-4 w-4" data-brand-logo-icon />
+          </span>
+          <span data-brand-name>CafeQR Pro</span>
         </Link>
         <div className="card-warm">
           <h1 className="font-display text-2xl font-bold text-coffee-900">Set new password</h1>
