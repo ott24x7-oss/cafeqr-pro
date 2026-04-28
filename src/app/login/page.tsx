@@ -37,8 +37,13 @@ function LoginInner() {
         <div className="absolute inset-0 bg-pattern opacity-10" />
         <div className="relative flex flex-col justify-between w-full">
           <Link href="/" className="flex items-center gap-2 font-display text-xl font-bold">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-white/15"><Coffee className="h-5 w-5" /></span>
-            CafeQR Pro
+            <span
+              className="grid h-9 w-9 place-items-center rounded-xl bg-white/15 bg-cover bg-center"
+              data-brand-logo
+            >
+              <Coffee className="h-5 w-5" data-brand-logo-icon />
+            </span>
+            <span data-brand-name>CafeQR Pro</span>
           </Link>
           <div>
             <h2 className="font-display text-4xl font-bold leading-tight">Welcome back, brew master ☕</h2>
@@ -46,14 +51,20 @@ function LoginInner() {
               Sign in to manage menu, take live orders and watch your cafe revenue grow.
             </p>
           </div>
-          <div className="text-sm text-cream-200/70">© CafeQR Pro</div>
+          <div className="text-sm text-cream-200/70" data-brand-footer>© CafeQR Pro</div>
         </div>
       </aside>
 
       <main className="flex items-center justify-center p-6 bg-cream-50">
         <div className="w-full max-w-md">
           <Link href="/" className="md:hidden flex items-center gap-2 font-display text-xl font-bold text-coffee-900 mb-6">
-            <Coffee className="h-5 w-5" /> CafeQR Pro
+            <span
+              className="grid h-7 w-7 place-items-center rounded-lg bg-coffee-gradient text-cream-50 bg-cover bg-center"
+              data-brand-logo
+            >
+              <Coffee className="h-4 w-4" data-brand-logo-icon />
+            </span>
+            <span data-brand-name>CafeQR Pro</span>
           </Link>
           <h1 className="font-display text-3xl font-bold text-coffee-900">Sign in</h1>
           <p className="mt-1 text-sm text-coffee-600">Owner, staff or super admin — all sign in here.</p>

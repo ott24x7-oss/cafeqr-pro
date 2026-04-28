@@ -23,7 +23,7 @@ export default async function LandingPage() {
   const plans = await getPlans();
 
   return (
-    <div className="min-h-screen bg-cream-50 overflow-hidden">
+    <div className="min-h-screen bg-cream-50 overflow-x-clip">
       <PublicNavbar />
 
       {/* ═══════════ HERO — multi-phone showcase ═══════════ */}

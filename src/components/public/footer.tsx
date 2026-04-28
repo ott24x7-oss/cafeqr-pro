@@ -14,7 +14,7 @@ export function PublicFooter() {
               className="grid h-9 w-9 place-items-center rounded-xl bg-coffee-gradient text-cream-50 bg-cover bg-center"
               data-brand-logo
             >
-              <Coffee className="h-5 w-5" />
+              <Coffee className="h-5 w-5" data-brand-logo-icon />
             </span>
             <span className="font-display text-xl font-bold tracking-tight text-coffee-900" data-brand-name>
               CafeQR <span className="text-caramel">Pro</span>

@@ -7,6 +7,11 @@
  *   <p   data-brand-tagline>...</p>                            → textContent
  *   <p   data-brand-footer>...</p>                             → textContent
  *
+ * When a non-<img> element carries data-brand-logo (e.g. the styled
+ * footer span), its background-image is swapped. Any decorative child
+ * marked data-brand-logo-icon is hidden so it doesn't sit on top of
+ * the uploaded logo.
+ *
  * If the admin hasn't customised a field, the existing static markup
  * stays — there's no flash to a fallback. Per-cafe branding lives in a
  * different place and is unaffected by this script.
@@ -17,10 +22,20 @@
     if (b.logo) {
       document.querySelectorAll('[data-brand-logo]').forEach(function (el) {
         if (el.tagName === 'IMG') {
+          // next/image renders a srcset that takes precedence over src.
+          // Clear it so the admin-uploaded data URL actually shows.
+          el.removeAttribute('srcset');
+          el.removeAttribute('data-nimg');
           el.src = b.logo;
           if (b.brandName) el.alt = b.brandName;
         } else {
           el.style.backgroundImage = 'url("' + b.logo + '")';
+          el.style.backgroundSize = 'cover';
+          el.style.backgroundPosition = 'center';
+          // Hide any decorative icon stacked on top of the logo target.
+          el.querySelectorAll('[data-brand-logo-icon]').forEach(function (icon) {
+            icon.style.display = 'none';
+          });
         }
       });
     }
