@@ -1,14 +1,14 @@
 import Link from 'next/link';
 import {
-  ArrowRight, Sparkles, Star, Coffee, QrCode, Smartphone, Bell, CreditCard,
-  ChefHat, Users, Utensils, BarChart3, MessageSquare, Check, Zap,
+  ArrowRight, ArrowDown, Sparkles, QrCode, Smartphone, Bell, CreditCard,
+  Utensils, BarChart3, MessageSquare, Zap, Coffee, Plus, Check, Star,
 } from 'lucide-react';
 import { PublicNavbar } from '@/components/public/navbar';
 import { PublicFooter } from '@/components/public/footer';
 import { Button } from '@/components/ui/button';
 import { PhoneFrame } from '@/components/mockups/phone-frame';
 import {
-  ScanQRScreen, MenuScreen, CartScreen, TrackingScreen, PayScreen, ReviewScreen,
+  ScanQRScreen, MenuScreen, TrackingScreen, PayScreen,
   DashboardMini, QRPrintCard, WANotificationMockup, OrderToast,
 } from '@/components/mockups/screens';
 import { prisma } from '@/lib/prisma';
@@ -26,83 +26,91 @@ export default async function LandingPage() {
     <div className="min-h-screen bg-cream-50 overflow-x-clip">
       <PublicNavbar />
 
-      {/* ═══════════ HERO — multi-phone showcase ═══════════ */}
+      {/* ═══════════ HERO — split visual: dashboard → phone ═══════════ */}
       <section className="relative">
         <div className="absolute inset-0 bg-pattern opacity-40" />
         <div className="absolute -top-40 -right-40 h-[500px] w-[500px] rounded-full bg-caramel/20 blur-3xl" />
         <div className="absolute -bottom-40 -left-40 h-[500px] w-[500px] rounded-full bg-coffee-200/40 blur-3xl" />
 
-        <div className="container relative pt-12 md:pt-16 pb-10 grid lg:grid-cols-2 gap-10 items-center">
-          <div className="text-center lg:text-left animate-fade-up">
-            <div className="inline-flex items-center gap-2 rounded-full bg-cream-200 px-3 py-1 text-xs font-semibold text-coffee-800 mb-4">
-              <Sparkles className="h-3.5 w-3.5" /> Trusted by 500+ cafes
-            </div>
-            <h1 className="font-display text-4xl md:text-6xl font-bold leading-[1.05] text-coffee-900">
-              Scan. Order. <br />
-              <span className="text-gradient-coffee">Sip.</span>
-            </h1>
-            <p className="mt-4 text-lg text-coffee-700 max-w-md mx-auto lg:mx-0">
-              QR menus that just work — no apps, no fuss.
-            </p>
-            <div className="mt-6 flex flex-wrap justify-center lg:justify-start gap-3">
-              <Link href="/signup">
-                <Button size="lg">Start free <ArrowRight className="h-4 w-4" /></Button>
-              </Link>
-              <Link href="/how-it-works">
-                <Button variant="outline" size="lg">See it work</Button>
-              </Link>
-            </div>
+        <div className="container relative pt-12 md:pt-16 pb-10 text-center">
+          <div className="inline-flex items-center gap-2 rounded-full bg-cream-200 px-3 py-1 text-xs font-semibold text-coffee-800 mb-4">
+            <Sparkles className="h-3.5 w-3.5" /> 500+ cafes · Live in 5 minutes
           </div>
+          <h1 className="font-display text-4xl md:text-6xl font-bold leading-[1.05] text-coffee-900 max-w-3xl mx-auto">
+            Build your cafe's QR ordering store.
+          </h1>
+          <p className="mt-3 text-base md:text-lg text-coffee-700">
+            No app. No code. Just your menu and a QR.
+          </p>
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            <Link href="/signup">
+              <Button size="lg">Start free <ArrowRight className="h-4 w-4" /></Button>
+            </Link>
+            <Link href="/demo">
+              <Button variant="outline" size="lg">See live demo</Button>
+            </Link>
+          </div>
+        </div>
 
-          {/* Phone fan */}
-          <div className="relative h-[500px] md:h-[560px]">
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
+        {/* Hero visual: dashboard → phone with menu */}
+        <div className="container relative pb-16">
+          <div className="grid md:grid-cols-[1fr_auto_1fr] gap-6 md:gap-4 items-center max-w-5xl mx-auto">
+            <div className="relative">
+              <span className="pill bg-coffee-700 text-cream-50 mb-2">You build</span>
+              <DashboardMini />
+              <div className="absolute -top-3 -right-3 hidden md:block">
+                <OrderToast status="NEW" n="#1284" t="now" />
+              </div>
+            </div>
+            <div className="hidden md:flex flex-col items-center text-coffee-500">
+              <ArrowRight className="h-8 w-8" />
+              <span className="text-[10px] font-bold mt-1 uppercase tracking-wider">becomes</span>
+            </div>
+            <div className="flex md:hidden justify-center">
+              <ArrowDown className="h-8 w-8 text-coffee-500" />
+            </div>
+            <div className="relative">
+              <span className="pill bg-caramel text-coffee-900 mb-2">They order</span>
               <PhoneFrame size="md"><MenuScreen /></PhoneFrame>
             </div>
-            <div className="absolute left-1/2 top-1/2 -translate-x-[120%] -translate-y-[55%] -rotate-12 z-0 hidden md:block opacity-90">
-              <PhoneFrame size="sm"><ScanQRScreen /></PhoneFrame>
-            </div>
-            <div className="absolute left-1/2 top-1/2 translate-x-[20%] -translate-y-[45%] rotate-12 z-0 hidden md:block opacity-90">
-              <PhoneFrame size="sm"><TrackingScreen /></PhoneFrame>
-            </div>
-
-            {/* Floating chips */}
-            <div className="absolute top-12 left-2 hidden md:block z-20 animate-float">
-              <FloatingChip icon={Bell} label="New order!" tone="amber" />
-            </div>
-            <div className="absolute top-32 right-2 hidden md:block z-20 animate-float" style={{ animationDelay: '0.8s' }}>
-              <FloatingChip icon={CreditCard} label="₹861 paid" tone="emerald" />
-            </div>
-            <div className="absolute bottom-16 left-4 hidden md:block z-20 animate-float" style={{ animationDelay: '1.6s' }}>
-              <FloatingChip icon={Star} label="5★ review" tone="caramel" />
-            </div>
           </div>
         </div>
       </section>
 
-      {/* ═══════════ STATS ═══════════ */}
-      <section className="container -mt-2 md:-mt-6 relative z-10">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 max-w-4xl mx-auto">
-          {[
-            { v: '500+', l: 'Cafes' },
-            { v: '2.4M', l: 'Orders' },
-            { v: '4.9★', l: 'Rating' },
-            { v: '<3s', l: 'Order time' },
-          ].map((s) => (
-            <div key={s.l} className="card-warm text-center !p-3 md:!p-4">
-              <div className="font-display text-2xl md:text-3xl font-bold text-coffee-900">{s.v}</div>
-              <div className="text-[11px] md:text-xs text-coffee-600">{s.l}</div>
-            </div>
-          ))}
+      {/* ═══════════ BUILD IN 4 STEPS — the visual flow ═══════════ */}
+      <section className="bg-white border-y border-coffee-100">
+        <div className="container py-16 md:py-20">
+          <div className="text-center max-w-2xl mx-auto mb-10">
+            <span className="pill bg-cream-200 text-coffee-800">How you build</span>
+            <h2 className="mt-3 font-display text-3xl md:text-5xl font-bold text-coffee-900">
+              Sign up to selling in 4 steps
+            </h2>
+          </div>
+
+          <div className="grid md:grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr] gap-4 md:gap-2 items-center max-w-6xl mx-auto">
+            <BuildStep n="01" label="Sign up" mockup={<SignupMockup />} />
+            <StepArrow />
+            <BuildStep n="02" label="Add your menu" mockup={<MenuBuilderMockup />} />
+            <StepArrow />
+            <BuildStep n="03" label="Print your QR" mockup={<div className="scale-90"><QRPrintCard /></div>} />
+            <StepArrow />
+            <BuildStep n="04" label="Customers order" mockup={<PhoneFrame size="sm"><MenuScreen /></PhoneFrame>} />
+          </div>
+
+          <div className="text-center mt-10">
+            <Link href="/signup">
+              <Button size="lg">Start building free <ArrowRight className="h-4 w-4" /></Button>
+            </Link>
+          </div>
         </div>
       </section>
 
-      {/* ═══════════ FLOW SHOWCASE — 4 phones in a row ═══════════ */}
-      <section className="container py-16 md:py-24">
+      {/* ═══════════ CUSTOMER EXPERIENCE — 4 phones, no copy ═══════════ */}
+      <section className="container py-16 md:py-20">
         <div className="text-center max-w-2xl mx-auto mb-10">
-          <span className="pill bg-cream-200 text-coffee-800">The flow</span>
+          <span className="pill bg-cream-200 text-coffee-800">What your customers see</span>
           <h2 className="mt-3 font-display text-3xl md:text-5xl font-bold text-coffee-900">
-            From scan to served
+            Scan → Order → Track → Pay
           </h2>
         </div>
 
@@ -111,7 +119,7 @@ export default async function LandingPage() {
             { n: '01', t: 'Scan', screen: <ScanQRScreen />, c: 'bg-coffee-700' },
             { n: '02', t: 'Order', screen: <MenuScreen />, c: 'bg-coffee-600' },
             { n: '03', t: 'Track', screen: <TrackingScreen />, c: 'bg-caramel-dark' },
-            { n: '04', t: 'Pay & Review', screen: <PayScreen />, c: 'bg-caramel' },
+            { n: '04', t: 'Pay', screen: <PayScreen />, c: 'bg-caramel' },
           ].map((step) => (
             <div key={step.n} className="snap-start shrink-0 w-[260px] md:w-auto">
               <div className="text-center mb-3">
@@ -125,147 +133,61 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ═══════════ TWO-PERSPECTIVE CARDS ═══════════ */}
-      <section className="bg-white border-y border-coffee-100">
+      {/* ═══════════ OWNER VIEW — dashboard + live notifications ═══════════ */}
+      <section className="bg-cream-100/60 border-y border-coffee-100">
         <div className="container py-16 md:py-20">
-          <div className="text-center max-w-xl mx-auto mb-10">
-            <span className="pill bg-cream-200 text-coffee-800">For everyone</span>
-            <h2 className="mt-3 font-display text-3xl md:text-4xl font-bold text-coffee-900">
-              Built for cafes &amp; their customers
+          <div className="text-center max-w-2xl mx-auto mb-10">
+            <span className="pill bg-cream-200 text-coffee-800">What you see</span>
+            <h2 className="mt-3 font-display text-3xl md:text-5xl font-bold text-coffee-900">
+              One dashboard. Every order.
             </h2>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6 max-w-5xl mx-auto">
-            <Link href="/for-customers" className="group">
-              <div className="card-warm h-full hover:-translate-y-1 transition relative overflow-hidden">
-                <div className="absolute -right-10 -bottom-10 h-48 w-48 bg-coffee-100 rounded-full blur-2xl opacity-50 group-hover:scale-125 transition" />
-                <div className="relative">
-                  <span className="pill bg-coffee-700 text-cream-50 mb-4">For customers</span>
-                  <h3 className="font-display text-2xl font-bold text-coffee-900 mt-3">No apps. No queues.</h3>
-                  <p className="text-coffee-600 mt-2 text-sm">Scan, order from your seat, pay via UPI.</p>
-                  <div className="mt-5 flex justify-center">
-                    <PhoneFrame size="sm"><MenuScreen /></PhoneFrame>
-                  </div>
-                  <div className="mt-5 inline-flex items-center gap-1 text-coffee-700 font-semibold text-sm group-hover:gap-2 transition-all">
-                    See customer view <ArrowRight className="h-4 w-4" />
-                  </div>
-                </div>
-              </div>
-            </Link>
-
-            <Link href="/for-owners" className="group">
-              <div className="card-warm h-full hover:-translate-y-1 transition relative overflow-hidden">
-                <div className="absolute -right-10 -bottom-10 h-48 w-48 bg-cream-200 rounded-full blur-2xl opacity-70 group-hover:scale-125 transition" />
-                <div className="relative">
-                  <span className="pill bg-caramel text-coffee-900 mb-4">For cafe owners</span>
-                  <h3 className="font-display text-2xl font-bold text-coffee-900 mt-3">Setup in 5 minutes.</h3>
-                  <p className="text-coffee-600 mt-2 text-sm">Add menu, generate QR, take orders. Done.</p>
-                  <div className="mt-5">
-                    <DashboardMini />
-                  </div>
-                  <div className="mt-5 inline-flex items-center gap-1 text-coffee-700 font-semibold text-sm group-hover:gap-2 transition-all">
-                    See owner setup <ArrowRight className="h-4 w-4" />
-                  </div>
-                </div>
-              </div>
-            </Link>
+          <div className="relative max-w-5xl mx-auto">
+            <div className="rounded-3xl border border-coffee-200 bg-white shadow-coffee overflow-hidden">
+              <DashboardMini />
+            </div>
+            <div className="absolute -top-4 -right-2 md:-right-10 hidden md:block">
+              <OrderToast status="NEW" n="#1284" t="now" />
+            </div>
+            <div className="absolute -bottom-6 -left-2 md:-left-10 hidden md:block max-w-[260px]">
+              <WANotificationMockup />
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ═══════════ DASHBOARD VIEW ═══════════ */}
-      <section className="container py-16 md:py-24">
-        <div className="text-center max-w-2xl mx-auto mb-10">
-          <span className="pill bg-cream-200 text-coffee-800">Owner dashboard</span>
-          <h2 className="mt-3 font-display text-3xl md:text-5xl font-bold text-coffee-900">
-            Your control room
-          </h2>
-        </div>
-
-        <div className="relative max-w-5xl mx-auto">
-          <div className="rounded-3xl border border-coffee-200 bg-white shadow-coffee overflow-hidden">
-            <DashboardMini />
-          </div>
-
-          {/* Floating elements around dashboard */}
-          <div className="absolute -top-4 -right-2 md:-right-10 hidden md:block">
-            <OrderToast status="NEW" n="#1284" t="now" />
-          </div>
-          <div className="absolute -bottom-6 -left-2 md:-left-10 hidden md:block max-w-[260px]">
-            <WANotificationMockup />
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════ FEATURES — icon grid, 1-line each ═══════════ */}
-      <section className="container py-12">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {/* ═══════════ FEATURES — single icon strip, no copy ═══════════ */}
+      <section className="container py-12 md:py-16">
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-8 gap-3">
           {[
             { i: QrCode, t: 'QR per table' },
-            { i: Smartphone, t: 'No app needed' },
+            { i: Smartphone, t: 'No app' },
             { i: Bell, t: 'Live orders' },
-            { i: MessageSquare, t: 'WhatsApp built-in' },
-            { i: CreditCard, t: 'UPI payments' },
-            { i: Utensils, t: 'Menu manager' },
-            { i: Users, t: 'Multi-staff roles' },
+            { i: MessageSquare, t: 'WhatsApp' },
+            { i: CreditCard, t: 'UPI' },
+            { i: Utensils, t: 'Menu' },
             { i: BarChart3, t: 'Analytics' },
-            { i: Star, t: 'Reviews' },
-            { i: ChefHat, t: 'Kitchen view' },
-            { i: Zap, t: 'PWA installable' },
-            { i: Coffee, t: 'Cafe-themed UI' },
+            { i: Zap, t: 'PWA' },
           ].map((f) => (
-            <div key={f.t} className="card-warm text-center !p-4 hover:-translate-y-0.5 transition">
-              <div className="grid h-10 w-10 mx-auto place-items-center rounded-xl bg-coffee-100 text-coffee-800 mb-2">
-                <f.i className="h-5 w-5" />
+            <div key={f.t} className="card-warm text-center !p-3 hover:-translate-y-0.5 transition">
+              <div className="grid h-9 w-9 mx-auto place-items-center rounded-xl bg-coffee-100 text-coffee-800 mb-1.5">
+                <f.i className="h-4 w-4" />
               </div>
-              <div className="text-xs font-semibold text-coffee-900">{f.t}</div>
+              <div className="text-[11px] font-semibold text-coffee-900">{f.t}</div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ═══════════ QR + WhatsApp showcase ═══════════ */}
-      <section className="container py-16">
-        <div className="grid md:grid-cols-2 gap-8 items-center max-w-5xl mx-auto">
-          <div>
-            <span className="pill bg-cream-200 text-coffee-800">Print &amp; place</span>
-            <h2 className="mt-3 font-display text-3xl md:text-4xl font-bold text-coffee-900">
-              QR codes for every table.
-            </h2>
-            <p className="mt-3 text-coffee-700 max-w-md">
-              Generate, download, print. One QR per table — auto-detects which one.
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-3 max-w-sm mx-auto">
-            <div className="rotate-[-4deg]"><QRPrintCard /></div>
-            <div className="rotate-[4deg] mt-4"><QRPrintCard /></div>
-          </div>
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-8 items-center max-w-5xl mx-auto mt-20">
-          <div className="md:order-2">
-            <span className="pill bg-cream-200 text-coffee-800">Instant alerts</span>
-            <h2 className="mt-3 font-display text-3xl md:text-4xl font-bold text-coffee-900">
-              WhatsApp the moment an order lands.
-            </h2>
-            <p className="mt-3 text-coffee-700 max-w-md">
-              Owner gets notified, customer gets updates. Manual `wa.me`, Cloud API or Baileys — your choice.
-            </p>
-          </div>
-          <div className="md:order-1">
-            <WANotificationMockup />
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════ PRICING TEASER ═══════════ */}
+      {/* ═══════════ PRICING — 3 cards ═══════════ */}
       <section className="bg-coffee-gradient text-cream-50 relative overflow-hidden">
         <div className="absolute inset-0 bg-pattern opacity-10" />
         <div className="container relative py-16 md:py-20 text-center">
           <h2 className="font-display text-3xl md:text-5xl font-bold">
             Plans that grow with you.
           </h2>
-          <p className="mt-3 text-cream-200/90">Start free. Upgrade only when you need more.</p>
+          <p className="mt-2 text-cream-200/90">Start free.</p>
           <div className="mt-8 grid md:grid-cols-3 gap-3 max-w-4xl mx-auto">
             {(plans.length ? plans : fallbackPlans).slice(0, 3).map((p: any) => (
               <div key={p.slug} className="rounded-2xl bg-white/10 backdrop-blur p-5 border border-white/15 text-left">
@@ -285,40 +207,19 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ═══════════ TESTIMONIAL — compact ═══════════ */}
+      {/* ═══════════ FINAL CTA — minimal ═══════════ */}
       <section className="container py-16">
-        <div className="grid md:grid-cols-3 gap-4 max-w-5xl mx-auto">
-          {testimonials.map((t) => (
-            <figure key={t.n} className="card-warm">
-              <div className="flex gap-0.5">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star key={i} className="h-4 w-4 fill-caramel text-caramel" />
-                ))}
-              </div>
-              <blockquote className="mt-2 text-coffee-800 text-sm">"{t.q}"</blockquote>
-              <figcaption className="mt-3 text-xs">
-                <div className="font-semibold text-coffee-900">{t.n}</div>
-                <div className="text-coffee-500">{t.r}</div>
-              </figcaption>
-            </figure>
-          ))}
-        </div>
-      </section>
-
-      {/* ═══════════ FINAL CTA ═══════════ */}
-      <section className="container pb-12">
-        <div className="rounded-3xl bg-cream-200 p-10 md:p-16 text-center relative overflow-hidden max-w-4xl mx-auto">
+        <div className="rounded-3xl bg-cream-200 p-10 md:p-14 text-center relative overflow-hidden max-w-3xl mx-auto">
           <div className="absolute -top-24 -right-24 h-64 w-64 bg-caramel/30 rounded-full blur-3xl" />
           <div className="absolute -bottom-24 -left-24 h-64 w-64 bg-coffee-200/50 rounded-full blur-3xl" />
           <div className="relative">
             <Coffee className="h-10 w-10 mx-auto text-coffee-700" />
-            <h2 className="font-display text-3xl md:text-5xl font-bold text-coffee-900 mt-4">
-              Brew faster orders.
+            <h2 className="font-display text-3xl md:text-5xl font-bold text-coffee-900 mt-3">
+              Build yours now.
             </h2>
-            <p className="mt-3 text-coffee-700">Ready in 5 minutes. No card needed.</p>
-            <div className="mt-7 flex flex-wrap justify-center gap-3">
-              <Link href="/signup"><Button size="lg">Start free trial <ArrowRight className="h-4 w-4" /></Button></Link>
-              <Link href="/how-it-works"><Button variant="outline" size="lg">Take the tour</Button></Link>
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <Link href="/signup"><Button size="lg">Start free <ArrowRight className="h-4 w-4" /></Button></Link>
+              <Link href="/demo"><Button variant="outline" size="lg">Watch demo</Button></Link>
             </div>
           </div>
         </div>
@@ -329,16 +230,75 @@ export default async function LandingPage() {
   );
 }
 
-function FloatingChip({ icon: I, label, tone }: any) {
-  const tones: Record<string, string> = {
-    amber: 'bg-amber-100 text-amber-900',
-    emerald: 'bg-emerald-100 text-emerald-900',
-    caramel: 'bg-cream-200 text-coffee-900',
-  };
+/* ───────────────── helper components ───────────────── */
+
+function BuildStep({ n, label, mockup }: { n: string; label: string; mockup: React.ReactNode }) {
   return (
-    <div className={`rounded-xl px-3 py-2 shadow-coffee text-xs font-bold flex items-center gap-1.5 ${tones[tone]}`}>
-      <I className="h-3.5 w-3.5" />
-      {label}
+    <div className="flex flex-col items-center">
+      <div className="inline-flex items-center gap-1.5 bg-coffee-700 text-cream-50 rounded-full px-2.5 py-0.5 text-[10px] font-bold mb-2">
+        STEP {n}
+      </div>
+      <div className="font-display text-base font-bold text-coffee-900 mb-3 text-center">{label}</div>
+      <div className="flex items-center justify-center min-h-[200px]">{mockup}</div>
+    </div>
+  );
+}
+
+function StepArrow() {
+  return (
+    <div className="flex md:flex-col items-center justify-center text-coffee-400">
+      <ArrowRight className="hidden md:block h-6 w-6" />
+      <ArrowDown className="md:hidden h-6 w-6 mx-auto my-2" />
+    </div>
+  );
+}
+
+/* Tiny inline mockups used only by the build-flow section */
+
+function SignupMockup() {
+  return (
+    <div className="rounded-2xl border border-coffee-200 bg-white shadow-soft p-3 w-[200px]">
+      <div className="font-display text-xs font-bold text-coffee-900 mb-2">Create your cafe</div>
+      <div className="space-y-1.5">
+        <div className="rounded-md bg-cream-100 px-2 py-1.5 text-[10px] text-coffee-700">Cafe Mocha</div>
+        <div className="rounded-md bg-cream-100 px-2 py-1.5 text-[10px] text-coffee-700">you@cafe.com</div>
+        <div className="rounded-md bg-cream-100 px-2 py-1.5 text-[10px] text-coffee-400">••••••••</div>
+        <div className="rounded-md bg-coffee-gradient text-cream-50 text-center py-1.5 text-[10px] font-bold">
+          Start free trial
+        </div>
+      </div>
+      <div className="mt-2 text-[9px] text-emerald-600 flex items-center gap-1">
+        <Check className="h-2.5 w-2.5" /> No card needed
+      </div>
+    </div>
+  );
+}
+
+function MenuBuilderMockup() {
+  return (
+    <div className="rounded-2xl border border-coffee-200 bg-white shadow-soft p-3 w-[200px]">
+      <div className="flex items-center justify-between mb-2">
+        <div className="font-display text-xs font-bold text-coffee-900">Menu</div>
+        <span className="inline-flex items-center gap-0.5 text-[9px] bg-coffee-700 text-cream-50 rounded-full px-1.5 py-0.5">
+          <Plus className="h-2 w-2" /> Add
+        </span>
+      </div>
+      <div className="space-y-1.5">
+        {[
+          { n: 'Cappuccino', p: 180 },
+          { n: 'Cold Brew', p: 220 },
+          { n: 'Truffle Pasta', p: 460 },
+        ].map((i) => (
+          <div key={i.n} className="rounded-md border border-coffee-100 bg-white p-1.5 flex items-center gap-1.5">
+            <div className="h-6 w-6 rounded bg-coffee-gradient" />
+            <div className="flex-1 min-w-0">
+              <div className="text-[10px] font-bold text-coffee-900 truncate">{i.n}</div>
+              <div className="text-[9px] text-coffee-700">₹{i.p}</div>
+            </div>
+            <Star className="h-2.5 w-2.5 fill-caramel text-caramel" />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -347,10 +307,4 @@ const fallbackPlans = [
   { name: 'Starter', slug: 'starter', priceMonthly: 0, maxTables: 5, maxMenuItems: 30 },
   { name: 'Pro', slug: 'pro', priceMonthly: 499, maxTables: 30, maxMenuItems: 200 },
   { name: 'Business', slug: 'business', priceMonthly: 1499, maxTables: 200, maxMenuItems: 2000 },
-];
-
-const testimonials = [
-  { n: 'Riya M.', r: 'Cafe Mocha · Bengaluru', q: 'Sales jumped 22% in 2 months. My waiters serve, not chase.' },
-  { n: 'Arjun S.', r: 'Toast Cafe · Mumbai', q: '10-min setup. We never miss an order now.' },
-  { n: 'Sana K.', r: 'Bean &amp; Brew · Delhi', q: 'Customers love how fast they can order.' },
 ];
