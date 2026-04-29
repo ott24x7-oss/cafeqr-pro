@@ -39,7 +39,10 @@ export function NotificationsBell({ cafeId }: { cafeId: string }) {
       } catch {}
     }
     load();
-    interval = setInterval(load, 6000);
+    // 12s feels live enough for restaurant ops (orders aren't placed in
+    // sub-second bursts) and halves the per-tab DB load — earlier 6s
+    // polls were saturating the Prisma pool during page navigations.
+    interval = setInterval(load, 12000);
     return () => clearInterval(interval);
   }, [cafeId, muted]);
 
