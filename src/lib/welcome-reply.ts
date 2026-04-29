@@ -23,10 +23,19 @@ const DEFAULT_BODY =
 interface IncomingMessage {
   /** The Baileys session ID — same as CafeSettings.baileysSessionId */
   sessionId: string;
-  /** Sender phone, raw E.164-ish (digits only is fine — we normalize) */
+  /** Sender phone, raw E.164-ish (digits only is fine — we normalize).
+   *  For WhatsApp users on the new "lid" privacy ID this won't be a real
+   *  phone — it's used only for cooldown keying and skip-list matching,
+   *  not for routing the reply. */
   fromPhone: string;
   /** Message body, will be lowercased + trimmed before trigger match */
   body: string;
+  /** Optional: send the reply through this callback. The Baileys event
+   *  listener supplies a closure that calls `sock.sendMessage(originalJid,
+   *  ...)` directly — that way replies always land on the exact JID that
+   *  sent the message (s.whatsapp.net OR @lid OR anything else WhatsApp
+   *  invents next), without us trying to reconstruct it from a phone. */
+  replyVia?: (body: string) => Promise<{ ok: boolean; error?: string }>;
 }
 
 /** Storefront URL for a cafe — uses verified custom domain if set,
@@ -174,16 +183,21 @@ export async function handleIncomingMessage(input: IncomingMessage): Promise<{ r
     .replaceAll('{cafeName}', cafe.name)
     .replaceAll('{cafeUrl}', url);
 
-  log('sending', { to: fromPhone, cafeId: cafe.id });
-  const config = configFromCafe(settings.cafe as unknown as WACafe);
-  const result = await sendMessage({
-    to: fromPhone,
-    message: body,
-    config,
-  });
-  if (!result.ok) {
-    log('send-failed', { error: result.error });
-    return { replied: false, reason: result.error ?? 'send-failed' };
+  log('sending', { to: fromPhone, cafeId: cafe.id, via: input.replyVia ? 'callback' : 'whatsapp-send' });
+  let sendResult: { ok: boolean; error?: string };
+  if (input.replyVia) {
+    // Preferred path for Baileys-originated messages: caller already has
+    // the exact JID and a live socket. Bypasses sendBaileysInProcess so
+    // we never reconstruct the JID from a phone (which loses the @lid
+    // suffix for users on WhatsApp's new privacy IDs).
+    sendResult = await input.replyVia(body);
+  } else {
+    const config = configFromCafe(settings.cafe as unknown as WACafe);
+    sendResult = await sendMessage({ to: fromPhone, message: body, config });
+  }
+  if (!sendResult.ok) {
+    log('send-failed', { error: sendResult.error });
+    return { replied: false, reason: sendResult.error ?? 'send-failed' };
   }
 
   // Upsert the cooldown row.

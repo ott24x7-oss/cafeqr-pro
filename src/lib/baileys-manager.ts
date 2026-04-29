@@ -140,9 +140,26 @@ export async function startSession(id: string, opts?: { force?: boolean }): Prom
             log.info({ id, fromPhone, msgType: Object.keys(m.message ?? {}) }, 'baileys: skip empty-body');
             continue;
           }
-          log.info({ id, fromPhone, body: body.slice(0, 40) }, 'baileys: dispatching to welcome-reply');
+          log.info({ id, fromPhone, fromJid, body: body.slice(0, 40) }, 'baileys: dispatching to welcome-reply');
           const { handleIncomingMessage } = await import('./welcome-reply');
-          await handleIncomingMessage({ sessionId: id, fromPhone, body });
+          // Capture the exact JID + the live socket so welcome-reply can
+          // reply to the original sender without reconstructing the JID
+          // from a phone number (would break for @lid privacy users).
+          const replyJid = fromJid!;
+          const replySock = sock;
+          await handleIncomingMessage({
+            sessionId: id,
+            fromPhone,
+            body,
+            replyVia: async (text) => {
+              try {
+                await replySock.sendMessage(replyJid, { text });
+                return { ok: true };
+              } catch (e: any) {
+                return { ok: false, error: e?.message ?? 'baileys send failed' };
+              }
+            },
+          });
         }
       } catch (e: any) {
         log.warn({ id, err: e?.message, stack: e?.stack }, 'baileys: inbound handler error');
