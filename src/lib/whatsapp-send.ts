@@ -2,10 +2,9 @@
  * Server-only WhatsApp sender.
  *
  * Holds the network-y bits (Cloud API, Baileys) so client bundles never
- * transitively pull in fs/path/baileys. Importing this from a client file
- * will produce a build error thanks to `server-only`.
+ * transitively pull in fs/path/baileys. This module is server-only by
+ * nature (uses process.env, crypto, network calls) — no sentinel needed.
  */
-import 'server-only';
 import { decrypt } from './crypto';
 import { normalizePhone, waLink, type WAProvider, type CafeWAConfig } from './whatsapp';
 
