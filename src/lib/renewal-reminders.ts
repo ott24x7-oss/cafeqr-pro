@@ -1,3 +1,12 @@
+// NOTE: no `import 'server-only'` here. instrumentation.ts dynamic-
+// imports this module for the in-process scheduler tick, and that
+// instrumentation file gets bundled for the edge runtime as well.
+// The `server-only` sentinel throws in the edge bundle even though
+// the runtime guard (NEXT_RUNTIME !== 'nodejs') prevents the code
+// from actually executing there. The file remains server-only in
+// practice — it touches the Prisma client and makes outbound network
+// calls — the sentinel is just informational and isn't safe to use
+// here.
 import { prisma } from './prisma';
 import { configFromCafe, type WACafe } from './whatsapp';
 import { sendMessage } from './whatsapp-send';
