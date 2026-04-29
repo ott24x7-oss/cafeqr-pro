@@ -34,8 +34,11 @@ export default async function LandingPage() {
   const [plans, branding] = await Promise.all([getPlans(), getBranding()]);
   const appIcon = branding?.appIconDataUrl ?? '';
   const splash = branding?.splashImageDataUrl ?? '';
-  const apkGoogle = branding?.apkUrlGoogle ?? '';
-  const apkAmazon = branding?.apkUrlAmazon ?? '';
+  // Default to the APK files we ship under public/downloads/ when the admin
+  // hasn't pasted a custom URL yet, so the home page download buttons work
+  // out of the box. Admin can override either one in /admin/branding.
+  const apkGoogle = branding?.apkUrlGoogle?.trim() || '/downloads/app-google-debug.apk';
+  const apkAmazon = branding?.apkUrlAmazon?.trim() || '/downloads/app-amazon-debug.apk';
   const brandName = branding?.brandName?.trim() || 'WatShop Cafe';
 
   return (
@@ -270,11 +273,6 @@ export default async function LandingPage() {
                     <span className="block leading-tight">Amazon Appstore</span>
                   </span>
                 </a>
-              )}
-              {!apkGoogle && !apkAmazon && (
-                <span className="text-sm text-coffee-500 italic">
-                  Coming soon · download links will appear here once configured.
-                </span>
               )}
             </div>
 
