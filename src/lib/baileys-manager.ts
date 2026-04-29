@@ -117,11 +117,24 @@ export async function startSession(id: string, opts?: { force?: boolean }): Prom
             log.debug({ id, jid: fromJid }, 'baileys: skip no-phone');
             continue;
           }
+          // Unwrap WhatsApp's ephemeral / view-once / context wrappers so
+          // disappearing-messages chats and view-once captions still
+          // resolve a body. Real text lives one layer deeper than the
+          // top-level m.message in those modes.
+          const inner =
+            m.message?.ephemeralMessage?.message
+            ?? m.message?.viewOnceMessage?.message
+            ?? m.message?.viewOnceMessageV2?.message
+            ?? m.message?.documentWithCaptionMessage?.message
+            ?? m.message
+            ?? {};
           const body: string =
-            m.message?.conversation
-            ?? m.message?.extendedTextMessage?.text
-            ?? m.message?.imageMessage?.caption
-            ?? m.message?.videoMessage?.caption
+            inner?.conversation
+            ?? inner?.extendedTextMessage?.text
+            ?? inner?.imageMessage?.caption
+            ?? inner?.videoMessage?.caption
+            ?? inner?.buttonsResponseMessage?.selectedDisplayText
+            ?? inner?.listResponseMessage?.title
             ?? '';
           if (!body) {
             log.info({ id, fromPhone, msgType: Object.keys(m.message ?? {}) }, 'baileys: skip empty-body');
