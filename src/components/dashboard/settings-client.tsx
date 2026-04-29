@@ -90,7 +90,12 @@ export function SettingsClient({ cafe }: { cafe: any }) {
     deliveryPartnerPhone: cafe.settings?.deliveryPartnerPhone ?? '',
     loyaltyEnabled: cafe.settings?.loyaltyEnabled ?? false,
     loyaltyPercent: cafe.settings?.loyaltyPercent ?? 5,
+    welcomeAutoReply: cafe.settings?.welcomeAutoReply ?? false,
+    welcomeMessage: cafe.settings?.welcomeMessage ?? '',
+    welcomeTriggers: (cafe.settings?.welcomeTriggers ?? ['hi', 'hello']) as string[],
   });
+
+  const [newWelcomeTrigger, setNewWelcomeTrigger] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [showWaToken, setShowWaToken] = useState(false);
@@ -501,6 +506,126 @@ export function SettingsClient({ cafe }: { cafe: any }) {
                   {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                   Send test
                 </Button>
+              </div>
+            </div>
+
+            {/* Welcome auto-reply (Baileys only) */}
+            <div className="md:col-span-2 rounded-2xl border border-coffee-200 bg-white p-4 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="font-semibold text-coffee-900">Auto-reply on first contact</div>
+                  <p className="helper">
+                    When a customer DMs you with a trigger word, your bot replies with a welcome
+                    message + your menu link. Sends only once per customer per 7 days.
+                    {settings.whatsappProvider !== 'baileys' && (
+                      <span className="block mt-1 text-amber-700">
+                        Only works with the <b>Baileys</b> provider. Switch above to enable.
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <label className="inline-flex items-center gap-2 cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-coffee-700"
+                    checked={settings.welcomeAutoReply}
+                    onChange={(e) => setSettings({ ...settings, welcomeAutoReply: e.target.checked })}
+                    disabled={settings.whatsappProvider !== 'baileys'}
+                  />
+                  <span className="text-sm font-medium text-coffee-800">
+                    {settings.welcomeAutoReply ? 'On' : 'Off'}
+                  </span>
+                </label>
+              </div>
+
+              <div>
+                <label className="label">Welcome message</label>
+                <Textarea
+                  rows={4}
+                  value={settings.welcomeMessage}
+                  onChange={(e) => setSettings({ ...settings, welcomeMessage: e.target.value })}
+                  placeholder="Hi 👋 Thanks for reaching out to *{cafeName}*. Browse our menu and order online: {cafeUrl}"
+                  disabled={!settings.welcomeAutoReply}
+                />
+                <p className="helper">
+                  Use <code>{'{cafeName}'}</code> for your cafe name and <code>{'{cafeUrl}'}</code>
+                  {' '}for the menu link. Leave blank to use the default.
+                </p>
+              </div>
+
+              <div>
+                <label className="label">Trigger words</label>
+                <div className="flex gap-2 mb-2">
+                  <Input
+                    value={newWelcomeTrigger}
+                    onChange={(e) => setNewWelcomeTrigger(e.target.value)}
+                    placeholder="hi, hello, start, menu…"
+                    disabled={!settings.welcomeAutoReply}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const v = newWelcomeTrigger.trim().toLowerCase();
+                        if (!v) return;
+                        if (settings.welcomeTriggers.includes(v)) {
+                          setNewWelcomeTrigger('');
+                          return;
+                        }
+                        setSettings({
+                          ...settings,
+                          welcomeTriggers: [...settings.welcomeTriggers, v].slice(0, 12),
+                        });
+                        setNewWelcomeTrigger('');
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={!settings.welcomeAutoReply || !newWelcomeTrigger.trim()}
+                    onClick={() => {
+                      const v = newWelcomeTrigger.trim().toLowerCase();
+                      if (!v || settings.welcomeTriggers.includes(v)) return;
+                      setSettings({
+                        ...settings,
+                        welcomeTriggers: [...settings.welcomeTriggers, v].slice(0, 12),
+                      });
+                      setNewWelcomeTrigger('');
+                    }}
+                  >
+                    <Plus className="h-4 w-4" /> Add
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {settings.welcomeTriggers.length === 0 && (
+                    <span className="text-xs text-coffee-500">No triggers yet — add at least one.</span>
+                  )}
+                  {settings.welcomeTriggers.map((t) => (
+                    <span
+                      key={t}
+                      className="inline-flex items-center gap-1 rounded-full bg-cream-200 text-coffee-800 px-2.5 py-1 text-xs font-medium"
+                    >
+                      {t}
+                      <button
+                        type="button"
+                        className="text-coffee-600 hover:text-coffee-900"
+                        onClick={() =>
+                          setSettings({
+                            ...settings,
+                            welcomeTriggers: settings.welcomeTriggers.filter((x) => x !== t),
+                          })
+                        }
+                        disabled={!settings.welcomeAutoReply}
+                        aria-label={`Remove ${t}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <p className="helper">
+                  Match is case-insensitive and "starts with" — so <b>hi</b> triggers on
+                  &quot;hi there&quot; but not on &quot;please call hi&quot;.
+                </p>
               </div>
             </div>
 

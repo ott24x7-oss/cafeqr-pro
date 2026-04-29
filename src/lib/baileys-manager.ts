@@ -88,6 +88,36 @@ export async function startSession(id: string, opts?: { force?: boolean }): Prom
     sess.sock = sock;
 
     sock.ev.on('creds.update', saveCreds);
+
+    // Inbound message listener — feeds the welcome auto-reply. We import
+    // welcome-reply lazily so cafes that never receive an inbound message
+    // don't pull Prisma into the hot socket path. All errors are
+    // swallowed; a bad reply must never crash the connection.
+    sock.ev.on('messages.upsert', async (evt: any) => {
+      try {
+        const msgs = evt?.messages ?? [];
+        for (const m of msgs) {
+          if (!m || m.key?.fromMe) continue;
+          // Ignore group chats — only DMs trigger welcome replies.
+          if (m.key?.remoteJid?.endsWith('@g.us')) continue;
+          const fromJid: string | undefined = m.key?.remoteJid;
+          const fromPhone = fromJid?.split('@')[0]?.replace(/\D/g, '');
+          if (!fromPhone) continue;
+          const body: string =
+            m.message?.conversation
+            ?? m.message?.extendedTextMessage?.text
+            ?? m.message?.imageMessage?.caption
+            ?? m.message?.videoMessage?.caption
+            ?? '';
+          if (!body) continue;
+          const { handleIncomingMessage } = await import('./welcome-reply');
+          await handleIncomingMessage({ sessionId: id, fromPhone, body });
+        }
+      } catch (e: any) {
+        log.warn({ id, err: e?.message }, 'baileys: inbound handler error');
+      }
+    });
+
     sock.ev.on('connection.update', async (u: any) => {
       const { connection, lastDisconnect, qr } = u;
       if (qr) {

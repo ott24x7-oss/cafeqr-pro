@@ -236,6 +236,13 @@ model CafeSettings {
   // keyed by (cafeId, customerPhone). 1 point = 1 unit of cafe currency.
   loyaltyEnabled  Boolean  @default(true)
   loyaltyPercent  Float    @default(5.0)
+  // Welcome auto-reply: when a customer DMs the cafe's WhatsApp number
+  // with a trigger word ("hi", "hello", ...), reply once per 7 days with
+  // welcomeMessage + the cafe's storefront URL. Only fires on the
+  // Baileys provider; cloud_api / manual cafes ignore these.
+  welcomeAutoReply Boolean   @default(false)
+  welcomeMessage   String?
+  welcomeTriggers  String[]  @default(["hi", "hello"])
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -631,6 +638,20 @@ model Coupon {
   cafe          Cafe     @relation(fields: [cafeId], references: [id], onDelete: Cascade)
 
   @@unique([cafeId, code])
+}
+
+// ─── 18.5. WELCOME REPLY LOG ──────────────────────────────────────────────
+// One row per (cafe, customer phone) — tracks the last time the cafe's
+// auto-reply fired so we can enforce the 7-day cooldown without scanning
+// outbound history. Upserted on every successful welcome send.
+model WelcomeReplyLog {
+  id          String   @id @default(cuid())
+  cafeId      String
+  phone       String   // normalized, no leading + or spaces
+  lastSentAt  DateTime @default(now())
+
+  @@unique([cafeId, phone])
+  @@index([cafeId])
 }
 
 // ─── 19. LOYALTY ──────────────────────────────────────────────────────────

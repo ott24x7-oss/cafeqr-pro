@@ -62,7 +62,24 @@ export async function POST(req: Request) {
     'country', 'deliveryPartnerPhone',
     'invoiceTemplate',
     'loyaltyEnabled', 'loyaltyPercent',
+    'welcomeAutoReply', 'welcomeMessage', 'welcomeTriggers',
   ]);
+
+  // Sanitize welcome triggers: lowercased, trimmed, deduped, length-capped.
+  if (Array.isArray(plain.welcomeTriggers)) {
+    plain.welcomeTriggers = Array.from(
+      new Set(
+        plain.welcomeTriggers
+          .map((t: any) => (typeof t === 'string' ? t.trim().toLowerCase() : ''))
+          .filter((t: string) => t.length > 0 && t.length <= 32),
+      ),
+    ).slice(0, 12);
+  } else if (plain.welcomeTriggers !== undefined) {
+    delete plain.welcomeTriggers;
+  }
+  if (typeof plain.welcomeMessage === 'string') {
+    plain.welcomeMessage = plain.welcomeMessage.slice(0, 1000);
+  }
 
   // Clamp loyalty percent to a sane band so a typo can't gift the cafe owner
   // a 1000% earn rate. 0–50% is plenty of headroom.
