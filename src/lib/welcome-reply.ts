@@ -116,7 +116,15 @@ export async function handleIncomingMessage(input: IncomingMessage): Promise<{ r
     return { replied: false, reason: 'no-cafe-for-session' };
   }
   if (!settings.welcomeAutoReply) {
-    log('skip:disabled', { cafeId: settings.cafe.id });
+    // Surface the actual DB values so we can tell whether the save just
+    // didn't persist vs. the column being cleared by something else.
+    log('skip:disabled', {
+      cafeId: settings.cafe.id,
+      welcomeAutoReply: settings.welcomeAutoReply,
+      welcomeMessageLen: settings.welcomeMessage?.length ?? 0,
+      welcomeTriggers: settings.welcomeTriggers,
+      whatsappProvider: settings.whatsappProvider,
+    });
     return { replied: false, reason: 'disabled' };
   }
 
