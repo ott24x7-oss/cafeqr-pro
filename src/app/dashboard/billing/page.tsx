@@ -11,7 +11,13 @@ export default async function BillingPage() {
   const { cafe } = await getOwnerCafe();
   if (!cafe) return null;
   const [plans, current, subs] = await Promise.all([
-    prisma.plan.findMany({ where: { isActive: true }, orderBy: { sortOrder: 'asc' } }),
+    // Match /pricing's order — sortOrder first, priceMonthly as a stable
+    // tiebreaker so plans the admin added without a sortOrder don't
+    // shuffle randomly between rows.
+    prisma.plan.findMany({
+      where: { isActive: true },
+      orderBy: [{ sortOrder: 'asc' }, { priceMonthly: 'asc' }],
+    }),
     cafe.planId ? prisma.plan.findUnique({ where: { id: cafe.planId } }) : null,
     prisma.subscription.findMany({ where: { cafeId: cafe.id }, orderBy: { createdAt: 'desc' } }),
   ]);
