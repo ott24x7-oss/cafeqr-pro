@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getOwnerCafe } from '@/lib/guards';
 import { encrypt } from '@/lib/crypto';
+import { getPlanLimits } from '@/lib/plan-limits';
 
 const ENCRYPTED_RE = /^[0-9a-f]+:[0-9a-f]+:[0-9a-f]+$/i;
 const SENTINEL = '__unchanged__';
@@ -48,6 +49,38 @@ export async function POST(req: Request) {
   await prisma.cafe.update({ where: { id: cafe.id }, data: cafeUpdate });
 
   const existing = await prisma.cafeSettings.findUnique({ where: { cafeId: cafe.id } });
+
+  // Plan-tier feature lock: silently strip writes to columns the cafe's
+  // plan doesn't unlock. Returning 200 with the field stripped is a
+  // friendlier UX than rejecting the whole save (which would lose the
+  // user's edits to non-locked fields). The dashboard UI should also
+  // hide/disable these inputs visually so this is just defence-in-depth.
+  const planLimits = await getPlanLimits(cafe.id);
+  if (!planLimits.features.loyalty) {
+    delete (settings as any).loyaltyEnabled;
+    delete (settings as any).loyaltyPercent;
+  }
+  if (!planLimits.features.whatsapp) {
+    delete (settings as any).whatsappProvider;
+    delete (settings as any).waCloudToken;
+    delete (settings as any).waCloudPhoneId;
+    delete (settings as any).waCloudVerifyToken;
+    delete (settings as any).baileysSessionId;
+    delete (settings as any).welcomeAutoReply;
+    delete (settings as any).welcomeMessage;
+    delete (settings as any).welcomeTriggers;
+  }
+  if (!planLimits.features.payment) {
+    delete (settings as any).upiId;
+    delete (settings as any).upiQrUrl;
+    delete (settings as any).paymentEnabled;
+    delete (settings as any).paymentTiming;
+    delete (settings as any).paymentNote;
+    delete (settings as any).gmailUser;
+    delete (settings as any).gmailAppPassword;
+    delete (settings as any).gmailSenderFilter;
+    delete (settings as any).gmailSubjectFilter;
+  }
 
   // Plain (non-secret) fields we accept directly.
   const plain = pickPlain(settings, [

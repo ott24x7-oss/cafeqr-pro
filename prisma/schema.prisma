@@ -487,7 +487,13 @@ model Plan {
   maxTables       Int      @default(10)
   maxMenuItems    Int      @default(50)
   maxStaff        Int      @default(3)
+  // Per-month order limit. 0 means unlimited. Enforced at order-place
+  // time with a 10% soft-warn buffer; 110%+ is hard-blocked.
+  maxOrdersPerMonth Int    @default(0)
   whatsappEnabled Boolean  @default(true)
+  loyaltyEnabled  Boolean  @default(true)
+  paymentEnabled  Boolean  @default(true)
+  couponsEnabled  Boolean  @default(true)
   customBranding  Boolean  @default(false)
   customSubdomain Boolean  @default(false)
   prioritySupport Boolean  @default(false)

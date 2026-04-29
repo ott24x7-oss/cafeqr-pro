@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { CafeStoreLink } from '@/components/dashboard/cafe-store-link';
 import { RevenueSparkline } from '@/components/dashboard/revenue-sparkline';
 import { SetupChecklist } from '@/components/dashboard/setup-checklist';
+import { UsageBanner } from '@/components/dashboard/usage-banner';
 
 export const dynamic = 'force-dynamic';
 
@@ -116,6 +117,8 @@ export default async function DashboardOverview() {
           <span className="text-coffee-500"> · आज {cafe.name} में क्या हो रहा है।</span>
         </p>
       </div>
+
+      <UsageBanner cafeId={cafe.id} />
 
       <SetupChecklist items={setupItems} />
 

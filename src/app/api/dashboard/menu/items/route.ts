@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { getOwnerCafe } from '@/lib/guards';
+import { getPlanLimits, countMenuItems } from '@/lib/plan-limits';
 
 const schema = z.object({
   name: z.string().min(1),
@@ -31,6 +32,24 @@ export async function POST(req: Request) {
 
   const cat = await prisma.category.findUnique({ where: { id: body.categoryId } });
   if (!cat || cat.cafeId !== cafe.id) return NextResponse.json({ error: 'category mismatch' }, { status: 400 });
+
+  // Plan-tier menu-item cap.
+  const [limits, current] = await Promise.all([
+    getPlanLimits(cafe.id),
+    countMenuItems(cafe.id),
+  ]);
+  if (limits.maxMenuItems > 0 && current >= limits.maxMenuItems) {
+    return NextResponse.json(
+      {
+        error: `You've hit your plan's menu-item limit (${current}/${limits.maxMenuItems}). Upgrade your plan to add more items.`,
+        code: 'PLAN_LIMIT_REACHED',
+        limit: limits.maxMenuItems,
+        current,
+      },
+      { status: 402 },
+    );
+  }
+
   const item = await prisma.menuItem.create({
     data: { ...body, cafeId: cafe.id },
     include: { category: true, variants: true, addons: true },

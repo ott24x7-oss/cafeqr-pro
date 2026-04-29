@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { calcCart } from '@/lib/order-utils';
 import { genOrderNumber } from '@/lib/utils';
 import { notifyNewOrder } from '@/lib/notify';
+import { getOrderUsage } from '@/lib/plan-limits';
 
 const cartItemSchema = z.object({
   menuItemId: z.string(),
@@ -42,6 +43,18 @@ export async function POST(req: Request) {
     });
     if (!cafe) return NextResponse.json({ error: 'Cafe not found' }, { status: 404 });
     if (cafe.status === 'SUSPENDED') return NextResponse.json({ error: 'Cafe not accepting orders' }, { status: 403 });
+
+    // Plan-tier monthly order limit. Hard-block at >= 110% so a soft-warn
+    // window between 100% and 110% lets the cafe finish in-progress
+    // checkouts gracefully. Customer-facing message stays generic — we
+    // don't expose "the cafe needs to upgrade" to the diner.
+    const usage = await getOrderUsage(cafe.id);
+    if (usage.decision.blocked) {
+      return NextResponse.json(
+        { error: 'This cafe isn\'t accepting orders right now. Please try again in a few minutes.' },
+        { status: 503 },
+      );
+    }
 
     let table = null;
     if (body.tableCode) {
