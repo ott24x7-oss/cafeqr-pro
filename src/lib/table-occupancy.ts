@@ -14,6 +14,7 @@
  * SERVED / COMPLETED / CANCELLED → table is free.
  */
 import { prisma } from '@/lib/prisma';
+import { OrderStatus } from '@prisma/client';
 
 const OPEN_STATUSES = ['NEW', 'ACCEPTED', 'PREPARING', 'READY'] as const;
 
@@ -23,7 +24,7 @@ export async function getLiveOccupiedSet(cafeId: string): Promise<Set<string>> {
     where: {
       cafeId,
       tableId: { not: null },
-      status: { in: OPEN_STATUSES as unknown as string[] },
+      status: { in: [...OPEN_STATUSES] as OrderStatus[] },
     },
     _count: { tableId: true },
   });
