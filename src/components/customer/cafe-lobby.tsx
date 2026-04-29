@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useMemo, useState } from 'react';
 import {
-  Coffee, MapPin, Phone, Search, ShoppingBag, Truck, Users, Clock, Star, ChevronRight, Sparkles, Utensils, Flame, User,
+  Coffee, MapPin, Phone, Search, ShoppingBag, Truck, Users, Clock, Star, ChevronRight, Sparkles, Utensils, Flame, User, Award, LogIn,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { formatCurrency } from '@/lib/utils';
@@ -59,7 +59,14 @@ type Cafe = {
   } | null;
 };
 
-export function CafeLobby({ cafe }: { cafe: Cafe }) {
+interface CustomerProps {
+  phone: string;
+  name: string | null;
+  points: number;
+  loyaltyEnabled: boolean;
+}
+
+export function CafeLobby({ cafe, customer }: { cafe: Cafe; customer?: CustomerProps | null }) {
   const [q, setQ] = useState('');
 
   const groupedTables = useMemo(() => {
@@ -100,16 +107,35 @@ export function CafeLobby({ cafe }: { cafe: Cafe }) {
           )}
           <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/5 to-black/30" />
         </div>
-        {/* Customer account entry point — sign in to track orders, see
-            history and check loyalty points. Lives in the hero overlay so
-            it's discoverable from the cafe storefront without needing a
-            full nav bar. */}
-        <Link
-          href={`/cafe/${cafe.slug}/account`}
-          className="absolute top-3 right-3 inline-flex items-center gap-1.5 rounded-full bg-white/90 backdrop-blur px-3 py-1.5 text-xs font-semibold text-coffee-800 shadow-soft hover:bg-white"
-        >
-          <User className="h-3.5 w-3.5" /> My account
-        </Link>
+        {/* Customer identity badge — when logged in shows greeting + live
+            points balance (when loyalty is enabled), when logged out
+            offers a one-tap login. Lives in the hero overlay so it's
+            always discoverable. */}
+        {customer ? (
+          <Link
+            href={`/cafe/${cafe.slug}/account`}
+            className="absolute top-3 right-3 inline-flex items-center gap-2 rounded-full bg-white/95 backdrop-blur pl-1 pr-3 py-1 text-xs font-semibold text-coffee-900 shadow-coffee hover:bg-white"
+          >
+            <span className="grid h-7 w-7 place-items-center rounded-full bg-coffee-gradient text-cream-50 text-[11px] font-bold">
+              {(customer.name?.[0] ?? customer.phone.slice(-2)).toUpperCase()}
+            </span>
+            <span className="leading-tight">
+              <span className="block">{customer.name?.split(' ')[0] || 'You'}</span>
+              {customer.loyaltyEnabled && (
+                <span className="block text-[10px] font-bold text-emerald-700 inline-flex items-center gap-0.5">
+                  <Award className="h-2.5 w-2.5" /> {customer.points.toLocaleString()} pts
+                </span>
+              )}
+            </span>
+          </Link>
+        ) : (
+          <Link
+            href={`/cafe/${cafe.slug}/account/login?next=${encodeURIComponent(`/cafe/${cafe.slug}`)}`}
+            className="absolute top-3 right-3 inline-flex items-center gap-1.5 rounded-full bg-white/90 backdrop-blur px-3 py-1.5 text-xs font-semibold text-coffee-800 shadow-soft hover:bg-white"
+          >
+            <LogIn className="h-3.5 w-3.5" /> Login
+          </Link>
+        )}
       </header>
 
       <main className="max-w-3xl mx-auto px-4 -mt-16 sm:-mt-20 relative space-y-5">
@@ -178,6 +204,52 @@ export function CafeLobby({ cafe }: { cafe: Cafe }) {
             );
           })()}
         </section>
+
+        {/* Loyalty card — shown only when customer is logged in AND the
+            cafe has loyalty turned on. Tap goes to the full account hub. */}
+        {customer && customer.loyaltyEnabled && (
+          <Link
+            href={`/cafe/${cafe.slug}/account`}
+            className="block rounded-2xl bg-gradient-to-r from-coffee-700 to-caramel-dark text-cream-50 p-4 sm:p-5 shadow-coffee hover:-translate-y-0.5 transition relative overflow-hidden"
+          >
+            <div className="absolute -top-6 -right-6 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+            <div className="relative flex items-center gap-4">
+              <div className="grid h-12 w-12 sm:h-14 sm:w-14 place-items-center rounded-2xl bg-white/15 backdrop-blur shrink-0">
+                <Award className="h-6 w-6 sm:h-7 sm:w-7" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[11px] uppercase tracking-wider opacity-80">Your loyalty balance</div>
+                <div className="font-display text-2xl sm:text-3xl font-bold leading-none">
+                  {customer.points.toLocaleString()} <span className="text-sm font-semibold opacity-80">pts</span>
+                </div>
+                <div className="text-[11px] opacity-80 mt-0.5">
+                  Earn more on every paid order · 1 pt = 1 {cafe.currency || '₹'}
+                </div>
+              </div>
+              <ChevronRight className="h-5 w-5 opacity-80" />
+            </div>
+          </Link>
+        )}
+
+        {/* Login prompt — when NOT logged in, gently nudge so the customer
+            sees the points feature exists. */}
+        {!customer && (cafe.settings as any)?.loyaltyEnabled && (
+          <Link
+            href={`/cafe/${cafe.slug}/account/login?next=${encodeURIComponent(`/cafe/${cafe.slug}`)}`}
+            className="block rounded-2xl border border-dashed border-coffee-300 bg-cream-100 p-3 sm:p-4 hover:bg-cream-200 transition"
+          >
+            <div className="flex items-center gap-3">
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-coffee-gradient text-cream-50 shrink-0">
+                <Award className="h-5 w-5" />
+              </div>
+              <div className="flex-1 min-w-0 text-sm">
+                <div className="font-semibold text-coffee-900">Earn loyalty points</div>
+                <div className="text-xs text-coffee-600">Login with your WhatsApp number to start collecting points on every order.</div>
+              </div>
+              <LogIn className="h-4 w-4 text-coffee-600 shrink-0" />
+            </div>
+          </Link>
+        )}
 
         <div className="space-y-6">
         {/* Bestsellers strip — horizontal scroll of popular items so the

@@ -2,17 +2,25 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { X, Plus, Minus, Trash2, Loader2, MessageSquare, MapPin, Bike } from 'lucide-react';
+import { X, Plus, Minus, Trash2, Loader2, MessageSquare, MapPin, Bike, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input, Textarea } from '@/components/ui/input';
 import { calcCart, type CartItem } from '@/lib/order-utils';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from '@/components/ui/toaster';
 
+interface CustomerSession {
+  phone: string;
+  name: string | null;
+  points: number;
+  loyaltyEnabled: boolean;
+}
+
 export function CustomerCart({
   cafe,
   table,
   cart,
+  customer,
   onAdjust,
   onClose,
   onClear,
@@ -20,16 +28,20 @@ export function CustomerCart({
   cafe: any;
   table: any;
   cart: CartItem[];
+  customer?: CustomerSession | null;
   onAdjust: (idx: number, delta: number) => void;
   onClose: () => void;
   onClear: () => void;
 }) {
   const router = useRouter();
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
+  // Pre-fill name + phone from the customer session when present so the
+  // logged-in flow skips the OTP step entirely. The cookie was already
+  // verified during login, so we trust it here.
+  const [name, setName] = useState(customer?.name ?? '');
+  const [phone, setPhone] = useState(customer?.phone ?? '');
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
-  const [phoneVerified, setPhoneVerified] = useState(false);
+  const [phoneVerified, setPhoneVerified] = useState(Boolean(customer?.phone));
   const [address, setAddress] = useState('');
   const [note, setNote] = useState('');
 
@@ -215,7 +227,19 @@ export function CustomerCart({
                 </div>
               ) : (
                 <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-sm text-emerald-800 flex items-center gap-2">
-                  ✓ Verified · {phone}
+                  <Check className="h-4 w-4" />
+                  {customer?.phone === phone ? (
+                    <>
+                      Logged in as <span className="font-semibold">{phone}</span>
+                      {customer.loyaltyEnabled && customer.points > 0 && (
+                        <span className="ml-auto text-xs font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+                          {customer.points.toLocaleString()} pts
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <>Verified · {phone}</>
+                  )}
                 </div>
               )}
 

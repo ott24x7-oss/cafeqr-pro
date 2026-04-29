@@ -234,7 +234,7 @@ model CafeSettings {
   // Loyalty programme: when enabled, paid online orders credit
   // round(subtotal * loyaltyPercent / 100) points to a LoyaltyAccount
   // keyed by (cafeId, customerPhone). 1 point = 1 unit of cafe currency.
-  loyaltyEnabled  Boolean  @default(false)
+  loyaltyEnabled  Boolean  @default(true)
   loyaltyPercent  Float    @default(5.0)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

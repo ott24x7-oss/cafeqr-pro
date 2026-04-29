@@ -30,7 +30,15 @@ type CafeWithMenu = {
   }[];
 };
 
-export function CustomerMenu({ cafe, table }: { cafe: CafeWithMenu; table: any }) {
+export function CustomerMenu({
+  cafe,
+  table,
+  customer,
+}: {
+  cafe: CafeWithMenu;
+  table: any;
+  customer?: { phone: string; name: string | null; points: number; loyaltyEnabled: boolean } | null;
+}) {
   const [search, setSearch] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -330,6 +338,7 @@ export function CustomerMenu({ cafe, table }: { cafe: CafeWithMenu; table: any }
           cafe={cafe}
           table={table}
           cart={cart}
+          customer={customer ?? null}
           onAdjust={adjust}
           onClose={() => setShowCart(false)}
           onClear={() => { setCart([]); setShowCart(false); }}

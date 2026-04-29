@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { CustomerMenu } from '@/components/customer/customer-menu';
+import { getCustomerProfile } from '@/lib/customer-profile';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,5 +47,6 @@ export default async function CustomerMenuPage({ params }: { params: { slug: str
     if (!table || table.cafeId !== cafe.id) notFound();
   }
 
-  return <CustomerMenu cafe={cafe as any} table={table} />;
+  const customer = await getCustomerProfile(cafe.id, cafe.settings?.loyaltyEnabled ?? true);
+  return <CustomerMenu cafe={cafe as any} table={table} customer={customer} />;
 }
