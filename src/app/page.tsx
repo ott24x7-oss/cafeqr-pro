@@ -1,26 +1,27 @@
 import Link from 'next/link';
 import {
-  ArrowRight, ArrowDown, Sparkles, QrCode, Smartphone, Bell, CreditCard,
-  Utensils, BarChart3, MessageSquare, Zap, Coffee, Plus, Check, Star, Download,
+  ArrowRight, ArrowDown, Sparkles, Coffee, Plus, Check, Star, Download, Smartphone,
 } from 'lucide-react';
 import { PublicNavbar } from '@/components/public/navbar';
 import { PublicFooter } from '@/components/public/footer';
 import { Button } from '@/components/ui/button';
 import { PhoneFrame } from '@/components/mockups/phone-frame';
 import {
-  ScanQRScreen, MenuScreen, TrackingScreen, PayScreen,
-  DashboardMini, QRPrintCard, WANotificationMockup, OrderToast,
+  MenuScreen, DashboardMini, QRPrintCard, OrderToast,
 } from '@/components/mockups/screens';
 import { prisma } from '@/lib/prisma';
 
-// Re-render every 60 seconds so admin updates to PlatformBranding (logo,
-// app icon, splash, APK URLs) propagate to the home page within a minute
-// without forcing every visit to hit the DB.
+// Re-render every 60s so admin updates to PlatformBranding (logo, app icon,
+// splash, APK URLs) propagate to the home page within a minute without
+// forcing every visit to hit the DB.
 export const revalidate = 60;
 
 async function getPlans() {
   try {
-    return await prisma.plan.findMany({ where: { isActive: true }, orderBy: { sortOrder: 'asc' } });
+    return await prisma.plan.findMany({
+      where: { isActive: true },
+      orderBy: [{ sortOrder: 'asc' }, { priceMonthly: 'asc' }],
+    });
   } catch { return []; }
 }
 
@@ -34,9 +35,6 @@ export default async function LandingPage() {
   const [plans, branding] = await Promise.all([getPlans(), getBranding()]);
   const appIcon = branding?.appIconDataUrl ?? '';
   const splash = branding?.splashImageDataUrl ?? '';
-  // Default to the APK files we ship under public/downloads/ when the admin
-  // hasn't pasted a custom URL yet, so the home page download buttons work
-  // out of the box. Admin can override either one in /admin/branding.
   const apkGoogle = branding?.apkUrlGoogle?.trim() || '/downloads/app-google-debug.apk';
   const apkAmazon = branding?.apkUrlAmazon?.trim() || '/downloads/app-amazon-debug.apk';
   const brandName = branding?.brandName?.trim() || 'WatShop Cafe';
@@ -45,7 +43,7 @@ export default async function LandingPage() {
     <div className="min-h-screen bg-cream-50 overflow-x-clip">
       <PublicNavbar />
 
-      {/* ═══════════ HERO — split visual: dashboard → phone ═══════════ */}
+      {/* ═══════════ HERO ═══════════ */}
       <section className="relative">
         <div className="absolute inset-0 bg-pattern opacity-40" />
         <div className="absolute -top-40 -right-40 h-[500px] w-[500px] rounded-full bg-caramel/20 blur-3xl" />
@@ -53,13 +51,16 @@ export default async function LandingPage() {
 
         <div className="container relative pt-12 md:pt-16 pb-10 text-center">
           <div className="inline-flex items-center gap-2 rounded-full bg-cream-200 px-3 py-1 text-xs font-semibold text-coffee-800 mb-4">
-            <Sparkles className="h-3.5 w-3.5" /> 500+ cafes · Live in 5 minutes
+            <Sparkles className="h-3.5 w-3.5" /> Live in 5 minutes · 5 मिनट में शुरू
           </div>
           <h1 className="font-display text-4xl md:text-6xl font-bold leading-[1.05] text-coffee-900 max-w-3xl mx-auto">
-            Build your cafe's QR ordering store.
+            Your cafe's QR ordering store.
           </h1>
           <p className="mt-3 text-base md:text-lg text-coffee-700">
             No app. No code. Just your menu and a QR.
+          </p>
+          <p className="mt-1 text-sm text-coffee-500">
+            कोई app नहीं · कोई code नहीं · सिर्फ़ आपका menu और एक QR
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <Link href="/signup">
@@ -71,11 +72,11 @@ export default async function LandingPage() {
           </div>
         </div>
 
-        {/* Hero visual: dashboard → phone with menu */}
+        {/* Hero visual: dashboard → phone */}
         <div className="container relative pb-16">
           <div className="grid md:grid-cols-[1fr_auto_1fr] gap-6 md:gap-4 items-center max-w-5xl mx-auto">
             <div className="relative">
-              <span className="pill bg-coffee-700 text-cream-50 mb-2">You build</span>
+              <span className="pill bg-coffee-700 text-cream-50 mb-2">You build · आप बनाते हैं</span>
               <DashboardMini />
               <div className="absolute -top-3 -right-3 hidden md:block">
                 <OrderToast status="NEW" n="#1284" t="now" />
@@ -89,100 +90,78 @@ export default async function LandingPage() {
               <ArrowDown className="h-8 w-8 text-coffee-500" />
             </div>
             <div className="relative">
-              <span className="pill bg-caramel text-coffee-900 mb-2">They order</span>
+              <span className="pill bg-caramel text-coffee-900 mb-2">They order · वो order करते हैं</span>
               <PhoneFrame size="md"><MenuScreen /></PhoneFrame>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ═══════════ BUILD IN 4 STEPS — the visual flow ═══════════ */}
+      {/* ═══════════ 4-STEP GUIDE ═══════════ */}
       <section className="bg-white border-y border-coffee-100">
-        <div className="container py-16 md:py-20">
+        <div className="container py-14 md:py-20">
           <div className="text-center max-w-2xl mx-auto mb-10">
-            <span className="pill bg-cream-200 text-coffee-800">How you build</span>
+            <span className="pill bg-cream-200 text-coffee-800">Quick start guide</span>
             <h2 className="mt-3 font-display text-3xl md:text-5xl font-bold text-coffee-900">
-              Sign up to selling in 4 steps
+              4 steps to your first order.
             </h2>
+            <p className="mt-2 text-coffee-700 text-sm">
+              पहले order तक केवल 4 कदम — sign up से लेकर QR print तक।
+            </p>
           </div>
 
           <div className="grid md:grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr] gap-4 md:gap-2 items-center max-w-6xl mx-auto">
-            <BuildStep n="01" label="Sign up" mockup={<SignupMockup />} />
+            <BuildStep
+              n="01"
+              label="Sign up"
+              hi="साइन अप करें"
+              hint="Email + cafe name. No card needed."
+              hintHi="Email और cafe का नाम — कार्ड की ज़रूरत नहीं।"
+              mockup={<SignupMockup />}
+            />
             <StepArrow />
-            <BuildStep n="02" label="Add your menu" mockup={<MenuBuilderMockup />} />
+            <BuildStep
+              n="02"
+              label="Add your menu"
+              hi="Menu जोड़ें"
+              hint="Categories, photos, prices."
+              hintHi="Categories, फ़ोटो, और दाम।"
+              mockup={<MenuBuilderMockup />}
+            />
             <StepArrow />
-            <BuildStep n="03" label="Print your QR" mockup={<div className="scale-90"><QRPrintCard /></div>} />
+            <BuildStep
+              n="03"
+              label="Print your QR"
+              hi="QR print करें"
+              hint="One QR per table — print and stick."
+              hintHi="हर table का एक QR — print करके लगाएँ।"
+              mockup={<div className="scale-90"><QRPrintCard /></div>}
+            />
             <StepArrow />
-            <BuildStep n="04" label="Customers order" mockup={<PhoneFrame size="sm"><MenuScreen /></PhoneFrame>} />
+            <BuildStep
+              n="04"
+              label="Take orders"
+              hi="Orders लें"
+              hint="Customer scans → orders → you get pinged."
+              hintHi="ग्राहक scan करता है → order आता है → आपको alert मिलता है।"
+              mockup={<PhoneFrame size="sm"><MenuScreen /></PhoneFrame>}
+            />
           </div>
 
-          <div className="text-center mt-10">
+          <div className="text-center mt-12">
             <Link href="/signup">
               <Button size="lg">Start building free <ArrowRight className="h-4 w-4" /></Button>
             </Link>
+            <p className="mt-3 text-xs text-coffee-500">
+              Free for life on your first 30 orders / month · पहले 30 orders तक हमेशा मुफ़्त
+            </p>
           </div>
         </div>
       </section>
 
-      {/* ═══════════ CUSTOMER EXPERIENCE — 4 phones, no copy ═══════════ */}
-      <section className="container py-16 md:py-20">
-        <div className="text-center max-w-2xl mx-auto mb-10">
-          <span className="pill bg-cream-200 text-coffee-800">What your customers see</span>
-          <h2 className="mt-3 font-display text-3xl md:text-5xl font-bold text-coffee-900">
-            Scan → Order → Track → Pay
-          </h2>
-        </div>
-
-        <div className="flex md:grid md:grid-cols-4 gap-4 overflow-x-auto pb-6 md:overflow-visible snap-x scroll-smooth -mx-4 px-4 md:mx-0 md:px-0">
-          {[
-            { n: '01', t: 'Scan', screen: <ScanQRScreen />, c: 'bg-coffee-700' },
-            { n: '02', t: 'Order', screen: <MenuScreen />, c: 'bg-coffee-600' },
-            { n: '03', t: 'Track', screen: <TrackingScreen />, c: 'bg-caramel-dark' },
-            { n: '04', t: 'Pay', screen: <PayScreen />, c: 'bg-caramel' },
-          ].map((step) => (
-            <div key={step.n} className="snap-start shrink-0 w-[260px] md:w-auto">
-              <div className="text-center mb-3">
-                <div className={`inline-flex items-center gap-2 ${step.c} text-cream-50 rounded-full px-3 py-1 text-xs font-bold`}>
-                  {step.n} · {step.t}
-                </div>
-              </div>
-              <PhoneFrame size="sm">{step.screen}</PhoneFrame>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ═══════════ OWNER VIEW — dashboard + live notifications ═══════════ */}
-      <section className="bg-cream-100/60 border-y border-coffee-100">
-        <div className="container py-16 md:py-20">
-          <div className="text-center max-w-2xl mx-auto mb-10">
-            <span className="pill bg-cream-200 text-coffee-800">What you see</span>
-            <h2 className="mt-3 font-display text-3xl md:text-5xl font-bold text-coffee-900">
-              One dashboard. Every order.
-            </h2>
-          </div>
-
-          <div className="relative max-w-5xl mx-auto">
-            <div className="rounded-3xl border border-coffee-200 bg-white shadow-coffee overflow-hidden">
-              <DashboardMini />
-            </div>
-            <div className="absolute -top-4 -right-2 md:-right-10 hidden md:block">
-              <OrderToast status="NEW" n="#1284" t="now" />
-            </div>
-            <div className="absolute -bottom-6 -left-2 md:-left-10 hidden md:block max-w-[260px]">
-              <WANotificationMockup />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════ MOBILE APP — icon mockup + APK downloads ═══════════
-          Both icon and splash are admin-overridable (PlatformBranding ->
-          appIconDataUrl / splashImageDataUrl). Download buttons render only
-          when the corresponding APK URL is set in /admin/branding. */}
-      <section className="container py-16 md:py-20">
+      {/* ═══════════ MOBILE APP — icon mockup + APK downloads ═══════════ */}
+      <section className="container py-14 md:py-20">
         <div className="grid md:grid-cols-2 gap-10 md:gap-14 items-center max-w-5xl mx-auto">
-          {/* Phone with splash + icon */}
           <div className="relative mx-auto">
             <PhoneFrame size="md">
               <div className="h-full w-full relative bg-coffee-gradient flex items-center justify-center overflow-hidden">
@@ -196,9 +175,6 @@ export default async function LandingPage() {
                 ) : (
                   <div className="absolute inset-0 bg-pattern opacity-20" />
                 )}
-                {/* Foreground: icon + brand name on top of splash/gradient.
-                    Hidden if a splash image is supplied — the splash itself
-                    typically bakes in the icon. */}
                 {!splash && (
                   <div className="relative flex flex-col items-center text-cream-50">
                     {appIcon ? (
@@ -219,7 +195,6 @@ export default async function LandingPage() {
                 )}
               </div>
             </PhoneFrame>
-            {/* Floating app-icon badge in front of phone */}
             <div className="absolute -bottom-4 -right-4 md:-right-8">
               {appIcon ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
@@ -236,15 +211,16 @@ export default async function LandingPage() {
             </div>
           </div>
 
-          {/* Right column: copy + download buttons */}
           <div className="text-center md:text-left">
-            <span className="pill bg-cream-200 text-coffee-800">Mobile app</span>
+            <span className="pill bg-cream-200 text-coffee-800">Mobile app · मोबाइल app</span>
             <h2 className="mt-3 font-display text-3xl md:text-5xl font-bold text-coffee-900 leading-[1.05]">
               Run your cafe<br />from your phone.
             </h2>
             <p className="mt-3 text-coffee-700">
-              The companion app for cafe owners — live orders, kitchen view, payments and
-              WhatsApp alerts on the go.
+              Live orders, payments and WhatsApp alerts on the go.
+            </p>
+            <p className="mt-1 text-sm text-coffee-500">
+              Live orders, payments और WhatsApp alerts — सब कुछ phone पर।
             </p>
 
             <div className="mt-6 flex flex-wrap gap-3 justify-center md:justify-start">
@@ -277,43 +253,25 @@ export default async function LandingPage() {
             </div>
 
             <div className="mt-5 flex items-center gap-2 text-xs text-coffee-500 justify-center md:justify-start">
-              <Smartphone className="h-3.5 w-3.5" /> Free for cafe owners on every plan
+              <Smartphone className="h-3.5 w-3.5" /> Free on every plan · हर plan पर मुफ़्त
             </div>
           </div>
         </div>
       </section>
 
-      {/* ═══════════ FEATURES — single icon strip, no copy ═══════════ */}
-      <section className="container py-12 md:py-16">
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-8 gap-3">
-          {[
-            { i: QrCode, t: 'QR per table' },
-            { i: Smartphone, t: 'No app' },
-            { i: Bell, t: 'Live orders' },
-            { i: MessageSquare, t: 'WhatsApp' },
-            { i: CreditCard, t: 'UPI' },
-            { i: Utensils, t: 'Menu' },
-            { i: BarChart3, t: 'Analytics' },
-            { i: Zap, t: 'PWA' },
-          ].map((f) => (
-            <div key={f.t} className="card-warm text-center !p-3 hover:-translate-y-0.5 transition">
-              <div className="grid h-9 w-9 mx-auto place-items-center rounded-xl bg-coffee-100 text-coffee-800 mb-1.5">
-                <f.i className="h-4 w-4" />
-              </div>
-              <div className="text-[11px] font-semibold text-coffee-900">{f.t}</div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ═══════════ PRICING — 3 cards ═══════════ */}
+      {/* ═══════════ PRICING TEASER ═══════════ */}
       <section className="bg-coffee-gradient text-cream-50 relative overflow-hidden">
         <div className="absolute inset-0 bg-pattern opacity-10" />
-        <div className="container relative py-16 md:py-20 text-center">
+        <div className="container relative py-14 md:py-20 text-center">
           <h2 className="font-display text-3xl md:text-5xl font-bold">
-            Plans that grow with you.
+            Pay only when you grow.
           </h2>
-          <p className="mt-2 text-cream-200/90">Start free.</p>
+          <p className="mt-2 text-cream-200/90">
+            Start free. Pick a plan when you outgrow it.
+          </p>
+          <p className="text-sm text-cream-200/80">
+            मुफ़्त शुरू करें — ज़रूरत पड़ने पर plan चुनें।
+          </p>
           <div className="mt-8 grid md:grid-cols-3 gap-3 max-w-4xl mx-auto">
             {(plans.length ? plans : fallbackPlans).slice(0, 3).map((p: any) => (
               <div key={p.slug} className="rounded-2xl bg-white/10 backdrop-blur p-5 border border-white/15 text-left">
@@ -328,13 +286,17 @@ export default async function LandingPage() {
           </div>
           <div className="mt-7 flex flex-wrap justify-center gap-3">
             <Link href="/pricing"><Button variant="accent" size="lg">View pricing</Button></Link>
-            <Link href="/signup"><Button variant="outline" size="lg" className="border-cream-200 bg-transparent text-cream-50 hover:bg-white/10">Start free</Button></Link>
+            <Link href="/signup">
+              <Button variant="outline" size="lg" className="border-cream-200 bg-transparent text-cream-50 hover:bg-white/10">
+                Start free
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
 
-      {/* ═══════════ FINAL CTA — minimal ═══════════ */}
-      <section className="container py-16">
+      {/* ═══════════ FINAL CTA ═══════════ */}
+      <section className="container py-14">
         <div className="rounded-3xl bg-cream-200 p-10 md:p-14 text-center relative overflow-hidden max-w-3xl mx-auto">
           <div className="absolute -top-24 -right-24 h-64 w-64 bg-caramel/30 rounded-full blur-3xl" />
           <div className="absolute -bottom-24 -left-24 h-64 w-64 bg-coffee-200/50 rounded-full blur-3xl" />
@@ -343,6 +305,7 @@ export default async function LandingPage() {
             <h2 className="font-display text-3xl md:text-5xl font-bold text-coffee-900 mt-3">
               Build yours now.
             </h2>
+            <p className="mt-2 text-coffee-700 text-sm">अभी अपना cafe बनाएँ।</p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <Link href="/signup"><Button size="lg">Start free <ArrowRight className="h-4 w-4" /></Button></Link>
               <Link href="/demo"><Button variant="outline" size="lg">Watch demo</Button></Link>
@@ -358,14 +321,28 @@ export default async function LandingPage() {
 
 /* ───────────────── helper components ───────────────── */
 
-function BuildStep({ n, label, mockup }: { n: string; label: string; mockup: React.ReactNode }) {
+function BuildStep({
+  n, label, hi, hint, hintHi, mockup,
+}: {
+  n: string;
+  label: string;
+  hi: string;
+  hint: string;
+  hintHi: string;
+  mockup: React.ReactNode;
+}) {
   return (
     <div className="flex flex-col items-center">
       <div className="inline-flex items-center gap-1.5 bg-coffee-700 text-cream-50 rounded-full px-2.5 py-0.5 text-[10px] font-bold mb-2">
         STEP {n}
       </div>
-      <div className="font-display text-base font-bold text-coffee-900 mb-3 text-center">{label}</div>
+      <div className="font-display text-base font-bold text-coffee-900 text-center">{label}</div>
+      <div className="text-[11px] text-coffee-500 mb-3 text-center">{hi}</div>
       <div className="flex items-center justify-center min-h-[200px]">{mockup}</div>
+      <div className="mt-3 max-w-[200px] text-center">
+        <p className="text-[11px] text-coffee-700 leading-snug">{hint}</p>
+        <p className="text-[10px] text-coffee-500 leading-snug mt-0.5">{hintHi}</p>
+      </div>
     </div>
   );
 }
@@ -430,7 +407,7 @@ function MenuBuilderMockup() {
 }
 
 const fallbackPlans = [
-  { name: 'Starter', slug: 'starter', priceMonthly: 0, maxTables: 5, maxMenuItems: 30 },
-  { name: 'Pro', slug: 'pro', priceMonthly: 499, maxTables: 30, maxMenuItems: 200 },
-  { name: 'Business', slug: 'business', priceMonthly: 1499, maxTables: 200, maxMenuItems: 2000 },
+  { name: 'Free Lifetime', slug: 'free', priceMonthly: 0, maxTables: 2, maxMenuItems: 10 },
+  { name: 'Startup', slug: 'startup', priceMonthly: 199, maxTables: 10, maxMenuItems: 25 },
+  { name: 'Silver', slug: 'silver', priceMonthly: 299, maxTables: 25, maxMenuItems: 50 },
 ];
