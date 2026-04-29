@@ -91,6 +91,53 @@ export function PlansEditor({ initial }: { initial: any[] }) {
     }
   }
 
+  // Sweep the legacy seed plans (pro / starter / business) the user
+  // never wants to expose. Reuses the per-plan DELETE endpoint so any
+  // plan that's still in use surfaces the reassign modal — the user
+  // resolves it once, then re-runs the sweep.
+  async function deleteLegacy() {
+    const LEGACY = ['pro', 'starter', 'business'];
+    const targets = plans.filter((p) => LEGACY.includes(p.slug));
+    if (!targets.length) {
+      toast.success('No legacy plans to remove');
+      return;
+    }
+    if (!confirm(
+      `Delete ${targets.length} legacy plan${targets.length === 1 ? '' : 's'}?\n\n` +
+      targets.map((t) => `· ${t.name} (/${t.slug})`).join('\n') +
+      '\n\nUnused ones delete immediately. In-use ones will prompt to reassign.',
+    )) return;
+
+    let deleted = 0;
+    let blocked: any | null = null;
+    let blockedData: any = {};
+    for (const p of targets) {
+      const r = await fetch(`/api/admin/plans/${p.id}`, { method: 'DELETE' });
+      if (r.ok) {
+        deleted++;
+        setPlans((c) => c.filter((x) => x.id !== p.id));
+        continue;
+      }
+      const data = await r.json().catch(() => ({}));
+      if (r.status === 409 && data.code === 'PLAN_IN_USE') {
+        blocked = p;
+        blockedData = data;
+        break;
+      }
+      toast.error(`Could not delete ${p.name}`, data.error ?? `HTTP ${r.status}`);
+    }
+    if (blocked) {
+      toast.success(deleted ? `Deleted ${deleted} — ${blocked.name} needs reassign` : `${blocked.name} is in use`);
+      setReassignFor({
+        plan: blocked,
+        usingCafes: blockedData.usingCafes ?? blockedData.using ?? 0,
+        usingSubs: blockedData.usingSubs ?? 0,
+      });
+    } else {
+      toast.success(`Removed ${deleted} legacy plan${deleted === 1 ? '' : 's'}`);
+    }
+  }
+
   async function purgeAll() {
     const phrase = prompt(
       'Type DELETE to wipe ALL plans + ALL subscriptions. Cafes will be detached (fall back to Free).',
@@ -125,6 +172,14 @@ export function PlansEditor({ initial }: { initial: any[] }) {
             title="Re-number sortOrder by priceMonthly ascending. Fixes /pricing display order."
           >
             <ArrowUpDown className="h-4 w-4" /> Auto-sort by price
+          </Button>
+          <Button
+            variant="outline"
+            onClick={deleteLegacy}
+            className="text-rose-600 hover:bg-rose-50 border-rose-200"
+            title="Delete the seed Pro / Starter / Business plans. Plans that are in use will prompt for reassign."
+          >
+            <Trash2 className="h-4 w-4" /> Remove legacy
           </Button>
           <Button
             variant="outline"
