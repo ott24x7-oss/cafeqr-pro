@@ -13,10 +13,10 @@
  *   NEW · ACCEPTED · PREPARING · READY
  * SERVED / COMPLETED / CANCELLED → table is free.
  */
+import type { OrderStatus } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { OrderStatus } from '@prisma/client';
 
-const OPEN_STATUSES = ['NEW', 'ACCEPTED', 'PREPARING', 'READY'] as const;
+const OPEN_STATUSES: OrderStatus[] = ['NEW', 'ACCEPTED', 'PREPARING', 'READY'];
 
 export async function getLiveOccupiedSet(cafeId: string): Promise<Set<string>> {
   const rows = await prisma.order.groupBy({
@@ -24,7 +24,7 @@ export async function getLiveOccupiedSet(cafeId: string): Promise<Set<string>> {
     where: {
       cafeId,
       tableId: { not: null },
-      status: { in: [...OPEN_STATUSES] as OrderStatus[] },
+      status: { in: OPEN_STATUSES },
     },
     _count: { tableId: true },
   });
