@@ -2,12 +2,15 @@
     <!-- Default brand colors. The remote config can override
          splashBackgroundColor + primaryColor at runtime; these are the
          baked-in fallbacks shown before the first config fetch lands. -->
-    <color name="brand_primary">#22C55E</color>
-    <color name="brand_primary_dark">#16A34A</color>
-    <color name="brand_on_primary">#FFFFFF</color>
+    <color name="brand_primary">#6B4E3D</color>
+    <color name="brand_primary_dark">#3E2D24</color>
+    <color name="brand_on_primary">#F8F4F1</color>
 
-    <color name="splash_background">#0B0F14</color>
-    <color name="splash_text">#F1F5F9</color>
+    <color name="splash_background">#3E2D24</color>
+    <color name="splash_text">#F8F4F1</color>
+    <!-- Cream-tinted secondary used for the splash tagline so it sits in
+         the warm coffee palette instead of clashing slate-gray. -->
+    <color name="splash_text_secondary">#D4C2B4</color>
 
     <color name="surface_light">#FFFFFF</color>
     <color name="surface_dark">#0F172A</color>
