@@ -13,7 +13,12 @@ const schema = z.object({
   maxTables: z.number().int(),
   maxMenuItems: z.number().int(),
   maxStaff: z.number().int(),
+  // Per-month customer order limit. 0 = unlimited.
+  maxOrdersPerMonth: z.number().int().min(0).optional(),
   whatsappEnabled: z.boolean().optional(),
+  loyaltyEnabled: z.boolean().optional(),
+  paymentEnabled: z.boolean().optional(),
+  couponsEnabled: z.boolean().optional(),
   customBranding: z.boolean().optional(),
   customSubdomain: z.boolean().optional(),
   prioritySupport: z.boolean().optional(),

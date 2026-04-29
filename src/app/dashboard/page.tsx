@@ -8,6 +8,7 @@ import { CafeStoreLink } from '@/components/dashboard/cafe-store-link';
 import { RevenueSparkline } from '@/components/dashboard/revenue-sparkline';
 import { SetupChecklist } from '@/components/dashboard/setup-checklist';
 import { UsageBanner } from '@/components/dashboard/usage-banner';
+import { PlanCard } from '@/components/dashboard/plan-card';
 
 export const dynamic = 'force-dynamic';
 
@@ -119,6 +120,8 @@ export default async function DashboardOverview() {
       </div>
 
       <UsageBanner cafeId={cafe.id} />
+
+      <PlanCard cafeId={cafe.id} />
 
       <SetupChecklist items={setupItems} />
 
