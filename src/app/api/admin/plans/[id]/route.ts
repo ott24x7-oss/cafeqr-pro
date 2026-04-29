@@ -8,12 +8,26 @@ async function requireAdmin() {
   return s?.user.role === 'SUPER_ADMIN' ? s : null;
 }
 
+/** Lowercase + alphanum-with-hyphens-only. Strips backticks, spaces,
+ *  punctuation that admins sometimes paste in by accident. */
+function sanitizeSlug(raw: string): string {
+  return raw
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9-_]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40);
+}
+
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   if (!(await requireAdmin())) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   const body = await req.json();
   delete body.id;
   delete body.createdAt;
   delete body.updatedAt;
+  if (typeof body.slug === 'string' && body.slug.length > 0) {
+    body.slug = sanitizeSlug(body.slug);
+  }
   const plan = await prisma.plan.update({ where: { id: params.id }, data: body });
   return NextResponse.json({ plan });
 }

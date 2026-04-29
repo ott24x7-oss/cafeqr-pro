@@ -30,10 +30,35 @@ const schema = z.object({
   features: z.array(z.string()).optional(),
 });
 
+/** Lowercase + alphanum-with-hyphens-only slug. Strips stray
+ *  backticks / spaces / punctuation that admins sometimes paste in
+ *  by accident (e.g. `gold\`` in production). */
+function sanitizeSlug(raw: string): string {
+  return raw
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9-_]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40);
+}
+
 export async function POST(req: Request) {
   const s = await getServerSession(authOptions);
   if (s?.user.role !== 'SUPER_ADMIN') return NextResponse.json({ error: 'forbidden' }, { status: 403 });
-  const data = schema.parse(await req.json());
+
+  const raw = await req.json();
+  const data = schema.parse(raw);
+  data.slug = sanitizeSlug(data.slug || data.name);
+
+  // Auto-assign sortOrder when the admin didn't supply one (which is
+  // the common case via the editor modal). New plans land at the
+  // bottom of the list, in creation order, so /pricing renders them
+  // in the order the admin added them.
+  if (data.sortOrder === undefined || data.sortOrder === 0) {
+    const max = await prisma.plan.aggregate({ _max: { sortOrder: true } });
+    data.sortOrder = (max._max.sortOrder ?? -1) + 1;
+  }
+
   const plan = await prisma.plan.create({ data });
   return NextResponse.json({ plan });
 }

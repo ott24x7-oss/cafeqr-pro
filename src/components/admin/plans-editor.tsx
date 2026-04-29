@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Save, Trash2, Loader2, Star } from 'lucide-react';
+import { Plus, Save, Trash2, Loader2, Star, ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input, Textarea } from '@/components/ui/input';
 import { toast } from '@/components/ui/toaster';
@@ -77,6 +77,20 @@ export function PlansEditor({ initial }: { initial: any[] }) {
     }
   }
 
+  async function autoSort() {
+    const r = await fetch('/api/admin/plans/_resort', { method: 'POST' });
+    if (r.ok) {
+      const data = await r.json();
+      // Refresh the page state in-memory by re-fetching plan data.
+      // Simplest: reload — the editor is rarely-used admin chrome.
+      toast.success(`Re-sorted ${data.resorted} plans by price`);
+      setTimeout(() => window.location.reload(), 600);
+    } else {
+      const d = await r.json().catch(() => ({}));
+      toast.error('Could not re-sort', d.error ?? '');
+    }
+  }
+
   async function purgeAll() {
     const phrase = prompt(
       'Type DELETE to wipe ALL plans + ALL subscriptions. Cafes will be detached (fall back to Free).',
@@ -105,6 +119,13 @@ export function PlansEditor({ initial }: { initial: any[] }) {
           <p className="text-coffee-600 text-sm">Pricing visible on /pricing — managed here</p>
         </div>
         <div className="flex gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            onClick={autoSort}
+            title="Re-number sortOrder by priceMonthly ascending. Fixes /pricing display order."
+          >
+            <ArrowUpDown className="h-4 w-4" /> Auto-sort by price
+          </Button>
           <Button
             variant="outline"
             onClick={purgeAll}
@@ -233,6 +254,16 @@ function PlanEditor({ plan, onClose, onSave }: any) {
             <Field l="Max items" v={form.maxMenuItems} on={(v: string) => set('maxMenuItems', Number(v))} type="number" />
             <Field l="Max tables" v={form.maxTables} on={(v: string) => set('maxTables', Number(v))} type="number" />
             <Field l="Max staff" v={form.maxStaff} on={(v: string) => set('maxStaff', Number(v))} type="number" />
+          </div>
+
+          <div>
+            <Field
+              l="Sort order"
+              v={form.sortOrder ?? 0}
+              on={(v: string) => set('sortOrder', Number(v))}
+              type="number"
+              hint="Lower = leftmost on /pricing. New plans auto-fill to the end."
+            />
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
