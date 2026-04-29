@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import {
   LayoutDashboard, ListOrdered, Utensils, QrCode, CreditCard, Star, Users, Settings, BarChart3, Receipt,
-  Coffee, LogOut, Bell, Shield, Tag, History, Globe, Palette, Award, Smartphone, Menu, X,
+  Coffee, LogOut, Shield, Tag, History, Globe, Palette, Award, Smartphone, Menu, X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -106,7 +106,7 @@ export function DashboardSidebar({ role, cafeName, isAdmin }: { role: string; ca
 
       <div className="px-3 py-3 border-t border-coffee-100 space-y-1">
         <Link href="/" className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-coffee-700 hover:bg-cream-100">
-          <Bell className="h-4 w-4" /> Public site
+          <Globe className="h-4 w-4" /> Public site
         </Link>
         <button
           onClick={() => signOut({ callbackUrl: '/' })}
@@ -170,11 +170,21 @@ export function MobileBottomNav({ isAdmin }: { isAdmin?: boolean }) {
 }
 
 /**
- * Hamburger button that opens [MobileNavDrawer]. Lives inside the bottom
- * nav so it's reachable with the user's thumb without contorting. Uses
- * the same min-h + py- as the other cells so the bottom row looks even.
+ * Hamburger button that opens [MobileNavDrawer]. Has two modes:
+ *
+ *   compact = true  → icon-only square button, used in the dashboard
+ *                     top header where vertical space is tight.
+ *   compact = false → icon + "Menu" label stacked, used as the 5th
+ *                     cell of the bottom nav so it lines up with the
+ *                     other Home / Orders / Menu / Tables cells.
  */
-export function MobileMenuButton({ isAdmin, className }: { isAdmin?: boolean; className?: string }) {
+export function MobileMenuButton({
+  isAdmin, className, compact = false,
+}: {
+  isAdmin?: boolean;
+  className?: string;
+  compact?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -182,10 +192,15 @@ export function MobileMenuButton({ isAdmin, className }: { isAdmin?: boolean; cl
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Open menu"
-        className={cn("flex flex-col items-center justify-center gap-0.5 py-2.5 text-xs min-h-[56px] text-coffee-700", className)}
+        className={cn(
+          compact
+            ? 'grid h-10 w-10 place-items-center rounded-lg text-coffee-800 hover:bg-cream-100 active:bg-cream-200'
+            : 'flex flex-col items-center justify-center gap-0.5 py-2.5 text-xs min-h-[56px] text-coffee-700',
+          className,
+        )}
       >
-        <Menu className="h-5 w-5" />
-        <span className="text-[11px] font-medium">Menu</span>
+        <Menu className={compact ? 'h-5 w-5' : 'h-5 w-5'} />
+        {!compact && <span className="text-[11px] font-medium">Menu</span>}
       </button>
       {open && <MobileNavDrawer isAdmin={isAdmin} onClose={() => setOpen(false)} />}
     </>
@@ -226,13 +241,19 @@ function MobileNavDrawer({ isAdmin, onClose }: { isAdmin?: boolean; onClose: () 
   return (
     <div className="md:hidden fixed inset-0 z-[60]" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <aside className="absolute left-0 top-0 bottom-0 w-[82%] max-w-[320px] bg-white shadow-2xl flex flex-col">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-coffee-100">
-          <div className="flex items-center gap-2">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-coffee-gradient text-cream-50">
-              {isAdmin ? <Shield className="h-5 w-5" /> : <Coffee className="h-5 w-5" />}
+      {/* Explicit inline backgroundColor as a belt-and-suspenders fallback —
+          some Android WebViews dropped Tailwind's bg-white in past builds and
+          the dashboard page bled through the drawer. */}
+      <aside
+        className="absolute left-0 top-0 bottom-0 w-[82%] max-w-[320px] bg-white shadow-2xl flex flex-col"
+        style={{ backgroundColor: '#FFFFFF' }}
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b border-coffee-100 bg-white">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-coffee-gradient text-cream-50 shrink-0">
+              {isAdmin ? <Shield className="h-4 w-4" /> : <Coffee className="h-4 w-4" />}
             </span>
-            <div className="font-display text-base font-bold text-coffee-900">
+            <div className="font-display text-base font-bold text-coffee-900 truncate">
               {isAdmin ? 'Super Admin' : 'CafeQR Pro'}
             </div>
           </div>
@@ -240,13 +261,13 @@ function MobileNavDrawer({ isAdmin, onClose }: { isAdmin?: boolean; onClose: () 
             type="button"
             onClick={onClose}
             aria-label="Close menu"
-            className="grid h-9 w-9 place-items-center rounded-lg text-coffee-700 hover:bg-cream-100"
+            className="grid h-9 w-9 place-items-center rounded-lg text-coffee-700 hover:bg-cream-100 shrink-0"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <nav className="px-3 py-3 flex-1 overflow-y-auto">
+        <nav className="px-3 py-3 flex-1 overflow-y-auto bg-white">
           {nav.map((item) => {
             const active = path === item.href ||
               (item.href !== '/dashboard' && item.href !== '/admin' &&
@@ -257,30 +278,30 @@ function MobileNavDrawer({ isAdmin, onClose }: { isAdmin?: boolean; onClose: () 
                 href={item.href}
                 onClick={onClose}
                 className={cn(
-                  'flex items-center gap-2.5 rounded-xl px-3 py-3 text-sm font-medium mb-1 transition',
+                  'flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium mb-0.5 transition',
                   active ? 'bg-coffee-700 text-cream-50' : 'text-coffee-700 hover:bg-cream-100',
                 )}
               >
                 <item.icon className="h-4 w-4 shrink-0" />
-                <span>{item.label}</span>
+                <span className="truncate">{item.label}</span>
               </Link>
             );
           })}
         </nav>
 
-        <div className="px-3 py-3 border-t border-coffee-100 space-y-1">
+        <div className="px-3 py-3 border-t border-coffee-100 space-y-0.5 bg-white">
           <Link
             href="/"
             onClick={onClose}
-            className="flex items-center gap-2.5 rounded-xl px-3 py-3 text-sm text-coffee-700 hover:bg-cream-100"
+            className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-coffee-700 hover:bg-cream-100"
           >
-            <Bell className="h-4 w-4" /> Public site
+            <Globe className="h-4 w-4" /> Public site
           </Link>
           {!isAdmin && (
             <Link
               href="/admin"
               onClick={onClose}
-              className="flex items-center gap-2.5 rounded-xl px-3 py-3 text-sm text-coffee-700 hover:bg-cream-100"
+              className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-coffee-700 hover:bg-cream-100"
             >
               <Shield className="h-4 w-4" /> Admin (super-admin only)
             </Link>
@@ -288,7 +309,7 @@ function MobileNavDrawer({ isAdmin, onClose }: { isAdmin?: boolean; onClose: () 
           <button
             type="button"
             onClick={() => signOut({ callbackUrl: '/' })}
-            className="w-full text-left flex items-center gap-2.5 rounded-xl px-3 py-3 text-sm text-rose-600 hover:bg-rose-50"
+            className="w-full text-left flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-rose-600 hover:bg-rose-50"
           >
             <LogOut className="h-4 w-4" /> Sign out
           </button>
