@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -19,16 +18,16 @@ export function PublicNavbar() {
     <header className="sticky top-0 z-50 backdrop-blur bg-cream-50/85 border-b border-coffee-100">
       <div className="container flex h-16 items-center justify-between">
         <Link href="/" className="flex items-center gap-2" aria-label="WatShop Cafe — home">
-          <Image
+          {/* Plain <img> (not next/Image) so width auto-scales with the
+              source's aspect ratio. Square marks (~480×480) render at
+              36×36; wide lockups (~1280×427) render at ~108×36. The
+              data-brand-logo attribute lets /js/branding.js swap the
+              src to the admin-uploaded data URL. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src="/watshop-cafe-lockup.svg"
             alt="WatShop Cafe"
-            width={36}
-            height={36}
-            priority
-            className="h-9 w-9"
-            // data-brand-logo / data-brand-name are picked up by
-            // /js/branding.js so the super admin can swap the lockup and
-            // the visually-hidden brand text from /admin/branding.
+            className="h-9 w-auto max-h-9 max-w-[180px] md:max-w-[220px] object-contain"
             data-brand-logo
           />
           <span className="sr-only" data-brand-name>WatShop Cafe</span>

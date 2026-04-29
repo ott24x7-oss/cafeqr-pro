@@ -4,7 +4,7 @@ import { Coffee } from 'lucide-react';
 export function PublicFooter() {
   return (
     <footer className="border-t border-coffee-100 bg-cream-100/50 mt-24">
-      <div className="container py-14 grid gap-8 md:grid-cols-4">
+      <div className="container py-14 grid gap-8 md:grid-cols-5">
         <div className="md:col-span-2">
           <Link href="/" className="flex items-center gap-2">
             {/* The footer mark is a styled span (no <img>), so the runtime
@@ -41,6 +41,14 @@ export function PublicFooter() {
             <li><Link href="/login" className="hover:text-coffee-900">Login</Link></li>
             <li><Link href="/my-orders" className="hover:text-coffee-900">Track my orders</Link></li>
             <li><a href="mailto:hello@cafeqr.pro" className="hover:text-coffee-900">Contact</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 className="font-semibold text-coffee-900 mb-3">Legal</h4>
+          <ul className="space-y-2 text-sm text-coffee-600">
+            <li><Link href="/terms" className="hover:text-coffee-900">Terms of Service</Link></li>
+            <li><Link href="/privacy" className="hover:text-coffee-900">Privacy Policy</Link></li>
+            <li><Link href="/refund-policy" className="hover:text-coffee-900">Refund Policy</Link></li>
           </ul>
         </div>
       </div>

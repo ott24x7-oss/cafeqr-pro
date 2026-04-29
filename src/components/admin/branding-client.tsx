@@ -137,7 +137,12 @@ export function BrandingClient({ initial }: { initial: Initial }) {
                   <RotateCcw className="h-4 w-4" /> Use default
                 </Button>
               )}
-              <p className="helper">SVG, PNG, JPEG or WebP. Max ~450 KB raw / 600 KB encoded.</p>
+              <p className="helper">
+                SVG, PNG, JPEG or WebP. Max ~450 KB raw / 600 KB encoded.
+                <br />
+                Square mark (~512×512) <b>or</b> wide lockup (~1280×427) — both auto-fit the
+                navbar; height stays at 36px and width scales to the image's aspect.
+              </p>
             </div>
           </div>
         </section>
