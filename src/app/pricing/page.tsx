@@ -9,9 +9,11 @@ export const revalidate = 300;
 
 async function getPlans() {
   try {
+    // Pull every active plan the super admin has set up — no slug
+    // whitelist. Whatever lives in /admin/plans → Active surfaces here.
     return await prisma.plan.findMany({
-      where: { isActive: true, slug: { in: ['free', 'startup', 'silver', 'gold'] } },
-      orderBy: { sortOrder: 'asc' },
+      where: { isActive: true },
+      orderBy: [{ sortOrder: 'asc' }, { priceMonthly: 'asc' }],
     });
   } catch {
     return [];

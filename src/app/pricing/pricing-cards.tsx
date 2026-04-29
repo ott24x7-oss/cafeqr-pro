@@ -30,8 +30,21 @@ const FALLBACK_PLANS: Plan[] = [
 ];
 
 export function PricingCards({ plans: serverPlans }: { plans: Plan[] }) {
-  const plans = serverPlans.length === 4 ? serverPlans : FALLBACK_PLANS;
+  // Whatever the super admin published in /admin/plans is the source of
+  // truth. Only fall back to FALLBACK_PLANS when the DB returns nothing
+  // at all (fresh deploy, mid-purge) so the page never renders blank.
+  const plans = serverPlans.length > 0 ? serverPlans : FALLBACK_PLANS;
   const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');
+
+  // Card grid columns: 1 → 4 plans use sm:2 / lg:4; more than 4 wraps
+  // naturally onto a second row at lg:4. Single plan stays centered.
+  const colsClass = plans.length === 1
+    ? 'grid-cols-1 max-w-sm mx-auto'
+    : plans.length === 2
+      ? 'sm:grid-cols-2 max-w-3xl mx-auto'
+      : plans.length === 3
+        ? 'sm:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto'
+        : 'sm:grid-cols-2 lg:grid-cols-4';
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -56,7 +69,7 @@ export function PricingCards({ plans: serverPlans }: { plans: Plan[] }) {
         </div>
       </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className={`grid ${colsClass} gap-4`}>
         {plans.map((p) => (
           <PlanCard key={p.slug} plan={p} billing={billing} />
         ))}

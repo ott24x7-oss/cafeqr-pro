@@ -10,7 +10,8 @@ import { slugify } from '@/lib/utils';
 export function PlansEditor({ initial }: { initial: any[] }) {
   const [plans, setPlans] = useState(initial);
   const [editing, setEditing] = useState<any | null>(null);
-  const [reassignFor, setReassignFor] = useState<{ plan: any; using: number } | null>(null);
+  const [reassignFor, setReassignFor] = useState<{ plan: any; usingCafes: number; usingSubs: number } | null>(null);
+  const [purging, setPurging] = useState(false);
 
   async function saveOne(plan: any) {
     const r = await fetch(`/api/admin/plans${plan.id ? '/' + plan.id : ''}`, {
@@ -39,9 +40,11 @@ export function PlansEditor({ initial }: { initial: any[] }) {
     }
     const data = await r.json().catch(() => ({}));
     if (r.status === 409 && data.code === 'PLAN_IN_USE') {
-      // Open the reassignment modal so the admin can pick a destination
-      // plan and retry. We pass through the using-count for context.
-      setReassignFor({ plan, using: data.using ?? 0 });
+      setReassignFor({
+        plan,
+        usingCafes: data.usingCafes ?? data.using ?? 0,
+        usingSubs: data.usingSubs ?? 0,
+      });
       return;
     }
     toast.error('Could not delete', data.error ?? `HTTP ${r.status}`);
@@ -53,10 +56,44 @@ export function PlansEditor({ initial }: { initial: any[] }) {
       const data = await r.json();
       setPlans((c) => c.filter((p) => p.id !== planId));
       setReassignFor(null);
-      toast.success(`Deleted — moved ${data.moved} cafe${data.moved === 1 ? '' : 's'}`);
+      const moved = (data.movedCafes ?? 0) + (data.movedSubs ?? 0);
+      toast.success(`Deleted — moved ${moved} record${moved === 1 ? '' : 's'}`);
     } else {
       const d = await r.json().catch(() => ({}));
       toast.error('Could not delete', d.error ?? '');
+    }
+  }
+
+  async function forceDelete(planId: string) {
+    const r = await fetch(`/api/admin/plans/${planId}?force=1`, { method: 'DELETE' });
+    if (r.ok) {
+      const data = await r.json();
+      setPlans((c) => c.filter((p) => p.id !== planId));
+      setReassignFor(null);
+      toast.success(`Deleted (force) — wiped ${data.deletedSubs ?? 0} sub${data.deletedSubs === 1 ? '' : 's'}, detached ${data.detachedCafes ?? 0} cafe${data.detachedCafes === 1 ? '' : 's'}`);
+    } else {
+      const d = await r.json().catch(() => ({}));
+      toast.error('Could not delete', d.error ?? '');
+    }
+  }
+
+  async function purgeAll() {
+    const phrase = prompt(
+      'Type DELETE to wipe ALL plans + ALL subscriptions. Cafes will be detached (fall back to Free).',
+    );
+    if (phrase !== 'DELETE') return;
+    setPurging(true);
+    try {
+      const r = await fetch('/api/admin/plans/_purge?confirm=DELETE', { method: 'POST' });
+      const data = await r.json().catch(() => ({}));
+      if (r.ok) {
+        setPlans([]);
+        toast.success(`Purged — ${data.deletedPlans} plans, ${data.deletedSubs} subs, ${data.detachedCafes} cafes detached`);
+      } else {
+        toast.error('Purge failed', data.error ?? `HTTP ${r.status}`);
+      }
+    } finally {
+      setPurging(false);
     }
   }
 
@@ -67,7 +104,17 @@ export function PlansEditor({ initial }: { initial: any[] }) {
           <h1 className="font-display text-2xl md:text-3xl font-bold text-coffee-900">Plans</h1>
           <p className="text-coffee-600 text-sm">Pricing visible on /pricing — managed here</p>
         </div>
-        <Button
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            onClick={purgeAll}
+            disabled={purging}
+            className="text-rose-600 hover:bg-rose-50 border-rose-200"
+            title="Wipe every plan and subscription. Cafes get detached and fall back to Free."
+          >
+            <Trash2 className="h-4 w-4" /> {purging ? 'Wiping…' : 'Wipe all plans'}
+          </Button>
+          <Button
           onClick={() =>
             setEditing({
               name: '',
@@ -90,6 +137,7 @@ export function PlansEditor({ initial }: { initial: any[] }) {
         >
           <Plus className="h-4 w-4" /> Add plan
         </Button>
+        </div>
       </div>
 
       <div className="grid md:grid-cols-3 gap-3">
@@ -139,10 +187,12 @@ export function PlansEditor({ initial }: { initial: any[] }) {
       {reassignFor && (
         <ReassignModal
           plan={reassignFor.plan}
-          using={reassignFor.using}
+          usingCafes={reassignFor.usingCafes}
+          usingSubs={reassignFor.usingSubs}
           allPlans={plans}
           onClose={() => setReassignFor(null)}
           onConfirm={(toId) => reassignAndDelete(reassignFor.plan.id, toId)}
+          onForce={() => forceDelete(reassignFor.plan.id)}
         />
       )}
     </div>
@@ -218,15 +268,18 @@ function PlanEditor({ plan, onClose, onSave }: any) {
 }
 
 function ReassignModal({
-  plan, using, allPlans, onClose, onConfirm,
+  plan, usingCafes, usingSubs, allPlans, onClose, onConfirm, onForce,
 }: {
   plan: any;
-  using: number;
+  usingCafes: number;
+  usingSubs: number;
   allPlans: any[];
   onClose: () => void;
   onConfirm: (toId: string) => void;
+  onForce: () => void;
 }) {
-  // Default: prefer Startup, then any active paid plan, then first other plan.
+  // Default destination: prefer Startup, then any active paid plan,
+  // then any other active plan, finally any non-self plan at all.
   const candidates = allPlans.filter((p) => p.id !== plan.id);
   const defaultId = candidates.find((p) => p.slug === 'startup' && p.isActive)?.id
     ?? candidates.find((p) => p.priceMonthly > 0 && p.isActive)?.id
@@ -234,35 +287,62 @@ function ReassignModal({
     ?? candidates[0]?.id
     ?? '';
   const [toId, setToId] = useState(defaultId);
+  const noOtherPlans = candidates.length === 0;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center" onClick={onClose}>
       <div className="w-full max-w-md bg-cream-50 rounded-3xl p-5" onClick={(e) => e.stopPropagation()}>
-        <h3 className="font-display text-xl font-bold text-coffee-900 mb-1">Reassign cafes first</h3>
+        <h3 className="font-display text-xl font-bold text-coffee-900 mb-1">
+          {noOtherPlans ? 'Force-delete this plan?' : 'Reassign first'}
+        </h3>
         <p className="text-sm text-coffee-600 mb-4">
-          <b>{using}</b> cafe{using === 1 ? '' : 's'} {using === 1 ? 'is' : 'are'} on <b>{plan.name}</b>.
-          Pick a plan to move them to before deleting.
+          <b>{plan.name}</b> still has{' '}
+          <b>{usingCafes}</b> cafe{usingCafes === 1 ? '' : 's'} and{' '}
+          <b>{usingSubs}</b> subscription{usingSubs === 1 ? '' : 's'} attached.
+          {noOtherPlans
+            ? ' No other plan exists to reassign them to — you can force-delete to wipe subscription history and detach cafes (they fall back to Free).'
+            : ' Move them to another plan, or force-delete to wipe subscription history and detach cafes.'}
         </p>
-        <label className="label">Move cafes to</label>
-        <select
-          className="input"
-          value={toId}
-          onChange={(e) => setToId(e.target.value)}
-        >
-          {candidates.length === 0 && <option value="">No other plan available</option>}
-          {candidates.map((p) => (
-            <option key={p.id} value={p.id}>{p.name} (₹{p.priceMonthly}/mo)</option>
-          ))}
-        </select>
-        <div className="mt-5 flex justify-end gap-2">
+
+        {!noOtherPlans && (
+          <>
+            <label className="label">Move cafes &amp; subscriptions to</label>
+            <select
+              className="input"
+              value={toId}
+              onChange={(e) => setToId(e.target.value)}
+            >
+              {candidates.map((p) => (
+                <option key={p.id} value={p.id}>{p.name} (₹{p.priceMonthly}/mo){p.isActive ? '' : ' [hidden]'}</option>
+              ))}
+            </select>
+          </>
+        )}
+
+        <div className="mt-5 flex flex-col-reverse sm:flex-row sm:justify-between gap-2">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button
-            disabled={!toId}
-            onClick={() => onConfirm(toId)}
-            className="bg-rose-600 hover:bg-rose-700 text-white"
-          >
-            <Trash2 className="h-4 w-4" /> Move &amp; delete
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (confirm(`Force-delete will WIPE ${usingSubs} subscription row${usingSubs === 1 ? '' : 's'} for "${plan.name}". Continue?`)) {
+                  onForce();
+                }
+              }}
+              className="text-rose-600 hover:bg-rose-50 border-rose-200"
+            >
+              <Trash2 className="h-4 w-4" /> Force delete
+            </Button>
+            {!noOtherPlans && (
+              <Button
+                disabled={!toId}
+                onClick={() => onConfirm(toId)}
+                className="bg-coffee-700 hover:bg-coffee-800 text-cream-50"
+              >
+                <Trash2 className="h-4 w-4" /> Move &amp; delete
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>

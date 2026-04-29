@@ -39,4 +39,33 @@ export async function register() {
     // eslint-disable-next-line no-console
     console.warn('[boot] Baileys hydrate skipped:', (e as any)?.message ?? e);
   }
+
+  // 3) Renewal-reminder scheduler — fires every 6 hours in-process.
+  //    Idempotent (per-subscription dedupe via lastReminderAt) so even
+  //    if Railway restarts mid-day, missed runs are picked up on the
+  //    next boot. /api/cron/renewal-reminders is also exposed for
+  //    external triggers (uptime monitor / Railway cron) — both paths
+  //    call the same runRenewalReminders() function.
+  try {
+    const SIX_HOURS = 6 * 60 * 60 * 1000;
+    const tick = async () => {
+      try {
+        const { runRenewalReminders } = await import('./lib/renewal-reminders');
+        const r = await runRenewalReminders();
+        if (r.scanned > 0) {
+          // eslint-disable-next-line no-console
+          console.log(`[cron] renewal-reminders scanned=${r.scanned} sent=${r.sent} skipped=${r.skipped}`);
+        }
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn('[cron] renewal-reminders tick failed:', (e as any)?.message ?? e);
+      }
+    };
+    // Fire once 30s after boot (so DB pool is warm), then every 6 hours.
+    setTimeout(tick, 30_000);
+    setInterval(tick, SIX_HOURS);
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.warn('[boot] reminder scheduler skipped:', (e as any)?.message ?? e);
+  }
 }
