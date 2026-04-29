@@ -41,6 +41,7 @@ const nextConfig = {
         mailparser: 'commonjs mailparser',
         pino: 'commonjs pino',
         pdfkit: 'commonjs pdfkit',
+        crypto: 'commonjs crypto',
       });
 
       // The edge runtime bundles instrumentation.ts (and its transitive
@@ -73,6 +74,12 @@ const nextConfig = {
         mailparser: false,
         pino: false,
         pdfkit: false,
+      };
+      // Node built-ins referenced transitively by server-only code —
+      // provide empty fallbacks so webpack doesn't error on the client pass.
+      config.resolve.fallback = {
+        ...(config.resolve.fallback ?? {}),
+        crypto: false,
       };
     }
     return config;
