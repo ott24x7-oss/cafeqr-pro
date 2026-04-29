@@ -1,28 +1,44 @@
 import Link from 'next/link';
 import { Coffee } from 'lucide-react';
+import { getPlatformBranding } from '@/lib/platform-branding';
 
-export function PublicFooter() {
+export async function PublicFooter() {
+  const { logoUrl, brandName, tagline, footerText } = await getPlatformBranding();
+  const isDataUrl = logoUrl.startsWith('data:');
+
+  // When admin uploaded a custom logo we paint it as the footer mark's
+  // background so the same image shows everywhere; otherwise fall back
+  // to the gradient + Coffee glyph already in the design system. SSR
+  // means no flash; /js/branding.js still re-applies on patch.
+  const markStyle = isDataUrl
+    ? { backgroundImage: `url("${logoUrl}")`, backgroundSize: 'cover', backgroundPosition: 'center' }
+    : undefined;
+
   return (
     <footer className="border-t border-coffee-100 bg-cream-100/50 mt-24">
       <div className="container py-14 grid gap-8 md:grid-cols-5">
         <div className="md:col-span-2">
           <Link href="/" className="flex items-center gap-2">
-            {/* The footer mark is a styled span (no <img>), so the runtime
-                patcher will treat it as a background-image target if the
-                admin uploads a custom logo. */}
             <span
               className="grid h-9 w-9 place-items-center rounded-xl bg-coffee-gradient text-cream-50 bg-cover bg-center"
               data-brand-logo
+              style={markStyle}
             >
-              <Coffee className="h-5 w-5" data-brand-logo-icon />
+              {/* Coffee fallback hidden when we already have a custom logo
+                  baked into the background. The data-brand-logo-icon attr
+                  also lets the runtime patcher hide it on later updates. */}
+              {!isDataUrl && <Coffee className="h-5 w-5" data-brand-logo-icon />}
             </span>
-            <span className="font-display text-xl font-bold tracking-tight text-coffee-900" data-brand-name>
-              CafeQR <span className="text-caramel">Pro</span>
+            <span
+              className="font-display text-xl font-bold tracking-tight text-coffee-900"
+              data-brand-name
+            >
+              {brandName}
             </span>
           </Link>
           <p className="mt-3 max-w-sm text-sm text-coffee-600" data-brand-tagline>
-            The all-in-one QR ordering platform built for cafes, restaurants and cloud kitchens. Take orders without an
-            app, manage everything from one dashboard.
+            {tagline ||
+              'The all-in-one QR ordering platform built for cafes, restaurants and cloud kitchens. Take orders without an app, manage everything from one dashboard.'}
           </p>
         </div>
         <div>
@@ -52,8 +68,11 @@ export function PublicFooter() {
           </ul>
         </div>
       </div>
-      <div className="border-t border-coffee-100 py-5 text-center text-xs text-coffee-500" data-brand-footer>
-        © {new Date().getFullYear()} CafeQR Pro. Brewed with ☕
+      <div
+        className="border-t border-coffee-100 py-5 text-center text-xs text-coffee-500"
+        data-brand-footer
+      >
+        {footerText || `© ${new Date().getFullYear()} ${brandName}. Brewed with ☕`}
       </div>
     </footer>
   );

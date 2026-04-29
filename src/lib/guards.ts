@@ -1,21 +1,21 @@
+import { cache } from 'react';
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
-import { cache } from 'react';
 import { authOptions } from './auth';
 import { prisma } from './prisma';
 import type { UserRole } from '@prisma/client';
 
-export const requireSession = cache(async () => {
+export async function requireSession() {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect('/login');
   return session;
-});
+}
 
-export const requireRole = cache(async (roles: UserRole[]) => {
+export async function requireRole(roles: UserRole[]) {
   const session = await requireSession();
   if (!roles.includes(session.user.role)) redirect('/login');
   return session;
-});
+}
 
 export async function requireSuperAdmin() {
   return requireRole(['SUPER_ADMIN']);
@@ -25,7 +25,15 @@ export async function requireOwnerOrStaff() {
   return requireRole(['CAFE_OWNER', 'STAFF', 'SUPER_ADMIN']);
 }
 
-/** For dashboard pages — returns the cafe owned by current user. */
+/**
+ * Resolve the cafe + role for the currently signed-in user.
+ *
+ * Wrapped in `React.cache()` so multiple calls within the same request
+ * (typically: dashboard layout + the page inside it) share a single
+ * round-trip. Without this, every dashboard page issues ~2 extra DB
+ * queries before its real work — the post-login experience felt
+ * noticeably slow because every navigation hit the cafe lookup twice.
+ */
 export const getOwnerCafe = cache(async () => {
   const session = await requireRole(['CAFE_OWNER', 'STAFF', 'SUPER_ADMIN']);
   if (session.user.role === 'STAFF') {
