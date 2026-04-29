@@ -138,6 +138,11 @@ model Cafe {
   currency     String     @default("INR")
   timezone     String     @default("Asia/Kolkata")
   status       CafeStatus @default(TRIAL)
+  // Owner-controlled "are we taking orders right now" flag. Independent
+  // of the billing CafeStatus — a cafe can be ACTIVE on the platform
+  // but closed for the night. Defaults to open so newly-onboarded cafes
+  // don't appear shut to their first customers.
+  isOpen       Boolean   @default(true)
   ownerId      String
   planId       String?
   trialEndsAt  DateTime?

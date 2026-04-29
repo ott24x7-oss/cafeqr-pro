@@ -43,6 +43,15 @@ export async function POST(req: Request) {
     });
     if (!cafe) return NextResponse.json({ error: 'Cafe not found' }, { status: 404 });
     if (cafe.status === 'SUSPENDED') return NextResponse.json({ error: 'Cafe not accepting orders' }, { status: 403 });
+    // Owner-controlled "Closed" toggle from the dashboard header. Distinct
+    // from SUSPENDED (which is a billing/admin action) — this is the
+    // owner saying "we're shut for the night".
+    if ((cafe as any).isOpen === false) {
+      return NextResponse.json(
+        { error: 'The cafe is currently closed. Please try again later.', code: 'CAFE_CLOSED' },
+        { status: 423 },
+      );
+    }
 
     // Plan-tier monthly order limit. Hard-block at >= 110% so a soft-warn
     // window between 100% and 110% lets the cafe finish in-progress

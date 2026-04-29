@@ -166,9 +166,15 @@ export function CafeLobby({ cafe, customer }: { cafe: Cafe; customer?: CustomerP
                     <Phone className="h-3 w-3" /> {cafe.phone}
                   </a>
                 )}
-                <span className="inline-flex items-center gap-1 text-emerald-700">
-                  <Clock className="h-3 w-3" /> Open
-                </span>
+                {((cafe as any).isOpen ?? true) ? (
+                  <span className="inline-flex items-center gap-1 text-emerald-700">
+                    <Clock className="h-3 w-3" /> Open
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-rose-700">
+                    <Clock className="h-3 w-3" /> Closed
+                  </span>
+                )}
               </div>
             </div>
           </div>

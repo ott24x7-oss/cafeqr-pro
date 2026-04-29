@@ -163,7 +163,11 @@ export function CustomerMenu({
                 )}
                 {cafe.city && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {cafe.city}</span>}
                 {cafe.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {cafe.phone}</span>}
-                <span className="flex items-center gap-1 text-emerald-700"><Clock className="h-3 w-3" /> Open</span>
+                {((cafe as any).isOpen ?? true) ? (
+                  <span className="flex items-center gap-1 text-emerald-700"><Clock className="h-3 w-3" /> Open</span>
+                ) : (
+                  <span className="flex items-center gap-1 text-rose-700"><Clock className="h-3 w-3" /> Closed</span>
+                )}
               </div>
             </div>
           </div>
@@ -179,7 +183,11 @@ export function CustomerMenu({
             <div className="text-[11px] text-coffee-500 truncate">
               {table ? `Table ${table.number}` : 'Takeaway'}
               {' · '}
-              <span className="text-emerald-700">Open</span>
+              {((cafe as any).isOpen ?? true) ? (
+                <span className="text-emerald-700">Open</span>
+              ) : (
+                <span className="text-rose-700">Closed</span>
+              )}
             </div>
           </div>
           <button

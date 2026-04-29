@@ -5,6 +5,7 @@ import { getOwnerCafe } from '@/lib/guards';
 import { DashboardSidebar, MobileBottomNav } from '@/components/dashboard/sidebar';
 import { Button } from '@/components/ui/button';
 import { NotificationsBell } from '@/components/dashboard/notifications-bell';
+import { OpenClosedToggle } from '@/components/dashboard/open-closed-toggle';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,6 +53,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
               Welcome back, <span className="font-semibold text-coffee-900">{session.user.name ?? 'there'}</span>
             </div>
             <div className="flex items-center gap-2">
+              {(role === 'OWNER' || session.user.role === 'SUPER_ADMIN') && (
+                <OpenClosedToggle initialOpen={(cafe as any).isOpen ?? true} />
+              )}
               {cafe.status === 'TRIAL' && cafe.trialEndsAt && (
                 <Link href="/dashboard/billing" className="hidden sm:flex pill-amber">
                   <AlertCircle className="h-3 w-3" /> Trial · {Math.max(0, Math.ceil((new Date(cafe.trialEndsAt).getTime() - Date.now()) / 86400000))}d left
