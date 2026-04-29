@@ -27,6 +27,16 @@
         android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!-- New-order alert plumbing. FOREGROUND_SERVICE / DATA_SYNC for the
+         poller that runs while the owner is signed in. WAKE_LOCK keeps the
+         CPU awake long enough to fire the alarm when the screen is off.
+         USE_FULL_SCREEN_INTENT lets the high-priority notification launch
+         OrderAlertActivity above the lock screen on Android 14+. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+
     <!-- Hardware features — none are required, so the install matrix
          covers Fire 7 (no camera, no GPS), Fire HD (camera, no GPS) and
          Play Store devices alike. Marking everything required=false is
@@ -137,6 +147,26 @@
             android:name=".UpdateActivity"
             android:exported="false"
             android:theme="@style/Theme.WatShopCafe" />
+
+        <!-- Full-screen new-order alert. Launched by the poller via the
+             notification's fullScreenIntent. showWhenLocked + turnScreenOn
+             so it lights the device above the lock screen. excludeFromRecents
+             keeps it out of the recent-apps list (it's transient). -->
+        <activity
+            android:name=".orders.OrderAlertActivity"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:showOnLockScreen="true"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.WatShopCafe" />
+
+        <!-- Foreground service that polls the dashboard for new orders.
+             foregroundServiceType=dataSync is required on Android 14+. -->
+        <service
+            android:name=".orders.NewOrderPoller"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
 
         <!-- FileProvider for camera image capture from the WebView's file
              chooser. Required because we hand the camera a content:// URI

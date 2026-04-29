@@ -86,7 +86,7 @@ export async function POST(req: Request) {
   const plain = pickPlain(settings, [
     'taxPercent', 'serviceCharge', 'packingCharge', 'deliveryCharge',
     'minOrderAmount', 'acceptDineIn', 'acceptTakeaway', 'acceptDelivery',
-    'whatsappProvider', 'notifyOwnerWA', 'notifyCustomerWA', 'notifyOnStatuses',
+    'whatsappProvider', 'notifyOwnerWA', 'notifyCustomerWA', 'notifyOwnerInApp', 'notifyOnStatuses',
     'waCloudPhoneId', 'baileysSessionId', 'notifyNumbers',
     'gmailUser', 'gmailSenderFilter', 'gmailSubjectFilter', 'paymentMatchWindowMinutes',
     'upiId', 'upiQrUrl', 'paymentEnabled', 'paymentTiming', 'paymentNote',

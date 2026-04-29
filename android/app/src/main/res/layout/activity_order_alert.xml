@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Full-screen new-order alert. Shown above the lock screen via the
+     fullScreenIntent attached to the high-priority notification. The
+     "Accept" button takes the owner straight to the WebView's order
+     detail page; "Dismiss" silences the loop and returns to whatever
+     the owner was doing. -->
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0B0F14"
+    android:padding="28dp"
+    android:keepScreenOn="true">
+
+    <ImageView
+        android:id="@+id/iconBadge"
+        android:layout_width="96dp"
+        android:layout_height="96dp"
+        android:src="@drawable/ic_new_order"
+        android:contentDescription="@null"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="48dp" />
+
+    <TextView
+        android:id="@+id/title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="#F1F5F9"
+        android:textSize="32sp"
+        android:textStyle="bold"
+        android:fontFamily="sans-serif"
+        android:text="@string/order_alert_title"
+        app:layout_constraintTop_toBottomOf="@id/iconBadge"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="20dp" />
+
+    <TextView
+        android:id="@+id/orderNumber"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="#22C55E"
+        android:textSize="44sp"
+        android:textStyle="bold"
+        android:fontFamily="monospace"
+        android:text="#0001"
+        app:layout_constraintTop_toBottomOf="@id/title"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="14dp" />
+
+    <TextView
+        android:id="@+id/orderMeta"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:textColor="#CBD5E1"
+        android:textSize="16sp"
+        android:gravity="center"
+        android:lineSpacingExtra="4dp"
+        android:text="Table 5 · 3 items · ₹240"
+        app:layout_constraintTop_toBottomOf="@id/orderNumber"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="14dp"
+        app:layout_constraintWidth_max="320dp" />
+
+    <TextView
+        android:id="@+id/customerLine"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:textColor="#94A3B8"
+        android:textSize="14sp"
+        android:gravity="center"
+        android:visibility="gone"
+        android:text="Aman · +91 9876543210"
+        app:layout_constraintTop_toBottomOf="@id/orderMeta"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="6dp"
+        app:layout_constraintWidth_max="320dp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/acceptButton"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:text="@string/order_alert_accept"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:backgroundTint="#22C55E"
+        android:textColor="#FFFFFF"
+        app:cornerRadius="20dp"
+        app:layout_constraintBottom_toTopOf="@id/dismissButton"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginBottom="12dp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/dismissButton"
+        style="@style/Widget.Material3.Button.TextButton"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="@string/order_alert_dismiss"
+        android:textSize="16sp"
+        android:textColor="#94A3B8"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginBottom="32dp" />
+</androidx.constraintlayout.widget.ConstraintLayout>

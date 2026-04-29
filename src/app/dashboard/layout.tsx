@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Coffee, AlertCircle } from 'lucide-react';
 import { getOwnerCafe } from '@/lib/guards';
-import { DashboardSidebar, MobileBottomNav } from '@/components/dashboard/sidebar';
+import { DashboardSidebar, MobileBottomNav, MobileMenuButton } from '@/components/dashboard/sidebar';
 import { Button } from '@/components/ui/button';
 import { NotificationsBell } from '@/components/dashboard/notifications-bell';
 import { OpenClosedToggle } from '@/components/dashboard/open-closed-toggle';
@@ -33,14 +33,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   const role = staffRole ?? 'OWNER';
+  const isAdmin = session.user.role === 'SUPER_ADMIN';
 
   return (
     <div className="min-h-screen flex bg-cream-50">
-      <DashboardSidebar role={role} cafeName={cafe.name} />
+      <DashboardSidebar role={role} cafeName={cafe.name} isAdmin={isAdmin} />
       <div className="flex-1 min-w-0 flex flex-col pb-24 md:pb-0">
         <header className="sticky top-0 z-30 border-b border-coffee-100 bg-white/85 backdrop-blur">
           <div className="px-4 md:px-6 h-14 flex items-center justify-between">
             <div className="md:hidden flex items-center gap-2">
+              <MobileMenuButton isAdmin={isAdmin} className="!py-0 !min-h-0 mr-1" />
               <span
                 className="grid h-8 w-8 place-items-center rounded-lg bg-coffee-gradient text-cream-50 bg-cover bg-center"
                 data-brand-logo
@@ -67,7 +69,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </header>
         <main className="flex-1 p-4 md:p-6">{children}</main>
       </div>
-      <MobileBottomNav />
+      <MobileBottomNav isAdmin={isAdmin} />
     </div>
   );
 }

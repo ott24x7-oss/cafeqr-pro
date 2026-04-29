@@ -65,6 +65,7 @@ export function SettingsClient({ cafe }: { cafe: any }) {
     whatsappProvider: cafe.settings?.whatsappProvider ?? 'manual',
     notifyOwnerWA: cafe.settings?.notifyOwnerWA ?? true,
     notifyCustomerWA: cafe.settings?.notifyCustomerWA ?? true,
+    notifyOwnerInApp: cafe.settings?.notifyOwnerInApp ?? false,
     notifyOnStatuses: (cafe.settings?.notifyOnStatuses ?? DEFAULT_NOTIFY_STATUSES) as string[],
     waCloudToken: cafe.settings?.waCloudToken ?? '',         // SENTINEL when set
     waCloudPhoneId: cafe.settings?.waCloudPhoneId ?? '',
@@ -641,6 +642,20 @@ export function SettingsClient({ cafe }: { cafe: any }) {
               <label className="flex items-center gap-2 px-3 py-2 rounded-xl border border-coffee-200 bg-white cursor-pointer">
                 <input type="checkbox" checked={settings.enableSound} onChange={(e) => setSettings({ ...settings, enableSound: e.target.checked })} className="accent-coffee-700" />
                 Play sound on new order
+              </label>
+              <label className="flex items-center gap-2 px-3 py-2 rounded-xl border-2 border-amber-300 bg-amber-50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings.notifyOwnerInApp}
+                  onChange={(e) => setSettings({ ...settings, notifyOwnerInApp: e.target.checked })}
+                  className="accent-coffee-700"
+                />
+                <span>
+                  Full-screen alert in WatShop Cafe Android app
+                  <span className="block text-[11px] text-coffee-600 font-normal">
+                    App rings + shows the order on a full-screen alert until you tap Accept or Dismiss.
+                  </span>
+                </span>
               </label>
             </div>
 

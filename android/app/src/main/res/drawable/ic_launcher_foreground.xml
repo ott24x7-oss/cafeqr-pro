@@ -1,34 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  Adaptive-icon foreground. The "W" mark is centered in the safe zone
-  (108dp viewport, ~72dp safe area). Cursive "Cafe" text from the
-  marketing lockup is intentionally NOT included here — at launcher-icon
-  sizes (48-72dp on phones) the script lettering would be illegible.
-  The full lockup with "Cafe" lives in /watshop-cafe-lockup.svg for the
-  navbar and marketing pages.
--->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-
-    <!-- Drop shadow under the W (subtle 3D feel matching the brand mark) -->
-    <group android:translateY="2">
-        <path
-            android:fillColor="#3E2D24"
-            android:fillAlpha="0.35"
-            android:pathData="M30,38 L40,38 L48,72 L54,42 L60,72 L68,38 L78,38 L67,80 L58,80 L54,58 L50,80 L41,80 Z" />
-    </group>
-
-    <!-- Main W glyph (cream highlight blend) -->
+    <!-- Centered "W" to match the new logo style -->
     <path
-        android:fillColor="#FFFBF5"
-        android:pathData="M30,36 L40,36 L48,70 L54,40 L60,70 L68,36 L78,36 L67,78 L58,78 L54,56 L50,78 L41,78 Z" />
-
-    <!-- Inner highlight to give the W a glossy 3D look -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:fillAlpha="0.55"
-        android:pathData="M32,36 L38,36 L42,52 L40,52 Z" />
+        android:fillColor="#F8F4F1"
+        android:pathData="M37,42 L43,42 L47,68 L52,42 L58,42 L63,68 L67,42 L73,42 L67,76 L60,76 L55,52 L51,76 L43,76 Z" />
 </vector>

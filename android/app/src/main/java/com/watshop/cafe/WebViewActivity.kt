@@ -35,6 +35,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import com.watshop.cafe.orders.NewOrderPoller
 import com.watshop.cafe.util.ColorUtil
 import java.io.File
 import java.text.SimpleDateFormat
@@ -114,6 +115,11 @@ class WebViewActivity : AppCompatActivity() {
             pendingGeoCallback = null
         }
 
+    // POST_NOTIFICATIONS request — Android 13+. Result is fire-and-forget;
+    // the poller checks on each notify() and gracefully degrades.
+    private val postNotifPermissionLauncher: ActivityResultLauncher<String> =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* ignore */ }
+
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -152,7 +158,39 @@ class WebViewActivity : AppCompatActivity() {
             // Restore WebView state across config changes / process restore.
             webView.restoreState(savedInstanceState)
         } else {
-            webView.loadUrl(BuildConfig.APP_BASE_URL)
+            // EXTRA_DEEP_LINK lets OrderAlertActivity hand the user
+            // straight into the order detail page when they tap "Accept".
+            val deep = intent.getStringExtra(EXTRA_DEEP_LINK)
+            webView.loadUrl(if (!deep.isNullOrBlank()) deep else BuildConfig.APP_BASE_URL)
+        }
+
+        // Ask for POST_NOTIFICATIONS once on Android 13+. Without it, the
+        // poller can't post the high-priority alert that triggers the
+        // full-screen activity. Silent denial is fine — the user can flip
+        // it later in OS Settings.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    this, Manifest.permission.POST_NOTIFICATIONS,
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                postNotifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+
+        // Kick off the new-order poller. It bails immediately if the
+        // owner isn't signed in (no NextAuth cookie yet) or the toggle is
+        // off, so calling start() unconditionally is safe.
+        NewOrderPoller.start(this)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // OrderAlertActivity → "Accept & view" reuses this activity via
+        // FLAG_ACTIVITY_CLEAR_TOP | SINGLE_TOP — load the deep link in
+        // place instead of waiting for a cold restart.
+        val deep = intent.getStringExtra(EXTRA_DEEP_LINK)
+        if (!deep.isNullOrBlank()) {
+            webView.loadUrl(deep)
         }
     }
 
@@ -517,6 +555,9 @@ class WebViewActivity : AppCompatActivity() {
         private const val TAG = "WebViewActivity"
         const val EXTRA_PRIMARY_COLOR = "primary_color"
         const val EXTRA_APP_NAME = "app_name"
+        /** When set, the WebView loads this URL on first render or
+         *  via onNewIntent — used by OrderAlertActivity's "Accept" CTA. */
+        const val EXTRA_DEEP_LINK = "deep_link"
 
         private val EXTERNAL_SCHEMES = setOf(
             "tel", "mailto", "sms", "smsto", "mms", "mmsto",

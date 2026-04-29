@@ -35,4 +35,19 @@
 
     <!-- File chooser title -->
     <string name="file_chooser_title">Choose a file</string>
+
+    <!-- New-order full-screen alert -->
+    <string name="order_alert_title">New order!</string>
+    <string name="order_alert_accept">Accept &amp; view</string>
+    <string name="order_alert_dismiss">Dismiss</string>
+
+    <!-- Foreground service notification -->
+    <string name="poller_running">Listening for new orders</string>
+    <string name="poller_running_subtitle">You\'ll get a full-screen alert.</string>
+
+    <!-- Notification channel labels -->
+    <string name="channel_alerts_name">New order alerts</string>
+    <string name="channel_alerts_description">Loud full-screen alerts when a customer places a new order.</string>
+    <string name="channel_service_name">Order listener</string>
+    <string name="channel_service_description">Background polling so the app can ring when orders come in.</string>
 </resources>

@@ -174,7 +174,7 @@ export function MobileBottomNav({ isAdmin }: { isAdmin?: boolean }) {
  * nav so it's reachable with the user's thumb without contorting. Uses
  * the same min-h + py- as the other cells so the bottom row looks even.
  */
-function MobileMenuButton({ isAdmin }: { isAdmin?: boolean }) {
+export function MobileMenuButton({ isAdmin, className }: { isAdmin?: boolean; className?: string }) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -182,7 +182,7 @@ function MobileMenuButton({ isAdmin }: { isAdmin?: boolean }) {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Open menu"
-        className="flex flex-col items-center justify-center gap-0.5 py-2.5 text-xs min-h-[56px] text-coffee-700"
+        className={cn("flex flex-col items-center justify-center gap-0.5 py-2.5 text-xs min-h-[56px] text-coffee-700", className)}
       >
         <Menu className="h-5 w-5" />
         <span className="text-[11px] font-medium">Menu</span>

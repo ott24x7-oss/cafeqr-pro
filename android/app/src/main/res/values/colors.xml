@@ -8,9 +8,6 @@
 
     <color name="splash_background">#3E2D24</color>
     <color name="splash_text">#F8F4F1</color>
-    <!-- Cream-tinted secondary used for the splash tagline so it sits in
-         the warm coffee palette instead of clashing slate-gray. -->
-    <color name="splash_text_secondary">#D4C2B4</color>
 
     <color name="surface_light">#FFFFFF</color>
     <color name="surface_dark">#0F172A</color>

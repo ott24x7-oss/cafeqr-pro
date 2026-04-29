@@ -192,6 +192,11 @@ model CafeSettings {
   whatsappProvider WAProvider @default(manual)
   notifyOwnerWA   Boolean  @default(true)
   notifyCustomerWA Boolean @default(true)
+  // When true, the Android companion app polls for new orders every ~12s
+  // while the owner is signed in and fires a full-screen alert (sound +
+  // vibration + Accept/Dismiss). Default off so owners not running the
+  // app aren't surprised by ringing on shared devices.
+  notifyOwnerInApp Boolean @default(false)
   // Which moments fire a customer WhatsApp ping. Pseudo-status `PLACED` ↔
   // order receipt; `PAID` ↔ combined payment-received + invoice + review
   // message. The remaining values are the OrderStatus enum.

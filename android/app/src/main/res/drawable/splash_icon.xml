@@ -1,92 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  Splash icon — used by both:
-    * the system splash (Theme.WatShopCafe.Splash via
-      windowSplashScreenAnimatedIcon, ~120dp safe area)
-    * the in-app splash (activity_main.xml ImageView, 140dp)
-  Self-contained version of the launcher mark (rounded brown dome +
-  cream stripe + highlight dot + cream "W") so it reads as the brand
-  even on devices that mask the launcher icon to a circle. Painted at
-  120dp viewport but vector-scales cleanly to any size.
--->
+<!-- Vector monogram used by the system splash screen. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="120dp"
     android:height="120dp"
     android:viewportWidth="120"
     android:viewportHeight="120">
-
-    <!-- Soft drop-shadow under the dome -->
+    <!-- White W on transparent background (since the activity background is now brown) -->
     <path
-        android:fillColor="#000000"
-        android:fillAlpha="0.25"
-        android:pathData="M22,108 L98,108 C98,113 92,116 86,116 L34,116 C28,116 22,113 22,108 Z" />
-
-    <!-- All dome elements clipped to the rounded square shape -->
-    <group>
-        <clip-path
-            android:pathData="M5,30 C5,16 16,5 30,5 L90,5 C104,5 115,16 115,30 L115,90 C115,104 104,115 90,115 L30,115 C16,115 5,104 5,90 Z" />
-
-        <!-- Brown coffee gradient base -->
-        <path android:pathData="M0,0 L120,0 L120,120 L0,120 Z">
-            <aapt:attr name="android:fillColor">
-                <gradient
-                    android:type="linear"
-                    android:startX="0" android:startY="0"
-                    android:endX="120" android:endY="120"
-                    android:startColor="#C49A78"
-                    android:centerColor="#8B6644"
-                    android:endColor="#3E2D24" />
-            </aapt:attr>
-        </path>
-
-        <!-- Cream horizontal stripe near the top of the dome -->
-        <path android:fillColor="#E8C9A4"
-              android:pathData="M0,32 L120,32 L120,36 L0,36 Z" />
-        <path android:fillColor="#3E2D24" android:fillAlpha="0.35"
-              android:pathData="M0,36 L120,36 L120,38 L0,38 Z" />
-
-        <!-- Highlight dot in the upper-right corner -->
-        <path android:fillColor="#E8C9A4"
-              android:pathData="M93,21 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0" />
-        <path android:fillColor="#FFFFFF" android:fillAlpha="0.65"
-              android:pathData="M91.5,19 m-1.5,0 a1.5,1.5 0 1,0 3,0 a1.5,1.5 0 1,0 -3,0" />
-
-        <!-- Drop shadow under the W -->
-        <group android:translateY="2">
-            <path
-                android:fillColor="#3E2D24"
-                android:fillAlpha="0.40"
-                android:pathData="M30,46 L40,46 L48,80 L54,50 L60,80 L68,46 L78,46 L67,88 L58,88 L54,66 L50,88 L41,88 Z" />
-        </group>
-
-        <!-- Main "W" glyph (cream highlight blend) -->
-        <path
-            android:fillColor="#FFFBF5"
-            android:pathData="M30,44 L40,44 L48,78 L54,48 L60,78 L68,44 L78,44 L67,86 L58,86 L54,64 L50,86 L41,86 Z" />
-
-        <!-- Inner gloss highlight on the W -->
-        <path
-            android:fillColor="#FFFFFF"
-            android:fillAlpha="0.55"
-            android:pathData="M32,44 L38,44 L42,60 L40,60 Z" />
-
-        <!-- Bottom vignette gradient for the 3D dome look -->
-        <path android:pathData="M0,75 L120,75 L120,120 L0,120 Z">
-            <aapt:attr name="android:fillColor">
-                <gradient
-                    android:type="linear"
-                    android:startX="60" android:startY="75"
-                    android:endX="60" android:endY="120"
-                    android:startColor="#003E2D24"
-                    android:endColor="#553E2D24" />
-            </aapt:attr>
-        </path>
-    </group>
-
-    <!-- Edge bevel on the dome (sits on top of the clipped content) -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:fillAlpha="0.20"
-        android:pathData="M5,30 C5,16 16,5 30,5 L90,5 C104,5 115,16 115,30 L114,30 C114,16.6 103.4,6 90,6 L30,6 C16.6,6 6,16.6 6,30 Z" />
+        android:fillColor="#F8F4F1"
+        android:pathData="M37,42 L46,42 L51,73 L57,42 L65,42 L71,73 L75,42 L84,42 L77,82 L67,82 L61,52 L56,82 L46,82 Z" />
 </vector>
