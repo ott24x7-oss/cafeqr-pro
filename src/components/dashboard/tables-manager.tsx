@@ -61,6 +61,25 @@ export function TablesManager({ initialTables, cafe, appUrl }: { initialTables: 
     if (r.ok) setTables((c) => c.filter((t) => t.id !== id));
   }
 
+  // Manual override for stuck rows. The server cancels any still-open
+  // orders on the table, then flips the flag. Optimistic update keeps
+  // the UI snappy.
+  async function freeNow(id: string) {
+    const t = tables.find((x) => x.id === id);
+    const hasOpen = !!t?.isOccupied;
+    if (hasOpen && !confirm('This table still has open orders. Cancel them and mark Available?')) return;
+    setTables((c) => c.map((x) => (x.id === id ? { ...x, isOccupied: false } : x)));
+    const r = await fetch(`/api/dashboard/tables/${id}/free`, { method: 'POST' });
+    if (!r.ok) {
+      toast.error('Could not free table');
+      // Best-effort revert
+      setTables((c) => c.map((x) => (x.id === id ? { ...x, isOccupied: hasOpen } : x)));
+      return;
+    }
+    const data = await r.json();
+    toast.success(data.cancelled ? `Freed (${data.cancelled} order${data.cancelled > 1 ? 's' : ''} cancelled)` : 'Freed');
+  }
+
   function downloadQr(t: any) {
     const canvas = document.querySelector(`canvas[data-tcode="${t.code}"]`) as HTMLCanvasElement | null;
     if (!canvas) return toast.error('QR not ready');
@@ -164,7 +183,23 @@ export function TablesManager({ initialTables, cafe, appUrl }: { initialTables: 
         ) : tables.map((t) => (
           <div key={t.id} className="card-warm text-center">
             <div className="font-display text-xl font-bold text-coffee-900">Table {t.number}</div>
-            <div className="text-xs text-coffee-500">Capacity {t.capacity} {t.isOccupied && <span className="pill-amber ml-1">Occupied</span>}</div>
+            <div className="text-xs text-coffee-500 flex items-center justify-center gap-1.5 flex-wrap">
+              <span>Capacity {t.capacity}</span>
+              {t.isOccupied ? (
+                <>
+                  <span className="pill-amber">Occupied</span>
+                  <button
+                    onClick={() => freeNow(t.id)}
+                    className="text-[11px] text-coffee-700 underline-offset-2 hover:underline"
+                    title="Cancel any open orders on this table and mark Available"
+                  >
+                    Free now
+                  </button>
+                </>
+              ) : (
+                <span className="pill-wa">Available</span>
+              )}
+            </div>
             <div className="my-3 flex justify-center">
               <div className="p-2 bg-white rounded-xl border border-coffee-200">
                 {/* @ts-ignore data-tcode used to find canvas for download/print */}

@@ -42,5 +42,17 @@ export async function POST(req: Request) {
     },
   });
 
+  // Free the table if this was the last open order on it. Mirrors the
+  // owner-side status route — without this, customer cancellations leave
+  // the table stuck on "Occupied".
+  if (order.tableId) {
+    const open = await prisma.order.count({
+      where: { tableId: order.tableId, status: { in: ['NEW', 'ACCEPTED', 'PREPARING', 'READY'] } },
+    });
+    if (!open) {
+      await prisma.table.update({ where: { id: order.tableId }, data: { isOccupied: false } });
+    }
+  }
+
   return NextResponse.json({ ok: true, status: updated.status });
 }

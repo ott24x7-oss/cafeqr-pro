@@ -36,7 +36,14 @@ export async function POST(req: Request, { params }: { params: { orderId: string
     include: { items: true, table: true },
   });
 
-  if (body.status === 'COMPLETED' || body.status === 'SERVED') {
+  // Free the table the moment it has no remaining open orders. CANCELLED
+  // is included alongside COMPLETED / SERVED — earlier the cancel branch
+  // was missing, which left tables stuck on "Occupied" forever after a
+  // cancel. The /dashboard/tables page now also recomputes occupancy from
+  // live order count so a stale flag would self-heal on the next render
+  // anyway, but we keep the stored flag honest for any code path that
+  // still reads it directly.
+  if (body.status === 'COMPLETED' || body.status === 'SERVED' || body.status === 'CANCELLED') {
     if (order.tableId) {
       const open = await prisma.order.count({
         where: { tableId: order.tableId, status: { in: ['NEW', 'ACCEPTED', 'PREPARING', 'READY'] } },

@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { CafeLobby } from '@/components/customer/cafe-lobby';
 import { getCustomerProfile } from '@/lib/customer-profile';
+import { getLiveOccupiedSet } from '@/lib/table-occupancy';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,6 +64,11 @@ export default async function CafeIndexPage({
       </div>
     );
   }
+
+  // Override stored isOccupied with a live recompute so table availability
+  // tracks open-order count, not a stale cached flag.
+  const occupied = await getLiveOccupiedSet(cafe.id);
+  cafe.tables = cafe.tables.map((t) => ({ ...t, isOccupied: occupied.has(t.id) }));
 
   const customer = await getCustomerProfile(cafe.id, cafe.settings?.loyaltyEnabled ?? true);
   return <CafeLobby cafe={cafe as any} customer={customer} />;
