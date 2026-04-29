@@ -1,4 +1,3 @@
-import 'server-only';
 import { prisma } from './prisma';
 import { configFromCafe, type WACafe } from './whatsapp';
 import { sendMessage } from './whatsapp-send';
