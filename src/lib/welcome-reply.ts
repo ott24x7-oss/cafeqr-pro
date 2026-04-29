@@ -50,12 +50,27 @@ function looksLikeTrigger(body: string, triggers: string[]): boolean {
   });
 }
 
+/** Lightweight tagged logger — `[welcome-reply] ...`. Helps grepping
+ *  Railway logs while debugging "why didn't the bot reply" issues. */
+function log(reason: string, details?: Record<string, unknown>) {
+  // eslint-disable-next-line no-console
+  console.log(`[welcome-reply] ${reason}`, details ?? '');
+}
+
 export async function handleIncomingMessage(input: IncomingMessage): Promise<{ replied: boolean; reason?: string }> {
+  log('inbound', { sessionId: input.sessionId, fromPhone: input.fromPhone, body: input.body });
+
   const fromPhone = normalizePhone(input.fromPhone);
-  if (!fromPhone) return { replied: false, reason: 'invalid-phone' };
+  if (!fromPhone) {
+    log('skip:invalid-phone', { raw: input.fromPhone });
+    return { replied: false, reason: 'invalid-phone' };
+  }
 
   // Locate the cafe by Baileys session ID. CafeSettings holds the link.
-  const settings = await prisma.cafeSettings.findFirst({
+  // First try exact match; if that misses, fall back to "any cafe whose
+  // session ID is empty/null but has Baileys provider on" — covers cafes
+  // that paired before baileysSessionId was being persisted reliably.
+  let settings = await prisma.cafeSettings.findFirst({
     where: { baileysSessionId: input.sessionId },
     include: {
       cafe: {
@@ -69,8 +84,41 @@ export async function handleIncomingMessage(input: IncomingMessage): Promise<{ r
     },
   }).catch(() => null);
 
-  if (!settings || !settings.cafe) return { replied: false, reason: 'no-cafe-for-session' };
-  if (!settings.welcomeAutoReply) return { replied: false, reason: 'disabled' };
+  if (!settings) {
+    // Loosened lookup: in some upgrade paths the column ends up empty
+    // even though the cafe is paired and using Baileys. If exactly one
+    // cafe has welcomeAutoReply on and provider=baileys, use that.
+    const candidates = await prisma.cafeSettings.findMany({
+      where: {
+        whatsappProvider: 'baileys',
+        welcomeAutoReply: true,
+        OR: [{ baileysSessionId: null }, { baileysSessionId: '' }],
+      },
+      include: {
+        cafe: {
+          select: {
+            id: true, name: true, slug: true,
+            customDomain: true, customDomainStatus: true,
+            phone: true, whatsappNo: true, ownerId: true,
+            owner: { select: { phone: true } },
+          },
+        },
+      },
+    }).catch(() => [] as any[]);
+    if (candidates.length === 1) {
+      log('lookup:fallback-to-only-baileys-cafe', { cafeId: candidates[0].cafe?.id });
+      settings = candidates[0] as any;
+    }
+  }
+
+  if (!settings || !settings.cafe) {
+    log('skip:no-cafe-for-session', { sessionId: input.sessionId });
+    return { replied: false, reason: 'no-cafe-for-session' };
+  }
+  if (!settings.welcomeAutoReply) {
+    log('skip:disabled', { cafeId: settings.cafe.id });
+    return { replied: false, reason: 'disabled' };
+  }
 
   const cafe = settings.cafe;
 
@@ -86,21 +134,29 @@ export async function handleIncomingMessage(input: IncomingMessage): Promise<{ r
       .map((p) => normalizePhone(String(p)))
       .filter(Boolean),
   );
-  if (skipPhones.has(fromPhone)) return { replied: false, reason: 'staff-number' };
+  if (skipPhones.has(fromPhone)) {
+    log('skip:staff-number', { fromPhone, skipList: Array.from(skipPhones) });
+    return { replied: false, reason: 'staff-number' };
+  }
 
   // Trigger match (case-insensitive, starts-with).
   const triggers = (settings.welcomeTriggers && settings.welcomeTriggers.length > 0)
     ? settings.welcomeTriggers
     : ['hi', 'hello'];
   if (!looksLikeTrigger(input.body, triggers)) {
+    log('skip:no-trigger-match', { body: input.body, triggers });
     return { replied: false, reason: 'no-trigger-match' };
   }
 
   // 7-day cooldown.
-  const log = await prisma.welcomeReplyLog.findUnique({
+  const cooldownLog = await prisma.welcomeReplyLog.findUnique({
     where: { cafeId_phone: { cafeId: cafe.id, phone: fromPhone } },
   }).catch(() => null);
-  if (log && Date.now() - log.lastSentAt.getTime() < SEVEN_DAYS_MS) {
+  if (cooldownLog && Date.now() - cooldownLog.lastSentAt.getTime() < SEVEN_DAYS_MS) {
+    log('skip:cooldown', {
+      fromPhone,
+      lastSentAt: cooldownLog.lastSentAt.toISOString(),
+    });
     return { replied: false, reason: 'cooldown' };
   }
 
@@ -110,15 +166,17 @@ export async function handleIncomingMessage(input: IncomingMessage): Promise<{ r
     .replaceAll('{cafeName}', cafe.name)
     .replaceAll('{cafeUrl}', url);
 
-  // Send via the cafe's configured provider (which is Baileys here, since
-  // that's what received the message). sendMessage handles the rest.
+  log('sending', { to: fromPhone, cafeId: cafe.id });
   const config = configFromCafe(settings.cafe as unknown as WACafe);
   const result = await sendMessage({
     to: fromPhone,
     message: body,
     config,
   });
-  if (!result.ok) return { replied: false, reason: result.error ?? 'send-failed' };
+  if (!result.ok) {
+    log('send-failed', { error: result.error });
+    return { replied: false, reason: result.error ?? 'send-failed' };
+  }
 
   // Upsert the cooldown row.
   await prisma.welcomeReplyLog.upsert({
@@ -127,5 +185,6 @@ export async function handleIncomingMessage(input: IncomingMessage): Promise<{ r
     update: { lastSentAt: new Date() },
   });
 
+  log('replied', { to: fromPhone, cafeId: cafe.id });
   return { replied: true };
 }

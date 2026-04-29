@@ -96,25 +96,43 @@ export async function startSession(id: string, opts?: { force?: boolean }): Prom
     sock.ev.on('messages.upsert', async (evt: any) => {
       try {
         const msgs = evt?.messages ?? [];
+        // High-level visibility: log every batch the session sees, even
+        // before any filtering. If this line never appears in Railway
+        // logs, messages aren't reaching Baileys at all (something
+        // upstream is intercepting).
+        log.info({ id, count: msgs.length, type: evt?.type }, 'baileys: messages.upsert');
         for (const m of msgs) {
-          if (!m || m.key?.fromMe) continue;
-          // Ignore group chats — only DMs trigger welcome replies.
-          if (m.key?.remoteJid?.endsWith('@g.us')) continue;
+          if (!m) continue;
+          if (m.key?.fromMe) {
+            log.debug({ id, jid: m.key?.remoteJid }, 'baileys: skip fromMe');
+            continue;
+          }
+          if (m.key?.remoteJid?.endsWith('@g.us')) {
+            log.debug({ id, jid: m.key?.remoteJid }, 'baileys: skip group');
+            continue;
+          }
           const fromJid: string | undefined = m.key?.remoteJid;
           const fromPhone = fromJid?.split('@')[0]?.replace(/\D/g, '');
-          if (!fromPhone) continue;
+          if (!fromPhone) {
+            log.debug({ id, jid: fromJid }, 'baileys: skip no-phone');
+            continue;
+          }
           const body: string =
             m.message?.conversation
             ?? m.message?.extendedTextMessage?.text
             ?? m.message?.imageMessage?.caption
             ?? m.message?.videoMessage?.caption
             ?? '';
-          if (!body) continue;
+          if (!body) {
+            log.info({ id, fromPhone, msgType: Object.keys(m.message ?? {}) }, 'baileys: skip empty-body');
+            continue;
+          }
+          log.info({ id, fromPhone, body: body.slice(0, 40) }, 'baileys: dispatching to welcome-reply');
           const { handleIncomingMessage } = await import('./welcome-reply');
           await handleIncomingMessage({ sessionId: id, fromPhone, body });
         }
       } catch (e: any) {
-        log.warn({ id, err: e?.message }, 'baileys: inbound handler error');
+        log.warn({ id, err: e?.message, stack: e?.stack }, 'baileys: inbound handler error');
       }
     });
 
