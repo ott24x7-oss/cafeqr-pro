@@ -27,6 +27,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
 
+    # Allow the publish step (only on manual trigger) to commit the new
+    # APKs back to public/downloads/. The default GITHUB_TOKEN only has
+    # read scope; we need contents:write to push.
+    permissions:
+      contents: write
+
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
@@ -72,3 +78,31 @@ jobs:
           path: android/app/build/outputs/apk/google/debug/*.apk
           retention-days: 14
           if-no-files-found: error
+
+      # Manual-trigger only (Actions tab → Run workflow). Copies the
+      # freshly-built APKs into public/downloads/ and commits — that
+      # path is served as a static asset by Next.js, so the home-page
+      # download buttons immediately point at the new build without
+      # anyone having to fetch artifacts manually.
+      #
+      # Skipped on regular pushes to keep the repo from gaining 14 MB
+      # of binary history every time someone touches android source.
+      # The [skip ci] tag in the commit message prevents the new push
+      # from re-triggering this workflow.
+      - name: Publish APKs to public/downloads/
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          set -e
+          mkdir -p public/downloads
+          cp android/app/build/outputs/apk/google/debug/app-google-debug.apk public/downloads/app-google-debug.apk
+          cp android/app/build/outputs/apk/amazon/debug/app-amazon-debug.apk public/downloads/app-amazon-debug.apk
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/downloads/app-google-debug.apk public/downloads/app-amazon-debug.apk
+          if git diff --cached --quiet; then
+            echo "APKs are unchanged — nothing to commit."
+          else
+            git commit -m "ci: refresh APK downloads from build ${{ github.run_number }} [skip ci]"
+            git push
+            echo "Published new APKs to public/downloads/"
+          fi

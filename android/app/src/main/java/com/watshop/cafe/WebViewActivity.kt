@@ -177,6 +177,16 @@ class WebViewActivity : AppCompatActivity() {
         s.displayZoomControls = false
         s.mediaPlaybackRequiresUserGesture = false
         s.cacheMode = WebSettings.LOAD_DEFAULT
+        // Off-screen pre-raster keeps the WebView layer above/below the
+        // visible viewport painted, so fast scrolling a long menu doesn't
+        // flash. Combined with browser-native loading="lazy" on <img>
+        // tags the menu page now lazy-loads dishes the user can't see.
+        // Reflective call so older WebView providers degrade gracefully.
+        try {
+            WebView::class.java
+                .getMethod("setOffscreenPreRaster", Boolean::class.javaPrimitiveType)
+                .invoke(webView, true)
+        } catch (_: Throwable) { /* best-effort, never block boot */ }
         // Append "WatShopApp/<ver>" so the server can branch on app vs
         // browser if needed (e.g. hide install banners in-app).
         s.userAgentString = s.userAgentString + " WatShopCafeApp/${BuildConfig.VERSION_NAME}"

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Plus, Pencil, Trash2, Search, Coffee, X, Power, Loader2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input, Textarea } from '@/components/ui/input';
@@ -9,6 +10,10 @@ import { toast } from '@/components/ui/toaster';
 import { BulkMenuImport } from '@/components/dashboard/bulk-menu-import';
 
 export function MenuManager({ categories: initialCats, items: initialItems }: { categories: any[]; items: any[] }) {
+  // router.refresh() invalidates the React Server Components cache so a
+  // navigate-back to /dashboard or /dashboard/orders sees the latest menu
+  // state without the user having to pull-to-refresh in the WebView.
+  const router = useRouter();
   const [cats, setCats] = useState(initialCats);
   const [items, setItems] = useState(initialItems);
   const [activeCat, setActiveCat] = useState<string>('all');
@@ -97,6 +102,7 @@ export function MenuManager({ categories: initialCats, items: initialItems }: { 
     if (data.deleted) parts.push(`${data.deleted} deleted`);
     if (data.hidden) parts.push(`${data.hidden} hidden (had orders)`);
     toast.success('Done', parts.join(' · ') || 'No changes');
+    router.refresh();
   }
 
   async function deleteItem(id: string) {
@@ -105,6 +111,7 @@ export function MenuManager({ categories: initialCats, items: initialItems }: { 
     if (r.ok) {
       setItems((x) => x.filter((i) => i.id !== id));
       toast.success('Deleted');
+      router.refresh();
     }
   }
 
@@ -116,6 +123,7 @@ export function MenuManager({ categories: initialCats, items: initialItems }: { 
     });
     if (r.ok) {
       setItems((x) => x.map((i) => (i.id === item.id ? { ...i, isAvailable: !item.isAvailable } : i)));
+      router.refresh();
     }
   }
 
@@ -136,13 +144,17 @@ export function MenuManager({ categories: initialCats, items: initialItems }: { 
       toast.error('Could not update stock');
     } else {
       toast.success(next ? 'Back in stock' : 'Marked sold out');
+      router.refresh();
     }
   }
 
   async function deleteCat(id: string) {
     if (!confirm('Delete this category? Items will be uncategorized.')) return;
     const r = await fetch(`/api/dashboard/menu/categories/${id}`, { method: 'DELETE' });
-    if (r.ok) setCats((x) => x.filter((c) => c.id !== id));
+    if (r.ok) {
+      setCats((x) => x.filter((c) => c.id !== id));
+      router.refresh();
+    }
   }
 
   return (
@@ -349,6 +361,7 @@ export function MenuManager({ categories: initialCats, items: initialItems }: { 
           onSaved={(c: any) => {
             setCats((cur) => editCat ? cur.map((x) => (x.id === c.id ? c : x)) : [...cur, c]);
             setShowCatModal(false);
+            router.refresh();
           }}
         />
       )}
@@ -360,6 +373,7 @@ export function MenuManager({ categories: initialCats, items: initialItems }: { 
           onSaved={(i: any) => {
             setItems((cur) => editItem ? cur.map((x) => (x.id === i.id ? i : x)) : [...cur, i]);
             setShowItemModal(false);
+            router.refresh();
           }}
         />
       )}
