@@ -62,39 +62,49 @@ const FALLBACK_FREE: Omit<PlanLimits, 'planId' | 'planSlug' | 'planName'> = {
   },
 };
 
-/** Resolve a cafe's current plan limits. Cached per-request. */
+/**
+ * Pure converter — turns an already-fetched Plan record into PlanLimits
+ * without touching the DB. Use this whenever the caller already has
+ * `cafe.plan` from a parent fetch (e.g. dashboard layout's
+ * getOwnerCafe), so we don't pay for a redundant Cafe round-trip.
+ */
+export function planToLimits(plan: any | null | undefined): PlanLimits {
+  if (!plan) {
+    return { planId: null, planSlug: null, planName: null, ...FALLBACK_FREE };
+  }
+  return {
+    planId: plan.id,
+    planSlug: plan.slug,
+    planName: plan.name,
+    priceMonthly: plan.priceMonthly,
+    priceYearly: plan.priceYearly,
+    maxTables: plan.maxTables,
+    maxMenuItems: plan.maxMenuItems,
+    maxStaff: plan.maxStaff,
+    maxOrdersPerMonth: plan.maxOrdersPerMonth ?? 0,
+    features: {
+      whatsapp: plan.whatsappEnabled,
+      loyalty: plan.loyaltyEnabled ?? true,
+      payment: plan.paymentEnabled ?? true,
+      coupons: plan.couponsEnabled ?? true,
+      customBranding: plan.customBranding,
+      customSubdomain: plan.customSubdomain,
+      prioritySupport: plan.prioritySupport,
+      analytics: plan.analytics,
+      multiLanguage: plan.multiLanguage,
+    },
+  };
+}
+
+/** Resolve a cafe's current plan limits. Cached per-request.
+ *  Use planToLimits() instead when you already have the Plan object —
+ *  this fn issues a Cafe round-trip you'd otherwise duplicate. */
 export const getPlanLimits = cache(async (cafeId: string): Promise<PlanLimits> => {
   const cafe = await prisma.cafe.findUnique({
     where: { id: cafeId },
     select: { planId: true, plan: true },
   }).catch(() => null);
-
-  if (!cafe?.plan) {
-    return { planId: null, planSlug: null, planName: null, ...FALLBACK_FREE };
-  }
-  const p = cafe.plan;
-  return {
-    planId: p.id,
-    planSlug: p.slug,
-    planName: p.name,
-    priceMonthly: p.priceMonthly,
-    priceYearly: p.priceYearly,
-    maxTables: p.maxTables,
-    maxMenuItems: p.maxMenuItems,
-    maxStaff: p.maxStaff,
-    maxOrdersPerMonth: (p as any).maxOrdersPerMonth ?? 0,
-    features: {
-      whatsapp: p.whatsappEnabled,
-      loyalty: (p as any).loyaltyEnabled ?? true,
-      payment: (p as any).paymentEnabled ?? true,
-      coupons: (p as any).couponsEnabled ?? true,
-      customBranding: p.customBranding,
-      customSubdomain: p.customSubdomain,
-      prioritySupport: p.prioritySupport,
-      analytics: p.analytics,
-      multiLanguage: p.multiLanguage,
-    },
-  };
+  return planToLimits(cafe?.plan);
 });
 
 /** First moment of the current calendar month, in server time. */

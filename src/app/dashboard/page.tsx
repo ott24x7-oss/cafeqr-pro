@@ -9,6 +9,7 @@ import { RevenueSparkline } from '@/components/dashboard/revenue-sparkline';
 import { SetupChecklist } from '@/components/dashboard/setup-checklist';
 import { UsageBanner } from '@/components/dashboard/usage-banner';
 import { PlanCard } from '@/components/dashboard/plan-card';
+import { planToLimits, evaluateOrderLimit } from '@/lib/plan-limits';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,7 +23,21 @@ export default async function DashboardOverview() {
   const sparkSince = new Date(Date.now() - 30 * 86400000);
   sparkSince.setHours(0, 0, 0, 0);
 
-  const [todayOrders, allTodayOrders, pendingOrders, completedToday, reviewAgg, latestOrders, topItems, sparkOrders, menuItemCount, tableCount] = await Promise.all([
+  // Resolve plan limits from the already-loaded cafe.plan — saves an
+  // entire Cafe + Plan round-trip vs calling getPlanLimits(cafe.id).
+  const limits = planToLimits((cafe as any).plan);
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+
+  // Single Promise.all for every query the overview needs — including
+  // the order-count for plan-usage which used to live in PlanCard /
+  // UsageBanner. Browsers see one round-trip-shaped wait instead of
+  // one for the page + two more for the lazy children.
+  const [
+    todayOrders, allTodayOrders, pendingOrders, completedToday, reviewAgg,
+    latestOrders, topItems, sparkOrders, menuItemCount, tableCount, ordersThisMonth,
+  ] = await Promise.all([
     prisma.order.aggregate({
       where: { cafeId: cafe.id, createdAt: { gte: since } },
       _sum: { totalAmount: true },
@@ -51,7 +66,12 @@ export default async function DashboardOverview() {
     }),
     prisma.menuItem.count({ where: { cafeId: cafe.id } }),
     prisma.table.count({ where: { cafeId: cafe.id } }),
+    prisma.order.count({
+      where: { cafeId: cafe.id, createdAt: { gte: monthStart }, status: { not: 'CANCELLED' } },
+    }),
   ]);
+
+  const orderDecision = evaluateOrderLimit(ordersThisMonth, limits.maxOrdersPerMonth);
 
   // First-time setup checklist — shown until everything is ✓.
   const setupItems = [
@@ -119,9 +139,9 @@ export default async function DashboardOverview() {
         </p>
       </div>
 
-      <UsageBanner cafeId={cafe.id} />
+      <UsageBanner plan={limits} decision={orderDecision} />
 
-      <PlanCard cafeId={cafe.id} />
+      <PlanCard limits={limits} current={ordersThisMonth} />
 
       <SetupChecklist items={setupItems} />
 

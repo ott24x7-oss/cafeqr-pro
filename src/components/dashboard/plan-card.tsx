@@ -1,19 +1,16 @@
 import Link from 'next/link';
 import { Award, Check, Lock, ArrowUpRight, Sparkles } from 'lucide-react';
-import { getPlanLimits, countOrdersThisMonth } from '@/lib/plan-limits';
+import type { PlanLimits } from '@/lib/plan-limits';
 
 /**
  * Server card showing the cafe's currently-active plan + which features
- * it unlocks + a quick "Upgrade" / "Manage plan" affordance. Sits on the
- * dashboard overview so owners always know what tier they're on without
- * having to dig into /dashboard/billing.
+ * it unlocks + a quick "Upgrade" / "Manage plan" affordance.
+ *
+ * Now a pure renderer — `limits` and `currentOrders` come in as props
+ * from the parent so we don't double-fetch the same data the dashboard
+ * page already has.
  */
-export async function PlanCard({ cafeId }: { cafeId: string }) {
-  const [limits, current] = await Promise.all([
-    getPlanLimits(cafeId),
-    countOrdersThisMonth(cafeId),
-  ]);
-
+export function PlanCard({ limits, current }: { limits: PlanLimits; current: number }) {
   const isFree = limits.planSlug === 'free' || limits.priceMonthly === 0;
   const features: { label: string; on: boolean }[] = [
     { label: 'WhatsApp integration', on: limits.features.whatsapp },

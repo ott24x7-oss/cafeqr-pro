@@ -1,10 +1,14 @@
 import Link from 'next/link';
 import { ArrowUpRight, Sparkles, AlertTriangle } from 'lucide-react';
-import { getOrderUsage } from '@/lib/plan-limits';
+import type { PlanLimits, OrderLimitDecision } from '@/lib/plan-limits';
 
 /**
  * Top-of-dashboard banner showing the cafe's monthly order usage and a
  * prominent upgrade CTA when they're nearing or at their plan's limit.
+ *
+ * Now a pure renderer — `plan` and `decision` come in from the parent
+ * so we share the single plan + order-count fetch with PlanCard and
+ * the rest of the dashboard.
  *
  * Renders nothing for cafes on Gold (1000/mo) until they reach 70% — for
  * everyone else it's always visible so the owner has a constant sense
@@ -15,9 +19,7 @@ import { getOrderUsage } from '@/lib/plan-limits';
  *   - blocked    : 110%+; new orders rejected at /api/orders/place
  *   - free-pitch : Always shown for Free Lifetime (regardless of usage)
  */
-export async function UsageBanner({ cafeId }: { cafeId: string }) {
-  const usage = await getOrderUsage(cafeId);
-  const { plan, decision } = usage;
+export function UsageBanner({ plan, decision }: { plan: PlanLimits; decision: OrderLimitDecision }) {
 
   // Unlimited or no plan resolution — render nothing.
   if (decision.limit === 0) return null;
