@@ -272,18 +272,24 @@ export default async function LandingPage() {
           <p className="text-sm text-cream-200/80">
             मुफ़्त शुरू करें — ज़रूरत पड़ने पर plan चुनें।
           </p>
-          <div className="mt-8 grid md:grid-cols-3 gap-3 max-w-4xl mx-auto">
-            {(plans.length ? plans : fallbackPlans).slice(0, 3).map((p: any) => (
-              <div key={p.slug} className="rounded-2xl bg-white/10 backdrop-blur p-5 border border-white/15 text-left">
-                <div className="text-xs uppercase tracking-wide opacity-70">{p.name}</div>
-                <div className="text-3xl font-bold mt-1">
-                  {p.priceMonthly === 0 ? 'Free' : `₹${p.priceMonthly}`}
-                  {p.priceMonthly > 0 && <span className="text-sm opacity-70">/mo</span>}
+          {/* Pricing teaser cards — render only what the super admin has
+              actually published in /admin/plans. No hardcoded fallback;
+              if the admin has wiped the table the teaser cards collapse
+              and we fall back to a clean "see plans" CTA below. */}
+          {plans.length > 0 && (
+            <div className="mt-8 grid md:grid-cols-3 gap-3 max-w-4xl mx-auto">
+              {plans.slice(0, 3).map((p: any) => (
+                <div key={p.slug} className="rounded-2xl bg-white/10 backdrop-blur p-5 border border-white/15 text-left">
+                  <div className="text-xs uppercase tracking-wide opacity-70">{p.name}</div>
+                  <div className="text-3xl font-bold mt-1">
+                    {p.priceMonthly === 0 ? 'Free' : `₹${p.priceMonthly}`}
+                    {p.priceMonthly > 0 && <span className="text-sm opacity-70">/mo</span>}
+                  </div>
+                  <div className="text-xs opacity-80 mt-1">{p.maxTables} tables · {p.maxMenuItems} items</div>
                 </div>
-                <div className="text-xs opacity-80 mt-1">{p.maxTables} tables · {p.maxMenuItems} items</div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
           <div className="mt-7 flex flex-wrap justify-center gap-3">
             <Link href="/pricing"><Button variant="accent" size="lg">View pricing</Button></Link>
             <Link href="/signup">
@@ -406,8 +412,3 @@ function MenuBuilderMockup() {
   );
 }
 
-const fallbackPlans = [
-  { name: 'Free Lifetime', slug: 'free', priceMonthly: 0, maxTables: 2, maxMenuItems: 10 },
-  { name: 'Startup', slug: 'startup', priceMonthly: 199, maxTables: 10, maxMenuItems: 25 },
-  { name: 'Silver', slug: 'silver', priceMonthly: 299, maxTables: 25, maxMenuItems: 50 },
-];

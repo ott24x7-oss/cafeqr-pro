@@ -22,19 +22,38 @@ interface Plan {
   isPopular: boolean;
 }
 
-const FALLBACK_PLANS: Plan[] = [
-  { id: 'free',    slug: 'free',    name: 'Free Lifetime', description: 'Get started for free.',          priceMonthly: 0,   priceYearly: 0,    maxTables: 2,  maxMenuItems: 10,  maxOrdersPerMonth: 30,   whatsappEnabled: false, loyaltyEnabled: false, paymentEnabled: false, couponsEnabled: false, isPopular: false },
-  { id: 'startup', slug: 'startup', name: 'Startup',       description: 'For small cafes.',               priceMonthly: 199, priceYearly: 1200, maxTables: 10, maxMenuItems: 25,  maxOrdersPerMonth: 100,  whatsappEnabled: true,  loyaltyEnabled: true,  paymentEnabled: true,  couponsEnabled: true,  isPopular: false },
-  { id: 'silver',  slug: 'silver',  name: 'Silver',        description: 'Most popular.',                  priceMonthly: 299, priceYearly: 1799, maxTables: 25, maxMenuItems: 50,  maxOrdersPerMonth: 200,  whatsappEnabled: true,  loyaltyEnabled: true,  paymentEnabled: true,  couponsEnabled: true,  isPopular: true  },
-  { id: 'gold',    slug: 'gold',    name: 'Gold',          description: 'For high-volume cafes.',         priceMonthly: 499, priceYearly: 2999, maxTables: 50, maxMenuItems: 200, maxOrdersPerMonth: 1000, whatsappEnabled: true,  loyaltyEnabled: true,  paymentEnabled: true,  couponsEnabled: true,  isPopular: false },
-];
-
 export function PricingCards({ plans: serverPlans }: { plans: Plan[] }) {
-  // Whatever the super admin published in /admin/plans is the source of
-  // truth. Only fall back to FALLBACK_PLANS when the DB returns nothing
-  // at all (fresh deploy, mid-purge) so the page never renders blank.
-  const plans = serverPlans.length > 0 ? serverPlans : FALLBACK_PLANS;
+  // Whatever the super admin published in /admin/plans is the SOLE source
+  // of truth. No hardcoded fallback — if the admin has wiped the table,
+  // we render an honest empty state instead of phantom plans the visitor
+  // can't actually buy.
+  const plans = serverPlans;
   const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');
+
+  if (plans.length === 0) {
+    return (
+      <div className="max-w-2xl mx-auto text-center card-warm py-12">
+        <div className="font-display text-2xl font-bold text-coffee-900">
+          Pricing is being set up.
+        </div>
+        <p className="text-coffee-600 mt-2 text-sm">
+          Our team is finalising the new plans. Please check back shortly, or get in touch and we'll
+          set you up directly.
+        </p>
+        <p className="text-coffee-500 mt-1 text-xs">
+          हम अभी अपने plans update कर रहे हैं — कुछ देर में दोबारा देखिए या हमसे सीधे संपर्क करें।
+        </p>
+        <div className="mt-5 flex justify-center gap-2 flex-wrap">
+          <Link href="/signup">
+            <Button>Start free trial</Button>
+          </Link>
+          <Link href="/">
+            <Button variant="outline">Back to home</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   // Card grid columns: 1 → 4 plans use sm:2 / lg:4; more than 4 wraps
   // naturally onto a second row at lg:4. Single plan stays centered.
