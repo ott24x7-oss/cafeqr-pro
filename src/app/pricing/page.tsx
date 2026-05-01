@@ -5,7 +5,11 @@ import { prisma } from '@/lib/prisma';
 import { PricingCards } from './pricing-cards';
 
 export const metadata = { title: 'Pricing — pay only for the orders you take' };
-export const revalidate = 300;
+// 60s matches the landing page so plan changes propagate consistently.
+// Admin mutations also call revalidatePath('/pricing') for instant updates;
+// this is just the safety net for edits made outside the admin flow
+// (direct DB writes, migrations).
+export const revalidate = 60;
 
 async function getPlans() {
   try {

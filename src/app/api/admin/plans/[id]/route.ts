@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { revalidatePlanSurfaces } from '@/lib/revalidate-plan-surfaces';
 
 async function requireAdmin() {
   const s = await getServerSession(authOptions);
@@ -29,6 +30,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     body.slug = sanitizeSlug(body.slug);
   }
   const plan = await prisma.plan.update({ where: { id: params.id }, data: body });
+  revalidatePlanSurfaces();
   return NextResponse.json({ plan });
 }
 
@@ -99,6 +101,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
   }
 
   await prisma.plan.delete({ where: { id: params.id } });
+  revalidatePlanSurfaces();
 
   return NextResponse.json({
     ok: true,

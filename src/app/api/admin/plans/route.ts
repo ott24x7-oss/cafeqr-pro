@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { revalidatePlanSurfaces } from '@/lib/revalidate-plan-surfaces';
 
 const schema = z.object({
   name: z.string(),
@@ -60,5 +61,6 @@ export async function POST(req: Request) {
   }
 
   const plan = await prisma.plan.create({ data });
+  revalidatePlanSurfaces();
   return NextResponse.json({ plan });
 }

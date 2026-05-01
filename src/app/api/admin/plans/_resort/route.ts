@@ -48,6 +48,12 @@ async function run() {
     }),
   );
 
+  // Bust the cached HTML on /, /pricing, /dashboard/billing so the new
+  // sort order shows up immediately instead of after the route's
+  // revalidate window.
+  const { revalidatePlanSurfaces } = await import('@/lib/revalidate-plan-surfaces');
+  revalidatePlanSurfaces();
+
   return NextResponse.json({
     ok: true,
     resorted: updates.length,
