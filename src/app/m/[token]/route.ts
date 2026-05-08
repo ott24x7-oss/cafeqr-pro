@@ -6,7 +6,8 @@
  * /account page. No client JS needed — works even with JS disabled.
  *
  * Failure modes (expired, used, unknown) redirect to the cafe's customer
- * login page with `?error=link_*` so the UI can show a helpful message.
+ * login page with `?error=link_<reason>` so the UI can show a tailored
+ * message ("expired" vs "already used" vs "invalid").
  */
 import { NextResponse } from 'next/server';
 import { consumeMagicLink } from '@/lib/magic-link';
@@ -19,20 +20,21 @@ import {
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-function fail(req: Request, reason: string, slug?: string) {
+function fail(req: Request, reason: 'invalid' | 'used' | 'expired', slug?: string) {
   const base = new URL(req.url).origin;
-  // No cafe slug means we can't deep-link to a specific login page; fall
-  // back to the homepage with the error param so the user knows what went
-  // wrong without us picking the "wrong" cafe.
+  const code = `link_${reason}`;
+  // We surface a slug on used/expired (because the row tells us which cafe
+  // the customer was trying to reach), but on a totally unknown token we
+  // can't pick a login page so we send them to the homepage instead.
   const target = slug
-    ? `${base}/cafe/${slug}/account/login?error=${encodeURIComponent(reason)}`
-    : `${base}/?error=${encodeURIComponent(reason)}`;
+    ? `${base}/cafe/${slug}/account/login?error=${encodeURIComponent(code)}`
+    : `${base}/?error=${encodeURIComponent(code)}`;
   return NextResponse.redirect(target, { status: 302 });
 }
 
 export async function GET(req: Request, { params }: { params: { token: string } }) {
   const result = await consumeMagicLink(params.token);
-  if (!result) return fail(req, 'link_invalid');
+  if (!result.ok) return fail(req, result.reason, result.cafeSlug);
 
   const session = encodeSession(result.phone);
   const base = new URL(req.url).origin;

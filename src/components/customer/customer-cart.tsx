@@ -105,23 +105,39 @@ export function CustomerCart({
     }
   }
 
-  // Watch for the cookie once we've sent the link. When it lands, the cart
-  // flips to verified and the customer can place the order in this same tab.
+  // Watch for the cookie once we've sent the link. When it lands AND the
+  // cookie's phone matches what the customer typed (compared by last-10
+  // digits to absorb country-code differences), the cart flips to verified.
+  // Mismatch means the customer is logged in as a different number — we
+  // refuse to take that as proof and ask them to start over with the right
+  // phone, which is a visible win over the OTP flow that didn't even try
+  // to enforce this.
   useEffect(() => {
     if (!linkSent || phoneVerified) return;
+    const tail = (s: string) => s.replace(/\D/g, '').slice(-10);
+    const wanted = tail(phone);
     pollRef.current = setInterval(async () => {
       try {
         const r = await fetch(`/api/customer/me?cafeSlug=${cafe.slug}`, { cache: 'no-store' });
         if (!r.ok) return;
         const data = await r.json();
-        if (data?.phone) {
+        if (!data?.phone) return;
+        if (tail(data.phone) === wanted) {
+          setPhone(data.phone);
           setPhoneVerified(true);
           toast.success('WhatsApp verified ✓');
+        } else {
+          if (pollRef.current) clearInterval(pollRef.current);
+          setLinkSent(false);
+          toast.error(
+            'Different number signed in',
+            `That tab is logged in as ${data.phone}. Tap "Use a different number" to retry.`
+          );
         }
       } catch {/* keep polling */}
     }, 2500);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, [linkSent, phoneVerified, cafe.slug]);
+  }, [linkSent, phoneVerified, cafe.slug, phone]);
 
   async function placeOrder() {
     if (!cart.length) return;

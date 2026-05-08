@@ -96,9 +96,13 @@ export default function CustomerLoginPage({ params }: { params: { slug: string }
           <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800 flex items-start gap-2">
             <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
             <span>
-              {errorParam === 'link_invalid'
-                ? 'That login link is no longer valid. Request a new one below.'
-                : 'Something went wrong with that link. Please try again.'}
+              {errorParam === 'link_expired'
+                ? 'That login link expired. Request a fresh one below — it\'s good for 10 minutes.'
+                : errorParam === 'link_used'
+                  ? 'That login link was already used. Request a new one below.'
+                  : errorParam === 'link_invalid'
+                    ? 'That login link isn\'t valid. Request a new one below.'
+                    : 'Something went wrong with that link. Please try again.'}
             </span>
           </div>
         )}

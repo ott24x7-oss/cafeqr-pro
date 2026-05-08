@@ -36,8 +36,9 @@ export async function POST(req: Request) {
 
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
     const userAgent = req.headers.get('user-agent') ?? null;
+    const origin = new URL(req.url).origin;
 
-    const result = await issueMagicLink({ cafe, phone: normalized, ip, userAgent });
+    const result = await issueMagicLink({ cafe, phone: normalized, origin, ip, userAgent });
 
     return NextResponse.json({
       ok: true,
