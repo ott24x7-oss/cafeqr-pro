@@ -131,19 +131,3 @@ export async function notifyCustomerStatus(orderId: string, status: string) {
   }
 }
 
-export async function sendOTP(phone: string, otp: string, cafe?: WACafe) {
-  const message = [
-    `🔐 *${cafe?.name ?? 'CafeQR Pro'}*`,
-    '',
-    `Your verification code is *${otp}*`,
-    `It will expire in 10 minutes.`,
-    '',
-    `Do not share this code with anyone.`,
-  ].join('\n');
-
-  if (cafe) {
-    const config = configFromCafe(cafe);
-    return sendMessage({ to: phone, message, config });
-  }
-  return sendMessage({ to: phone, message, provider: 'manual' });
-}

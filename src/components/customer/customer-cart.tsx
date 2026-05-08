@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { X, Plus, Minus, Trash2, Loader2, MessageSquare, MapPin, Bike, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -39,11 +39,13 @@ export function CustomerCart({
   // verified during login, so we trust it here.
   const [name, setName] = useState(customer?.name ?? '');
   const [phone, setPhone] = useState(customer?.phone ?? '');
-  const [otp, setOtp] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
+  const [linkSent, setLinkSent] = useState(false);
+  const [linkLoading, setLinkLoading] = useState(false);
+  const [waSendLink, setWaSendLink] = useState<string | null>(null);
   const [phoneVerified, setPhoneVerified] = useState(Boolean(customer?.phone));
   const [address, setAddress] = useState('');
   const [note, setNote] = useState('');
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Pick a sensible default order type. Walk-ins go takeaway; tables default
   // to dine-in unless dine-in is disabled. If the cafe only does delivery
@@ -73,34 +75,69 @@ export function CustomerCart({
   const addressValid = type !== 'DELIVERY' || address.trim().length >= 6;
   const canPlace = nameValid && phoneValid && addressValid && cart.length > 0 && !submitting;
 
-  async function requestOtp() {
+  // One-tap magic link: ping the customer with a WhatsApp login URL, then
+  // poll /api/customer/me until the cqr_customer cookie shows up. The cookie
+  // is set by the /m/[token] handler when the customer taps the link, so by
+  // the time `me` returns 200 we know phone ownership is proven and the
+  // checkout can proceed without an OTP step.
+  async function requestLink() {
     if (!phone || phone.replace(/\D/g, '').length < 10) {
       toast.error('Enter valid phone number');
       return;
     }
-    const r = await fetch('/api/auth/customer-otp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, cafeSlug: cafe.slug }),
-    });
-    const data = await r.json();
-    if (!r.ok) {
-      toast.error('Could not send OTP');
-      return;
+    setLinkLoading(true);
+    try {
+      const r = await fetch('/api/auth/customer-magic-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, cafeSlug: cafe.slug }),
+      });
+      const data = await r.json();
+      if (!r.ok || !data.ok) throw new Error(data.error ?? 'Could not send login link');
+      setLinkSent(true);
+      setWaSendLink(data.waSendLink ?? null);
+      if (data.delivered) toast.success('Login link sent on WhatsApp');
+      else toast.info('Use the WhatsApp share link below');
+    } catch (e: any) {
+      toast.error('Could not send link', e?.message);
+    } finally {
+      setLinkLoading(false);
     }
-    setOtpSent(true);
-    if (data.otp) toast.info(`Demo OTP: ${data.otp}`, 'Auto-fill enabled');
-    if (data.otp) setOtp(data.otp);
   }
 
-  function verifyOtp() {
-    if (!otp || otp.length < 4) {
-      toast.error('Enter 4-digit code');
-      return;
-    }
-    setPhoneVerified(true);
-    toast.success('WhatsApp verified ✓');
-  }
+  // Watch for the cookie once we've sent the link. When it lands AND the
+  // cookie's phone matches what the customer typed (compared by last-10
+  // digits to absorb country-code differences), the cart flips to verified.
+  // Mismatch means the customer is logged in as a different number — we
+  // refuse to take that as proof and ask them to start over with the right
+  // phone, which is a visible win over the OTP flow that didn't even try
+  // to enforce this.
+  useEffect(() => {
+    if (!linkSent || phoneVerified) return;
+    const tail = (s: string) => s.replace(/\D/g, '').slice(-10);
+    const wanted = tail(phone);
+    pollRef.current = setInterval(async () => {
+      try {
+        const r = await fetch(`/api/customer/me?cafeSlug=${cafe.slug}`, { cache: 'no-store' });
+        if (!r.ok) return;
+        const data = await r.json();
+        if (!data?.phone) return;
+        if (tail(data.phone) === wanted) {
+          setPhone(data.phone);
+          setPhoneVerified(true);
+          toast.success('WhatsApp verified ✓');
+        } else {
+          if (pollRef.current) clearInterval(pollRef.current);
+          setLinkSent(false);
+          toast.error(
+            'Different number signed in',
+            `That tab is logged in as ${data.phone}. Tap "Use a different number" to retry.`
+          );
+        }
+      } catch {/* keep polling */}
+    }, 2500);
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, [linkSent, phoneVerified, cafe.slug, phone]);
 
   async function placeOrder() {
     if (!cart.length) return;
@@ -212,18 +249,32 @@ export function CustomerCart({
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="WhatsApp number *"
                       inputMode="tel"
+                      disabled={linkSent}
                     />
-                    <Button variant="wa" onClick={requestOtp} disabled={otpSent}>
-                      <MessageSquare className="h-4 w-4" /> {otpSent ? 'Sent' : 'Verify'}
+                    <Button variant="wa" onClick={requestLink} disabled={linkSent || linkLoading}>
+                      {linkLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
+                      {linkSent ? 'Sent' : 'Verify'}
                     </Button>
                   </div>
-                  {otpSent && (
-                    <div className="mt-2 flex gap-2">
-                      <Input value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="4-digit code" inputMode="numeric" />
-                      <Button onClick={verifyOtp}>Confirm</Button>
+                  {linkSent && (
+                    <div className="mt-2 rounded-xl border border-emerald-200 bg-emerald-50 p-2.5 text-xs text-emerald-800 flex items-start gap-2">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        Tap the WhatsApp link we sent to {phone}. Once you do, this page will mark your number as verified — keep this tab open.
+                        {waSendLink && (
+                          <a
+                            href={waSendLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block mt-1.5 underline font-semibold"
+                          >
+                            Open WhatsApp to receive the link →
+                          </a>
+                        )}
+                      </div>
                     </div>
                   )}
-                  <div className="helper">Required — we'll send order updates here. {!phoneVerified && phone && <span className="text-rose-600 font-semibold">Please verify before placing the order.</span>}</div>
+                  <div className="helper">Required — we'll send order updates here. {!phoneVerified && phone && !linkSent && <span className="text-rose-600 font-semibold">Please verify before placing the order.</span>}</div>
                 </div>
               ) : (
                 <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-sm text-emerald-800 flex items-center gap-2">

@@ -104,7 +104,7 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  ownedCafes    Cafe[]    @relation("CafeOwner")
+  ownedCafes    Cafe[]          @relation("CafeOwner")
   staffOf       Staff[]
   resetTokens   PasswordReset[]
   notifications Notification[]
@@ -120,158 +120,181 @@ model PasswordReset {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+// One-tap WhatsApp login. The customer asks for a login link, we generate
+// a high-entropy token, persist this row, and DM the customer a URL like
+// `${APP_URL}/m/${token}`. Tapping it hits the GET handler which marks the
+// row used and mints the cqr_customer cookie. Single-use, 10-min TTL.
+model WhatsAppMagicLink {
+  id        String    @id @default(cuid())
+  cafeId    String
+  cafeSlug  String // denormalised so the GET handler can redirect without an extra join
+  phone     String // normalised E.164 digits (no `+`)
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  ip        String?
+  userAgent String?
+  createdAt DateTime  @default(now())
+
+  cafe Cafe @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+
+  @@index([cafeId, phone])
+  @@index([expiresAt])
+}
+
 // ─── 2. CAFE ──────────────────────────────────────────────────────────────
 model Cafe {
-  id           String     @id @default(cuid())
-  slug         String     @unique
-  name         String
-  logoUrl      String?
-  coverUrl     String?
-  description  String?
-  address      String?
-  city         String?
-  phone        String?
-  whatsappNo   String?
-  email        String?
-  gstNumber    String?
-  fssaiNumber  String?
-  currency     String     @default("INR")
-  timezone     String     @default("Asia/Kolkata")
-  status       CafeStatus @default(TRIAL)
+  id                      String     @id @default(cuid())
+  slug                    String     @unique
+  name                    String
+  logoUrl                 String?
+  coverUrl                String?
+  description             String?
+  address                 String?
+  city                    String?
+  phone                   String?
+  whatsappNo              String?
+  email                   String?
+  gstNumber               String?
+  fssaiNumber             String?
+  currency                String     @default("INR")
+  timezone                String     @default("Asia/Kolkata")
+  status                  CafeStatus @default(TRIAL)
   // Owner-controlled "are we taking orders right now" flag. Independent
   // of the billing CafeStatus — a cafe can be ACTIVE on the platform
   // but closed for the night. Defaults to open so newly-onboarded cafes
   // don't appear shut to their first customers.
-  isOpen       Boolean   @default(true)
-  ownerId      String
-  planId       String?
-  trialEndsAt  DateTime?
-  planEndsAt   DateTime?
+  isOpen                  Boolean    @default(true)
+  ownerId                 String
+  planId                  String?
+  trialEndsAt             DateTime?
+  planEndsAt              DateTime?
   // Vanity domain — e.g. menu.cafe-dk.com points here via CNAME.
   // Status flow: pending → verified (admin attaches it on Railway/Cloudflare
   // and clicks Approve) → failed (DNS check fails or admin rejects).
-  customDomain          String?    @unique
-  customDomainStatus    String?    @default("pending")
-  customDomainNote      String?
+  customDomain            String?    @unique
+  customDomainStatus      String?    @default("pending")
+  customDomainNote        String?
   customDomainRequestedAt DateTime?
   customDomainVerifiedAt  DateTime?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  createdAt               DateTime   @default(now())
+  updatedAt               DateTime   @updatedAt
 
-  owner        User           @relation("CafeOwner", fields: [ownerId], references: [id])
-  plan         Plan?          @relation(fields: [planId], references: [id])
-  settings     CafeSettings?
-  staff        Staff[]
-  tables       Table[]
-  categories   Category[]
-  menuItems    MenuItem[]
-  orders       Order[]
-  reviews      Review[]
-  coupons      Coupon[]
-  subscriptions Subscription[]
+  owner           User                @relation("CafeOwner", fields: [ownerId], references: [id])
+  plan            Plan?               @relation(fields: [planId], references: [id])
+  settings        CafeSettings?
+  staff           Staff[]
+  tables          Table[]
+  categories      Category[]
+  menuItems       MenuItem[]
+  orders          Order[]
+  reviews         Review[]
+  coupons         Coupon[]
+  subscriptions   Subscription[]
   loyaltyAccounts LoyaltyAccount[]
+  magicLinks      WhatsAppMagicLink[]
 
   @@index([ownerId])
 }
 
 // ─── 3. CAFE SETTINGS ─────────────────────────────────────────────────────
 model CafeSettings {
-  id              String   @id @default(cuid())
-  cafeId          String   @unique
-  taxPercent      Float    @default(5.0)
-  serviceCharge   Float    @default(0.0)
-  packingCharge   Float    @default(0.0)
-  deliveryCharge  Float    @default(0.0)
-  minOrderAmount  Float    @default(0.0)
-  acceptDineIn    Boolean  @default(true)
-  acceptTakeaway  Boolean  @default(true)
-  acceptDelivery  Boolean  @default(false)
-  openingHours    Json?    // { mon: {open: "09:00", close: "22:00", closed: false}, ... }
-  primaryColor    String   @default("#6B4E3D")
-  accentColor     String   @default("#D4A574")
-  whatsappProvider WAProvider @default(manual)
-  notifyOwnerWA   Boolean  @default(true)
-  notifyCustomerWA Boolean @default(true)
+  id                        String     @id @default(cuid())
+  cafeId                    String     @unique
+  taxPercent                Float      @default(5.0)
+  serviceCharge             Float      @default(0.0)
+  packingCharge             Float      @default(0.0)
+  deliveryCharge            Float      @default(0.0)
+  minOrderAmount            Float      @default(0.0)
+  acceptDineIn              Boolean    @default(true)
+  acceptTakeaway            Boolean    @default(true)
+  acceptDelivery            Boolean    @default(false)
+  openingHours              Json? // { mon: {open: "09:00", close: "22:00", closed: false}, ... }
+  primaryColor              String     @default("#6B4E3D")
+  accentColor               String     @default("#D4A574")
+  whatsappProvider          WAProvider @default(manual)
+  notifyOwnerWA             Boolean    @default(true)
+  notifyCustomerWA          Boolean    @default(true)
   // When true, the Android companion app polls for new orders every ~12s
   // while the owner is signed in and fires a full-screen alert (sound +
   // vibration + Accept/Dismiss). Default off so owners not running the
   // app aren't surprised by ringing on shared devices.
-  notifyOwnerInApp Boolean @default(false)
+  notifyOwnerInApp          Boolean    @default(false)
   // Which moments fire a customer WhatsApp ping. Pseudo-status `PLACED` ↔
   // order receipt; `PAID` ↔ combined payment-received + invoice + review
   // message. The remaining values are the OrderStatus enum.
-  notifyOnStatuses String[] @default(["PLACED", "ACCEPTED", "SERVED", "PAID"])
+  notifyOnStatuses          String[]   @default(["PLACED", "ACCEPTED", "SERVED", "PAID"])
   // Per-cafe WhatsApp Cloud API credentials (encrypted at rest)
-  waCloudToken         String?
-  waCloudPhoneId       String?
-  waCloudVerifyToken   String?
+  waCloudToken              String?
+  waCloudPhoneId            String?
+  waCloudVerifyToken        String?
   // Optional reference for a Baileys worker session
-  baileysSessionId     String?
+  baileysSessionId          String?
   // Extra phone numbers (E.164 digits) that receive new-order WA pings
-  notifyNumbers        String[]  @default([])
-  upiId           String?
-  upiQrUrl        String?
-  paymentEnabled  Boolean  @default(true)
+  notifyNumbers             String[]   @default([])
+  upiId                     String?
+  upiQrUrl                  String?
+  paymentEnabled            Boolean    @default(true)
   // 'prepaid'  → customer pays from the QR / pay page during the order flow
   // 'postpaid' → owner marks Served, bot auto-sends a pay link via WhatsApp
-  paymentTiming   String   @default("prepaid")
-  paymentNote     String?
+  paymentTiming             String     @default("prepaid")
+  paymentNote               String?
   // Which PDF receipt template the post-payment WhatsApp attaches.
   // Values: classic | modern | minimal | receipt | elegant | bold.
-  invoiceTemplate String   @default("classic")
+  invoiceTemplate           String     @default("classic")
   // Default country (ISO-3166 alpha-2) used to interpret phone numbers without
   // a country code prefix and to seed the customer-cart phone input.
-  country         String   @default("IN")
+  country                   String     @default("IN")
   // WhatsApp number of the cafe's delivery partner. When a DELIVERY order is
   // placed, the bot pings this number with customer name + phone + address.
-  deliveryPartnerPhone String?
+  deliveryPartnerPhone      String?
   // Auto-verify UPI payments by reading bank emails from the cafe's Gmail inbox
-  gmailUser                  String?
-  gmailAppPassword           String?   // encrypted
-  gmailSenderFilter          String?   // e.g. "alerts@hdfcbank.net"
-  gmailSubjectFilter         String?   // e.g. "received UPI"
-  paymentMatchWindowMinutes  Int       @default(30)
-  reviewEnabled   Boolean  @default(true)
-  googleReviewUrl String?
-  customSubdomain String?  @unique
-  language        String   @default("en")
-  enableSound     Boolean  @default(true)
-  smtpHost        String?
-  smtpPort        Int?
-  smtpUser        String?
-  smtpPass        String?  // encrypted
-  smtpFrom        String?
+  gmailUser                 String?
+  gmailAppPassword          String? // encrypted
+  gmailSenderFilter         String? // e.g. "alerts@hdfcbank.net"
+  gmailSubjectFilter        String? // e.g. "received UPI"
+  paymentMatchWindowMinutes Int        @default(30)
+  reviewEnabled             Boolean    @default(true)
+  googleReviewUrl           String?
+  customSubdomain           String?    @unique
+  language                  String     @default("en")
+  enableSound               Boolean    @default(true)
+  smtpHost                  String?
+  smtpPort                  Int?
+  smtpUser                  String?
+  smtpPass                  String? // encrypted
+  smtpFrom                  String?
   // Loyalty programme: when enabled, paid online orders credit
   // round(subtotal * loyaltyPercent / 100) points to a LoyaltyAccount
   // keyed by (cafeId, customerPhone). 1 point = 1 unit of cafe currency.
-  loyaltyEnabled  Boolean  @default(true)
-  loyaltyPercent  Float    @default(5.0)
+  loyaltyEnabled            Boolean    @default(true)
+  loyaltyPercent            Float      @default(5.0)
   // Welcome auto-reply: when a customer DMs the cafe's WhatsApp number
   // with a trigger word ("hi", "hello", ...), reply once per 7 days with
   // welcomeMessage + the cafe's storefront URL. Only fires on the
   // Baileys provider; cloud_api / manual cafes ignore these.
-  welcomeAutoReply Boolean   @default(false)
-  welcomeMessage   String?
-  welcomeTriggers  String[]  @default(["hi", "hello"])
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  welcomeAutoReply          Boolean    @default(false)
+  welcomeMessage            String?
+  welcomeTriggers           String[]   @default(["hi", "hello"])
+  createdAt                 DateTime   @default(now())
+  updatedAt                 DateTime   @updatedAt
 
-  cafe            Cafe     @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  cafe Cafe @relation(fields: [cafeId], references: [id], onDelete: Cascade)
 }
 
 // ─── 4. STAFF ─────────────────────────────────────────────────────────────
 model Staff {
-  id                 String    @id @default(cuid())
-  cafeId             String
-  userId             String
-  role               StaffRole @default(WAITER)
-  isActive           Boolean   @default(true)
-  notifyOnNewOrder   Boolean   @default(false)
-  invitedAt          DateTime  @default(now())
-  joinedAt           DateTime?
+  id               String    @id @default(cuid())
+  cafeId           String
+  userId           String
+  role             StaffRole @default(WAITER)
+  isActive         Boolean   @default(true)
+  notifyOnNewOrder Boolean   @default(false)
+  invitedAt        DateTime  @default(now())
+  joinedAt         DateTime?
 
-  cafe      Cafe      @relation(fields: [cafeId], references: [id], onDelete: Cascade)
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cafe Cafe @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([cafeId, userId])
   @@index([cafeId])
@@ -287,12 +310,12 @@ model Table {
   capacity   Int      @default(4)
   qrUrl      String?
   isOccupied Boolean  @default(false)
-  area       String?  // e.g. "Outdoor", "Rooftop"
+  area       String? // e.g. "Outdoor", "Rooftop"
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  cafe       Cafe     @relation(fields: [cafeId], references: [id], onDelete: Cascade)
-  orders     Order[]
+  cafe   Cafe    @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  orders Order[]
 
   @@unique([cafeId, number])
   @@index([cafeId])
@@ -300,18 +323,18 @@ model Table {
 
 // ─── 6. CATEGORY ──────────────────────────────────────────────────────────
 model Category {
-  id        String     @id @default(cuid())
+  id        String   @id @default(cuid())
   cafeId    String
   name      String
   slug      String
   imageUrl  String?
-  sortOrder Int        @default(0)
-  isActive  Boolean    @default(true)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  cafe      Cafe       @relation(fields: [cafeId], references: [id], onDelete: Cascade)
-  items     MenuItem[]
+  cafe  Cafe       @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  items MenuItem[]
 
   @@unique([cafeId, slug])
   @@index([cafeId])
@@ -319,7 +342,7 @@ model Category {
 
 // ─── 7. MENU ITEM ─────────────────────────────────────────────────────────
 model MenuItem {
-  id              String      @id @default(cuid())
+  id              String     @id @default(cuid())
   cafeId          String
   categoryId      String
   name            String
@@ -327,100 +350,100 @@ model MenuItem {
   imageUrl        String?
   price           Float
   discountedPrice Float?
-  diet            DietType    @default(VEG)
-  spicy           SpicyLevel  @default(NONE)
-  prepMinutes     Int         @default(15)
-  isAvailable     Boolean     @default(true)
-  inStock         Boolean     @default(true)
-  isPopular       Boolean     @default(false)
-  isFeatured      Boolean     @default(false)
-  isHappyHour     Boolean     @default(false)
+  diet            DietType   @default(VEG)
+  spicy           SpicyLevel @default(NONE)
+  prepMinutes     Int        @default(15)
+  isAvailable     Boolean    @default(true)
+  inStock         Boolean    @default(true)
+  isPopular       Boolean    @default(false)
+  isFeatured      Boolean    @default(false)
+  isHappyHour     Boolean    @default(false)
   happyHourPrice  Float?
-  sortOrder       Int         @default(0)
+  sortOrder       Int        @default(0)
   tags            String[]
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
 
-  cafe            Cafe        @relation(fields: [cafeId], references: [id], onDelete: Cascade)
-  category        Category    @relation(fields: [categoryId], references: [id])
-  variants        MenuVariant[]
-  addons          Addon[]
-  orderItems      OrderItem[]
+  cafe       Cafe          @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  category   Category      @relation(fields: [categoryId], references: [id])
+  variants   MenuVariant[]
+  addons     Addon[]
+  orderItems OrderItem[]
 
   @@index([cafeId, categoryId])
 }
 
 // ─── 8. MENU VARIANT ──────────────────────────────────────────────────────
 model MenuVariant {
-  id         String   @id @default(cuid())
+  id         String  @id @default(cuid())
   menuItemId String
-  name       String   // e.g. "Half", "Full", "Small", "Large"
+  name       String // e.g. "Half", "Full", "Small", "Large"
   price      Float
-  isDefault  Boolean  @default(false)
-  sortOrder  Int      @default(0)
+  isDefault  Boolean @default(false)
+  sortOrder  Int     @default(0)
 
-  menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
 
   @@index([menuItemId])
 }
 
 // ─── 9. ADDON ─────────────────────────────────────────────────────────────
 model Addon {
-  id         String   @id @default(cuid())
+  id         String  @id @default(cuid())
   menuItemId String
   name       String
-  price      Float    @default(0)
-  isRequired Boolean  @default(false)
-  sortOrder  Int      @default(0)
+  price      Float   @default(0)
+  isRequired Boolean @default(false)
+  sortOrder  Int     @default(0)
 
-  menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
 
   @@index([menuItemId])
 }
 
 // ─── 10. ORDER ────────────────────────────────────────────────────────────
 model Order {
-  id             String        @id @default(cuid())
-  orderNumber    String        @unique
-  cafeId         String
-  tableId        String?
-  customerName   String?
-  customerPhone  String?
-  customerAddress String?  // Required when type=DELIVERY — captured at checkout.
-  customerNote   String?
-  internalNote   String?
-  type           OrderType     @default(DINE_IN)
-  status         OrderStatus   @default(NEW)
-  subtotal       Float         @default(0)
-  taxAmount      Float         @default(0)
-  serviceAmount  Float         @default(0)
-  packingAmount  Float         @default(0)
-  deliveryAmount Float         @default(0)
-  discountAmount Float         @default(0)
-  totalAmount    Float         @default(0)
+  id              String        @id @default(cuid())
+  orderNumber     String        @unique
+  cafeId          String
+  tableId         String?
+  customerName    String?
+  customerPhone   String?
+  customerAddress String? // Required when type=DELIVERY — captured at checkout.
+  customerNote    String?
+  internalNote    String?
+  type            OrderType     @default(DINE_IN)
+  status          OrderStatus   @default(NEW)
+  subtotal        Float         @default(0)
+  taxAmount       Float         @default(0)
+  serviceAmount   Float         @default(0)
+  packingAmount   Float         @default(0)
+  deliveryAmount  Float         @default(0)
+  discountAmount  Float         @default(0)
+  totalAmount     Float         @default(0)
   // Same as totalAmount + a small unique paise nonce (1-99 paise). Only this
   // figure is what the customer is asked to pay — IMAP credit alerts match
   // on it directly, eliminating ambiguity when several pending orders share
   // the same rounded total.
-  payableAmount  Float?
-  couponCode     String?
-  paymentStatus  PaymentStatus @default(UNPAID)
-  assignedTo     String?
-  statusHistory  Json?         // array: [{status, at, by}]
-  acceptedAt     DateTime?
-  preparingAt    DateTime?
-  readyAt        DateTime?
-  servedAt       DateTime?
-  completedAt    DateTime?
-  cancelledAt    DateTime?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  payableAmount   Float?
+  couponCode      String?
+  paymentStatus   PaymentStatus @default(UNPAID)
+  assignedTo      String?
+  statusHistory   Json? // array: [{status, at, by}]
+  acceptedAt      DateTime?
+  preparingAt     DateTime?
+  readyAt         DateTime?
+  servedAt        DateTime?
+  completedAt     DateTime?
+  cancelledAt     DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
-  cafe           Cafe          @relation(fields: [cafeId], references: [id], onDelete: Cascade)
-  table          Table?        @relation(fields: [tableId], references: [id])
-  items          OrderItem[]
-  payment        Payment?
-  review         Review?
+  cafe    Cafe        @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  table   Table?      @relation(fields: [tableId], references: [id])
+  items   OrderItem[]
+  payment Payment?
+  review  Review?
 
   @@index([cafeId, status])
   @@index([customerPhone])
@@ -432,7 +455,7 @@ model OrderItem {
   id          String   @id @default(cuid())
   orderId     String
   menuItemId  String
-  name        String   // snapshot at order time
+  name        String // snapshot at order time
   variantName String?
   addonNames  String[]
   unitPrice   Float
@@ -441,8 +464,8 @@ model OrderItem {
   note        String?
   createdAt   DateTime @default(now())
 
-  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  menuItem    MenuItem @relation(fields: [menuItemId], references: [id])
+  order    Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id])
 
   @@index([orderId])
 }
@@ -464,86 +487,86 @@ model Payment {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
-  order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
 
 // ─── 13. REVIEW ───────────────────────────────────────────────────────────
 model Review {
-  id         String   @id @default(cuid())
-  cafeId     String
-  orderId    String?  @unique
-  rating     Int      // 1..5
-  comment    String?
-  customerName String?
+  id            String   @id @default(cuid())
+  cafeId        String
+  orderId       String?  @unique
+  rating        Int // 1..5
+  comment       String?
+  customerName  String?
   customerPhone String?
-  isVisible  Boolean  @default(true)
-  reply      String?
-  createdAt  DateTime @default(now())
+  isVisible     Boolean  @default(true)
+  reply         String?
+  createdAt     DateTime @default(now())
 
-  cafe       Cafe     @relation(fields: [cafeId], references: [id], onDelete: Cascade)
-  order      Order?   @relation(fields: [orderId], references: [id])
+  cafe  Cafe   @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  order Order? @relation(fields: [orderId], references: [id])
 
   @@index([cafeId])
 }
 
 // ─── 14. PLAN (managed from super admin) ──────────────────────────────────
 model Plan {
-  id              String   @id @default(cuid())
-  name            String
-  slug            String   @unique
-  priceMonthly    Float
-  priceYearly     Float
-  description     String?
-  maxTables       Int      @default(10)
-  maxMenuItems    Int      @default(50)
-  maxStaff        Int      @default(3)
+  id                String   @id @default(cuid())
+  name              String
+  slug              String   @unique
+  priceMonthly      Float
+  priceYearly       Float
+  description       String?
+  maxTables         Int      @default(10)
+  maxMenuItems      Int      @default(50)
+  maxStaff          Int      @default(3)
   // Per-month order limit. 0 means unlimited. Enforced at order-place
   // time with a 10% soft-warn buffer; 110%+ is hard-blocked.
-  maxOrdersPerMonth Int    @default(0)
-  whatsappEnabled Boolean  @default(true)
-  loyaltyEnabled  Boolean  @default(true)
-  paymentEnabled  Boolean  @default(true)
-  couponsEnabled  Boolean  @default(true)
-  customBranding  Boolean  @default(false)
-  customSubdomain Boolean  @default(false)
-  prioritySupport Boolean  @default(false)
-  analytics       Boolean  @default(true)
-  multiLanguage   Boolean  @default(false)
-  features        String[]
-  isActive        Boolean  @default(true)
-  isPopular       Boolean  @default(false)
-  sortOrder       Int      @default(0)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  maxOrdersPerMonth Int      @default(0)
+  whatsappEnabled   Boolean  @default(true)
+  loyaltyEnabled    Boolean  @default(true)
+  paymentEnabled    Boolean  @default(true)
+  couponsEnabled    Boolean  @default(true)
+  customBranding    Boolean  @default(false)
+  customSubdomain   Boolean  @default(false)
+  prioritySupport   Boolean  @default(false)
+  analytics         Boolean  @default(true)
+  multiLanguage     Boolean  @default(false)
+  features          String[]
+  isActive          Boolean  @default(true)
+  isPopular         Boolean  @default(false)
+  sortOrder         Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
-  cafes           Cafe[]
-  subscriptions   Subscription[]
+  cafes         Cafe[]
+  subscriptions Subscription[]
 }
 
 // ─── 15. SUBSCRIPTION ─────────────────────────────────────────────────────
 model Subscription {
-  id            String   @id @default(cuid())
-  cafeId        String
-  planId        String
-  amount        Float
+  id             String    @id @default(cuid())
+  cafeId         String
+  planId         String
+  amount         Float
   // Same shape as Order.payableAmount: amount + a 1-99 paise nonce so the
   // IMAP matcher can pin a credit alert to a specific subscription row.
-  payableAmount Float?
-  billing       String   @default("monthly") // monthly | yearly
-  startsAt      DateTime @default(now())
-  endsAt        DateTime
+  payableAmount  Float?
+  billing        String    @default("monthly") // monthly | yearly
+  startsAt       DateTime  @default(now())
+  endsAt         DateTime
   // pending → awaiting UPI payment ✔ active → paid + current
   // expired → past endsAt or superseded ✘ cancelled
-  status        String   @default("pending")
-  paidAt        DateTime?
-  transactionId String?
+  status         String    @default("pending")
+  paidAt         DateTime?
+  transactionId  String?
   // Stamped by the renewal-reminder cron after each WhatsApp ping so we
   // don't send the same reminder twice in 24h.
   lastReminderAt DateTime?
-  createdAt     DateTime @default(now())
+  createdAt      DateTime  @default(now())
 
-  cafe          Cafe     @relation(fields: [cafeId], references: [id], onDelete: Cascade)
-  plan          Plan     @relation(fields: [planId], references: [id])
+  cafe Cafe @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  plan Plan @relation(fields: [planId], references: [id])
 
   @@index([cafeId])
   @@index([status])
@@ -562,7 +585,7 @@ model Notification {
   isRead    Boolean   @default(false)
   createdAt DateTime  @default(now())
 
-  user      User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, isRead])
   @@index([cafeId])
@@ -574,27 +597,27 @@ model Notification {
 // the marketing pages read so the admin can tweak homepage copy without a
 // redeploy.
 model SiteSettings {
-  id          String   @id @default("singleton")
-  siteName    String   @default("CafeQR Pro")
-  tagline     String?
-  supportEmail String?
+  id                       String   @id @default("singleton")
+  siteName                 String   @default("CafeQR Pro")
+  tagline                  String?
+  supportEmail             String?
   // SMTP — used by lib/mail.ts as the highest-priority transport (above the
   // env vars) so admins can change the mailer from the dashboard.
-  smtpHost    String?
-  smtpPort    Int?
-  smtpUser    String?
-  smtpPass    String?  // encrypted at rest
-  smtpFrom    String?
+  smtpHost                 String?
+  smtpPort                 Int?
+  smtpUser                 String?
+  smtpPass                 String? // encrypted at rest
+  smtpFrom                 String?
   // Platform UPI for collecting subscription payments from cafe owners.
   // Mirrors the cafe-side UPI / IMAP setup but scoped to the SaaS owner.
   platformUpiId            String?
   platformUpiQrUrl         String?
   platformGmailUser        String?
-  platformGmailAppPassword String?  // encrypted at rest
+  platformGmailAppPassword String? // encrypted at rest
   // Free-form Json bag for marketing page copy (hero / about / footer / faq …)
-  content     Json?
-  updatedAt   DateTime @updatedAt
-  updatedBy   String?
+  content                  Json?
+  updatedAt                DateTime @updatedAt
+  updatedBy                String?
 }
 
 // ─── PLATFORM BRANDING (global, single row keyed by id='singleton') ─────
@@ -606,21 +629,21 @@ model SiteSettings {
 // NOTE: This is for the PLATFORM site only — per-cafe branding lives on
 // Cafe.logoUrl + CafeSettings.primaryColor and is unaffected.
 model PlatformBranding {
-  id           String   @id @default("singleton")
-  logoDataUrl  String   @default("")
-  brandName    String   @default("")
-  tagline      String   @default("")
-  footerText   String   @default("")
-  primaryColor String   @default("")
+  id                 String   @id @default("singleton")
+  logoDataUrl        String   @default("")
+  brandName          String   @default("")
+  tagline            String   @default("")
+  footerText         String   @default("")
+  primaryColor       String   @default("")
   // Mobile-app showcase: an icon + splash image rendered on the marketing
   // home page next to APK download buttons. Both are stored as base64 data
   // URLs (same convention as logoDataUrl). APK URLs are plain strings — the
   // file itself is hosted out-of-band (public/downloads, CDN, Play Store).
-  appIconDataUrl    String   @default("")
-  splashImageDataUrl String  @default("")
-  apkUrlGoogle      String   @default("")
-  apkUrlAmazon      String   @default("")
-  updatedAt    DateTime @updatedAt
+  appIconDataUrl     String   @default("")
+  splashImageDataUrl String   @default("")
+  apkUrlGoogle       String   @default("")
+  apkUrlAmazon       String   @default("")
+  updatedAt          DateTime @updatedAt
 }
 
 // ─── 17. BAILEYS AUTH (per-session, per-file blob) ───────────────────────
@@ -630,7 +653,7 @@ model BaileysAuthFile {
   id        String   @id @default(cuid())
   sessionId String
   file      String
-  data      String   // BufferJSON-serialised state for this slot
+  data      String // BufferJSON-serialised state for this slot
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
 
@@ -640,22 +663,22 @@ model BaileysAuthFile {
 
 // ─── 18. COUPON ───────────────────────────────────────────────────────────
 model Coupon {
-  id            String   @id @default(cuid())
+  id            String    @id @default(cuid())
   cafeId        String
   code          String
   description   String?
-  discountType  String   @default("percent") // percent | flat
+  discountType  String    @default("percent") // percent | flat
   discountValue Float
-  minOrder      Float    @default(0)
+  minOrder      Float     @default(0)
   maxDiscount   Float?
   usageLimit    Int?
-  usedCount     Int      @default(0)
+  usedCount     Int       @default(0)
   validFrom     DateTime?
   validUntil    DateTime?
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
 
-  cafe          Cafe     @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  cafe Cafe @relation(fields: [cafeId], references: [id], onDelete: Cascade)
 
   @@unique([cafeId, code])
 }
@@ -665,10 +688,10 @@ model Coupon {
 // auto-reply fired so we can enforce the 7-day cooldown without scanning
 // outbound history. Upserted on every successful welcome send.
 model WelcomeReplyLog {
-  id          String   @id @default(cuid())
-  cafeId      String
-  phone       String   // normalized, no leading + or spaces
-  lastSentAt  DateTime @default(now())
+  id         String   @id @default(cuid())
+  cafeId     String
+  phone      String // normalized, no leading + or spaces
+  lastSentAt DateTime @default(now())
 
   @@unique([cafeId, phone])
   @@index([cafeId])
@@ -680,18 +703,18 @@ model WelcomeReplyLog {
 // created automatically by the post-payment hook when CafeSettings
 // loyaltyEnabled is true; REDEEM/ADJUST are manual for now.
 model LoyaltyAccount {
-  id                String                @id @default(cuid())
-  cafeId            String
-  phone             String
-  name              String?
-  points            Int                   @default(0)
-  lifetimeEarned    Int                   @default(0)
-  lifetimeRedeemed  Int                   @default(0)
-  createdAt         DateTime              @default(now())
-  updatedAt         DateTime              @updatedAt
+  id               String   @id @default(cuid())
+  cafeId           String
+  phone            String
+  name             String?
+  points           Int      @default(0)
+  lifetimeEarned   Int      @default(0)
+  lifetimeRedeemed Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  cafe              Cafe                  @relation(fields: [cafeId], references: [id], onDelete: Cascade)
-  transactions      LoyaltyTransaction[]
+  cafe         Cafe                 @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  transactions LoyaltyTransaction[]
 
   @@unique([cafeId, phone])
   @@index([cafeId])
@@ -699,15 +722,15 @@ model LoyaltyAccount {
 }
 
 model LoyaltyTransaction {
-  id          String          @id @default(cuid())
-  accountId   String
-  type        LoyaltyTxnType
-  points      Int
-  orderId     String?         // cross-ref to Order; not a hard FK so deleting orders won't cascade points away
-  note        String?
-  createdAt   DateTime        @default(now())
+  id        String         @id @default(cuid())
+  accountId String
+  type      LoyaltyTxnType
+  points    Int
+  orderId   String? // cross-ref to Order; not a hard FK so deleting orders won't cascade points away
+  note      String?
+  createdAt DateTime       @default(now())
 
-  account     LoyaltyAccount  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  account LoyaltyAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
   @@unique([accountId, orderId, type]) // dedupe EARN per order
   @@index([accountId])

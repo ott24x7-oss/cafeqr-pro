@@ -158,14 +158,14 @@ export function generateReviewMessage(order: OrderForWA, cafe: WACafe, appUrl?: 
     .join('\n');
 }
 
-export function generateOTPMessage(otp: string, cafeName?: string) {
+export function generateMagicLinkMessage(url: string, cafeName?: string) {
   return [
-    `🔐 *${cafeName ?? 'CafeQR Pro'}*`,
+    `🔐 *${cafeName ?? 'CafeQR Pro'}* — one-tap login`,
     '',
-    `Your verification code is *${otp}*`,
-    `It will expire in 10 minutes.`,
+    `Tap to log in:`,
+    url,
     '',
-    `Do not share this code with anyone.`,
+    `Link expires in 10 minutes. Don't share it with anyone.`,
   ].join('\n');
 }
 
