@@ -4,6 +4,8 @@ import { Inter, Playfair_Display, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { Providers } from '@/components/providers';
 import { Toaster } from '@/components/ui/toaster';
+import { JsonLd } from '@/components/seo/json-ld';
+import { SITE_URL, SITE_NAME } from '@/lib/site';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -27,6 +29,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
     default: 'WatShop Cafe — QR menu & ordering for cafes',
     template: '%s · WatShop Cafe',
@@ -51,6 +54,8 @@ export const metadata: Metadata = {
     title: 'WatShop Cafe — QR menu & ordering for cafes',
     description: 'Smart QR ordering & management for cafes and restaurants, by WatShop.',
     type: 'website',
+    url: SITE_URL,
+    siteName: SITE_NAME,
   },
 };
 
@@ -78,6 +83,25 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={inter.className}>
         <Providers>{children}</Providers>
         <Toaster />
+        {/* Sitewide entity graph for rich results + AI search. Per-page
+            SoftwareApplication / Offer schema is added on the marketing pages. */}
+        <JsonLd
+          data={[
+            {
+              '@context': 'https://schema.org',
+              '@type': 'Organization',
+              name: SITE_NAME,
+              url: SITE_URL,
+              logo: `${SITE_URL}/favicon-512.png`,
+            },
+            {
+              '@context': 'https://schema.org',
+              '@type': 'WebSite',
+              name: SITE_NAME,
+              url: SITE_URL,
+            },
+          ]}
+        />
         {/* Runtime branding patcher — fetches /api/branding (60s cache) and
             rewrites elements tagged data-brand-logo / data-brand-name /
             data-brand-tagline / data-brand-footer plus the --brand-primary

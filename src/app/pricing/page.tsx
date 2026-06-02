@@ -1,10 +1,18 @@
 import { Sparkles } from 'lucide-react';
+import type { Metadata } from 'next';
 import { PublicNavbar } from '@/components/public/navbar';
 import { PublicFooter } from '@/components/public/footer';
 import { prisma } from '@/lib/prisma';
+import { JsonLd } from '@/components/seo/json-ld';
+import { SITE_URL, SITE_NAME } from '@/lib/site';
 import { PricingCards } from './pricing-cards';
 
-export const metadata = { title: 'Pricing — pay only for the orders you take' };
+export const metadata: Metadata = {
+  title: 'Pricing — pay only for the orders you take',
+  description:
+    'Simple, usage-based pricing for WatShop Cafe. Free for life on your first 30 orders a month, then pick a plan as you grow — no card required, upgrade anytime.',
+  alternates: { canonical: '/pricing' },
+};
 // 60s matches the landing page so plan changes propagate consistently.
 // Admin mutations also call revalidatePath('/pricing') for instant updates;
 // this is just the safety net for edits made outside the admin flow
@@ -27,8 +35,37 @@ async function getPlans() {
 export default async function PricingPage() {
   const plans = await getPlans();
 
+  const prices = plans.map((p: any) => Number(p.priceMonthly) || 0);
+  const softwareSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: SITE_NAME,
+    applicationCategory: 'BusinessApplication',
+    operatingSystem: 'Web, Android',
+    url: `${SITE_URL}/pricing`,
+    ...(plans.length
+      ? {
+          offers: {
+            '@type': 'AggregateOffer',
+            priceCurrency: 'INR',
+            lowPrice: String(Math.min(...prices)),
+            highPrice: String(Math.max(...prices)),
+            offerCount: String(plans.length),
+            offers: plans.map((p: any) => ({
+              '@type': 'Offer',
+              name: p.name,
+              price: String(Number(p.priceMonthly) || 0),
+              priceCurrency: 'INR',
+              url: `${SITE_URL}/pricing`,
+            })),
+          },
+        }
+      : {}),
+  };
+
   return (
     <div className="min-h-screen bg-cream-50">
+      <JsonLd data={softwareSchema} />
       <PublicNavbar />
 
       <section className="relative">

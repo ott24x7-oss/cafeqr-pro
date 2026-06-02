@@ -15,16 +15,25 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   const row = await prisma.platformBranding.findUnique({ where: { id: 'singleton' } });
+  // Emit short, cacheable endpoint URLs for image fields rather than raw
+  // base64 data URLs. The runtime patcher (/js/branding.js) just assigns these
+  // to src / background-image, so an endpoint URL works identically while
+  // keeping the DOM from being re-inflated with hundreds of KB after hydration.
+  const asset = (v: string | null | undefined, kind: 'logo' | 'icon' | 'splash') => {
+    const s = v?.trim() ?? '';
+    if (!s) return '';
+    return s.startsWith('data:') ? `/api/branding/asset/${kind}` : s;
+  };
   const body = {
-    logo: row?.logoDataUrl ?? '',
+    logo: asset(row?.logoDataUrl, 'logo'),
     brandName: row?.brandName ?? '',
     tagline: row?.tagline ?? '',
     footer: row?.footerText ?? '',
     primaryColor: row?.primaryColor ?? '',
     // App-mockup fields. The landing page reads them server-side (not via
     // the runtime patcher) so the icon/splash render with no flash.
-    appIcon: row?.appIconDataUrl ?? '',
-    splashImage: row?.splashImageDataUrl ?? '',
+    appIcon: asset(row?.appIconDataUrl, 'icon'),
+    splashImage: asset(row?.splashImageDataUrl, 'splash'),
     apkUrlGoogle: row?.apkUrlGoogle ?? '',
     apkUrlAmazon: row?.apkUrlAmazon ?? '',
   };

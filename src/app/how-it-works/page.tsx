@@ -3,8 +3,14 @@ import { ArrowRight, QrCode, Smartphone, Bell, ChefHat, CreditCard, Star } from 
 import { PublicNavbar } from '@/components/public/navbar';
 import { PublicFooter } from '@/components/public/footer';
 import { Button } from '@/components/ui/button';
+import type { Metadata } from 'next';
 
-export const metadata = { title: 'How CafeQR Pro Works' };
+export const metadata: Metadata = {
+  title: 'How WatShop Cafe Works',
+  description:
+    'See how WatShop Cafe works end to end — customers scan a table QR to order and pay, while owners get instant order + WhatsApp alerts and run the kitchen from one dashboard.',
+  alternates: { canonical: '/how-it-works' },
+};
 
 export default function HowItWorksPage() {
   return (
@@ -53,7 +59,7 @@ export default function HowItWorksPage() {
           <div className="absolute inset-0 bg-pattern opacity-10" />
           <h2 className="relative font-display text-3xl md:text-4xl font-bold">Ready to brew the future of ordering?</h2>
           <p className="relative mt-3 max-w-xl mx-auto text-cream-200/90">
-            Try CafeQR Pro free for 14 days. No card required.
+            Try WatShop Cafe free for 14 days. No card required.
           </p>
           <div className="relative mt-7 flex flex-wrap justify-center gap-3">
             <Link href="/signup"><Button variant="accent" size="lg">Start free trial <ArrowRight className="h-4 w-4" /></Button></Link>

@@ -5,3 +5,5 @@ Allow: /pricing
 Disallow: /dashboard
 Disallow: /admin
 Disallow: /api
+
+Sitemap: https://cafe.watshop.in/sitemap.xml
