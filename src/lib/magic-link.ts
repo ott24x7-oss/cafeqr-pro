@@ -1,4 +1,9 @@
-import 'server-only';
+// NOTE: intentionally NOT `import 'server-only'`. This module is reachable from
+// the Baileys inbound handler (welcome-reply.ts → baileys-manager.ts →
+// instrumentation), which Next bundles outside the React-Server-Component
+// layer — a server-only marker there breaks the build (same reason the sibling
+// whatsapp-send.ts omits it). It stays server-side in practice: prisma/crypto
+// are aliased out of any client bundle in next.config.js.
 import crypto from 'crypto';
 import { prisma } from './prisma';
 import { configFromCafe, generateMagicLinkMessage, type WACafe } from './whatsapp';
@@ -38,15 +43,24 @@ export async function issueMagicLink({
   origin,
   ip,
   userAgent,
+  ttlMs,
+  sendVia,
 }: {
   cafe: WACafe;
   phone: string;
   origin?: string | null;
   ip?: string | null;
   userAgent?: string | null;
+  /** Override the default 10-min TTL — e.g. the text-to-login flow uses 5 min. */
+  ttlMs?: number;
+  /** Transport override. When supplied (e.g. the Baileys inbound socket
+   *  replying on the exact sender JID), we deliver through it instead of the
+   *  cafe's configured provider — and the expiry copy reflects the real TTL. */
+  sendVia?: (message: string) => Promise<{ ok: boolean; error?: string }>;
 }): Promise<IssueMagicLinkResult> {
   const token = crypto.randomBytes(32).toString('hex');
-  const expiresAt = new Date(Date.now() + TTL_MS);
+  const ttl = ttlMs && ttlMs > 0 ? ttlMs : TTL_MS;
+  const expiresAt = new Date(Date.now() + ttl);
 
   await prisma.whatsAppMagicLink.create({
     data: {
@@ -77,11 +91,20 @@ export async function issueMagicLink({
   const base = (envAppUrl() || (origin ?? '').replace(/\/+$/, ''));
   const url = `${base}/m/${token}`;
   const config = configFromCafe(cafe);
-  const message = generateMagicLinkMessage(url, cafe.name);
+  const expiryMinutes = Math.max(1, Math.round(ttl / 60000));
+  const message = generateMagicLinkMessage(url, cafe.name, expiryMinutes);
 
   let delivered = false;
   let error: string | undefined;
-  if (config.provider && config.provider !== 'manual') {
+  if (sendVia) {
+    // Caller owns the transport (e.g. the Baileys inbound listener replying on
+    // the exact sender JID). Bypass the config-based sender so we never
+    // reconstruct the JID from a phone — that loses the @lid suffix for users
+    // on WhatsApp's new privacy IDs.
+    const r = await sendVia(message);
+    delivered = r.ok === true;
+    if (!r.ok) error = r.error;
+  } else if (config.provider && config.provider !== 'manual') {
     const r = await sendMessage({ to: phone, message, config });
     delivered = r.ok === true;
     if (!r.ok) error = r.error;
