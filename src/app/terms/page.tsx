@@ -2,7 +2,11 @@ import { PublicNavbar } from '@/components/public/navbar';
 import { PublicFooter } from '@/components/public/footer';
 import { prisma } from '@/lib/prisma';
 
-export const metadata = { title: 'Terms of Service' };
+export const metadata = {
+  title: 'Terms of Service',
+  description: 'The terms that govern your use of WatShop Cafe.',
+  alternates: { canonical: '/terms' },
+};
 export const revalidate = 3600; // Re-render hourly so brand-name updates land
 
 async function getBrandName() {

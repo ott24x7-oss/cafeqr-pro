@@ -8,6 +8,26 @@ const withPWA = require('next-pwa')({
 
 const nextConfig = {
   reactStrictMode: true,
+  // Don't advertise the framework.
+  poweredByHeader: false,
+  // Baseline security headers on every response. Applied here (not per-route)
+  // so the public marketing pages, the per-cafe storefronts and the API all
+  // get them. Kept conservative so nothing the customer flow needs is blocked
+  // (no camera/mic/geolocation is used anywhere in the web UI).
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), browsing-topics=()' },
+        ],
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: '**' },

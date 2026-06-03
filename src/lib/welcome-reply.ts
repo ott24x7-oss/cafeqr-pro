@@ -1,6 +1,7 @@
 import { prisma } from './prisma';
 import { sendMessage } from './whatsapp-send';
 import { configFromCafe, normalizePhone, type WACafe } from './whatsapp';
+import { issueMagicLink } from './magic-link';
 
 /**
  * Auto-reply on first contact. When a customer DMs a cafe's WhatsApp
@@ -16,6 +17,14 @@ import { configFromCafe, normalizePhone, type WACafe } from './whatsapp';
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 const APP_URL = (process.env.APP_URL || process.env.NEXTAUTH_URL || '').replace(/\/$/, '') || 'https://cafe.watshop.in';
+
+// One-tap WhatsApp login ("text-to-login"). A customer DMs a login trigger
+// word and gets a single-use, 5-minute magic link back. Independent of the
+// welcome auto-reply: takes priority over it and ignores the 7-day cooldown,
+// but is rate-limited so repeated texts can't mint a fresh token every time.
+const LOGIN_TTL_MS = 5 * 60 * 1000;
+const LOGIN_THROTTLE_MS = 30 * 1000;
+const DEFAULT_LOGIN_TRIGGERS = ['login', 'log in', 'sign in', 'signin'];
 
 const DEFAULT_BODY =
   'Hi 👋 Thanks for reaching out to *{cafeName}*. Browse our menu and order online: {cafeUrl}';
@@ -100,8 +109,12 @@ export async function handleIncomingMessage(input: IncomingMessage): Promise<{ r
     const candidates = await prisma.cafeSettings.findMany({
       where: {
         whatsappProvider: 'baileys',
-        welcomeAutoReply: true,
-        OR: [{ baileysSessionId: null }, { baileysSessionId: '' }],
+        AND: [
+          { OR: [{ baileysSessionId: null }, { baileysSessionId: '' }] },
+          // Either inbound feature being on is reason enough to auto-pick the
+          // sole paired Baileys cafe whose session ID didn't persist.
+          { OR: [{ welcomeAutoReply: true }, { waLoginEnabled: true }] },
+        ],
       },
       include: {
         cafe: {
@@ -124,22 +137,11 @@ export async function handleIncomingMessage(input: IncomingMessage): Promise<{ r
     log('skip:no-cafe-for-session', { sessionId: input.sessionId });
     return { replied: false, reason: 'no-cafe-for-session' };
   }
-  if (!settings.welcomeAutoReply) {
-    // Surface the actual DB values so we can tell whether the save just
-    // didn't persist vs. the column being cleared by something else.
-    log('skip:disabled', {
-      cafeId: settings.cafe.id,
-      welcomeAutoReply: settings.welcomeAutoReply,
-      welcomeMessageLen: settings.welcomeMessage?.length ?? 0,
-      welcomeTriggers: settings.welcomeTriggers,
-      whatsappProvider: settings.whatsappProvider,
-    });
-    return { replied: false, reason: 'disabled' };
-  }
 
   const cafe = settings.cafe;
 
-  // Skip the cafe's own staff numbers — never welcome-reply to them.
+  // Skip the cafe's own staff numbers — never auto-reply (welcome OR login)
+  // to them. Applies to both inbound features, so it runs before either gate.
   const skipPhones = new Set<string>(
     [
       cafe.phone,
@@ -154,6 +156,76 @@ export async function handleIncomingMessage(input: IncomingMessage): Promise<{ r
   if (skipPhones.has(fromPhone)) {
     log('skip:staff-number', { fromPhone, skipList: Array.from(skipPhones) });
     return { replied: false, reason: 'staff-number' };
+  }
+
+  // ── One-tap WhatsApp login ─────────────────────────────────────────────
+  // Checked before the welcome auto-reply so "login" works even when the
+  // welcome reply is off. A matched login trigger always wins; if the body
+  // isn't a login trigger we fall through to the welcome flow below.
+  if (settings.waLoginEnabled) {
+    const loginTriggers =
+      settings.waLoginTriggers && settings.waLoginTriggers.length > 0
+        ? settings.waLoginTriggers
+        : DEFAULT_LOGIN_TRIGGERS;
+    if (looksLikeTrigger(input.body, loginTriggers)) {
+      // Anti-spam: if a link was minted for this number in the last 30s, point
+      // them back to it instead of issuing another token.
+      const recent = await prisma.whatsAppMagicLink
+        .findFirst({
+          where: {
+            cafeId: cafe.id,
+            phone: fromPhone,
+            createdAt: { gt: new Date(Date.now() - LOGIN_THROTTLE_MS) },
+          },
+          orderBy: { createdAt: 'desc' },
+          select: { id: true },
+        })
+        .catch(() => null);
+      if (recent) {
+        log('login:throttled', { fromPhone, cafeId: cafe.id });
+        if (input.replyVia) {
+          await input
+            .replyVia('⏳ I just sent your login link above — please tap it within 5 minutes.')
+            .catch(() => {});
+        }
+        return { replied: false, reason: 'login-throttled' };
+      }
+
+      log('login:issuing', { fromPhone, cafeId: cafe.id });
+      // issueMagicLink wants a WACafe (cafe + nested settings); the inbound
+      // lookup gives us those as sibling objects, so stitch them together.
+      const cafeForLink = { ...cafe, settings } as unknown as WACafe;
+      const result = await issueMagicLink({
+        cafe: cafeForLink,
+        phone: fromPhone,
+        ttlMs: LOGIN_TTL_MS,
+        // APP_URL is the absolute base for the tapped link (falls back to the
+        // canonical host when the env var is unset, so it still resolves
+        // off-device). replyVia delivers on the exact inbound JID.
+        origin: APP_URL,
+        sendVia: input.replyVia,
+      });
+      if (!result.delivered) {
+        log('login:send-failed', { fromPhone, cafeId: cafe.id, error: result.error });
+        return { replied: false, reason: result.error ?? 'login-send-failed' };
+      }
+      log('login:replied', { fromPhone, cafeId: cafe.id });
+      return { replied: true, reason: 'login' };
+    }
+  }
+
+  // ── Welcome auto-reply ─────────────────────────────────────────────────
+  if (!settings.welcomeAutoReply) {
+    // Surface the actual DB values so we can tell whether the save just
+    // didn't persist vs. the column being cleared by something else.
+    log('skip:disabled', {
+      cafeId: settings.cafe.id,
+      welcomeAutoReply: settings.welcomeAutoReply,
+      welcomeMessageLen: settings.welcomeMessage?.length ?? 0,
+      welcomeTriggers: settings.welcomeTriggers,
+      whatsappProvider: settings.whatsappProvider,
+    });
+    return { replied: false, reason: 'disabled' };
   }
 
   // Trigger match (case-insensitive, starts-with).

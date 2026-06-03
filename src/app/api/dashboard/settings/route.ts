@@ -69,6 +69,8 @@ export async function POST(req: Request) {
     delete (settings as any).welcomeAutoReply;
     delete (settings as any).welcomeMessage;
     delete (settings as any).welcomeTriggers;
+    delete (settings as any).waLoginEnabled;
+    delete (settings as any).waLoginTriggers;
   }
   if (!planLimits.features.payment) {
     delete (settings as any).upiId;
@@ -85,7 +87,7 @@ export async function POST(req: Request) {
   // Plain (non-secret) fields we accept directly.
   const plain = pickPlain(settings, [
     'taxPercent', 'serviceCharge', 'packingCharge', 'deliveryCharge',
-    'minOrderAmount', 'acceptDineIn', 'acceptTakeaway', 'acceptDelivery',
+    'minOrderAmount', 'acceptDineIn', 'acceptTakeaway', 'acceptDelivery', 'allowGuestCheckout',
     'whatsappProvider', 'notifyOwnerWA', 'notifyCustomerWA', 'notifyOwnerInApp', 'notifyOnStatuses',
     'waCloudPhoneId', 'baileysSessionId', 'notifyNumbers',
     'gmailUser', 'gmailSenderFilter', 'gmailSubjectFilter', 'paymentMatchWindowMinutes',
@@ -96,6 +98,7 @@ export async function POST(req: Request) {
     'invoiceTemplate',
     'loyaltyEnabled', 'loyaltyPercent',
     'welcomeAutoReply', 'welcomeMessage', 'welcomeTriggers',
+    'waLoginEnabled', 'waLoginTriggers',
   ]);
 
   // Sanitize welcome triggers: lowercased, trimmed, deduped, length-capped.
@@ -112,6 +115,19 @@ export async function POST(req: Request) {
   }
   if (typeof plain.welcomeMessage === 'string') {
     plain.welcomeMessage = plain.welcomeMessage.slice(0, 1000);
+  }
+
+  // Same sanitization for the text-to-login trigger words.
+  if (Array.isArray(plain.waLoginTriggers)) {
+    plain.waLoginTriggers = Array.from(
+      new Set(
+        plain.waLoginTriggers
+          .map((t: any) => (typeof t === 'string' ? t.trim().toLowerCase() : ''))
+          .filter((t: string) => t.length > 0 && t.length <= 32),
+      ),
+    ).slice(0, 12);
+  } else if (plain.waLoginTriggers !== undefined) {
+    delete plain.waLoginTriggers;
   }
 
   // Clamp loyalty percent to a sane band so a typo can't gift the cafe owner

@@ -3,15 +3,16 @@ import { Coffee } from 'lucide-react';
 import { getPlatformBranding } from '@/lib/platform-branding';
 
 export async function PublicFooter() {
-  const { logoUrl, brandName, tagline, footerText } = await getPlatformBranding();
-  const isDataUrl = logoUrl.startsWith('data:');
+  const { customLogoUrl, brandName, tagline, footerText } = await getPlatformBranding();
+  const hasCustomLogo = !!customLogoUrl;
 
   // When admin uploaded a custom logo we paint it as the footer mark's
-  // background so the same image shows everywhere; otherwise fall back
-  // to the gradient + Coffee glyph already in the design system. SSR
+  // background so the same image shows everywhere; otherwise fall back to the
+  // gradient + Coffee glyph already in the design system. The logo resolves to
+  // a cacheable /api/branding/asset/logo URL (never an inlined data URL). SSR
   // means no flash; /js/branding.js still re-applies on patch.
-  const markStyle = isDataUrl
-    ? { backgroundImage: `url("${logoUrl}")`, backgroundSize: 'cover', backgroundPosition: 'center' }
+  const markStyle = hasCustomLogo
+    ? { backgroundImage: `url("${customLogoUrl}")`, backgroundSize: 'cover', backgroundPosition: 'center' }
     : undefined;
 
   return (
@@ -27,7 +28,7 @@ export async function PublicFooter() {
               {/* Coffee fallback hidden when we already have a custom logo
                   baked into the background. The data-brand-logo-icon attr
                   also lets the runtime patcher hide it on later updates. */}
-              {!isDataUrl && <Coffee className="h-5 w-5" data-brand-logo-icon />}
+              {!hasCustomLogo && <Coffee className="h-5 w-5" data-brand-logo-icon />}
             </span>
             <span
               className="font-display text-xl font-bold tracking-tight text-coffee-900"

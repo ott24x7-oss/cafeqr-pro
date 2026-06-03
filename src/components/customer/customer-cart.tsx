@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { X, Plus, Minus, Trash2, Loader2, MessageSquare, MapPin, Bike, Check } from 'lucide-react';
+import { X, Plus, Minus, Trash2, Loader2, MessageSquare, MapPin, Bike, Check, User, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input, Textarea } from '@/components/ui/input';
 import { calcCart, type CartItem } from '@/lib/order-utils';
@@ -24,6 +24,7 @@ export function CustomerCart({
   onAdjust,
   onClose,
   onClear,
+  onPlaced,
 }: {
   cafe: any;
   table: any;
@@ -32,6 +33,9 @@ export function CustomerCart({
   onAdjust: (idx: number, delta: number) => void;
   onClose: () => void;
   onClear: () => void;
+  // Clears the saved cart WITHOUT closing the drawer — lets us keep the
+  // sheet open to show the pay-confirm step after the order is created.
+  onPlaced?: () => void;
 }) {
   const router = useRouter();
   // Pre-fill name + phone from the customer session when present so the
@@ -59,6 +63,21 @@ export function CustomerCart({
   const [type, setType] = useState<'DINE_IN' | 'TAKEAWAY' | 'DELIVERY'>(defaultType);
   const [submitting, setSubmitting] = useState(false);
 
+  // Whether this customer already has a verified session (logged in). When
+  // they do we skip the login/guest chooser and trust the cookie.
+  const loggedIn = Boolean(customer?.phone);
+  const allowGuest = cafe.settings?.allowGuestCheckout !== false;
+  // 'login' = prove the number via the 1-tap WhatsApp link (unlocks order
+  // history + loyalty). 'guest' = name + number only, no verification.
+  const [mode, setMode] = useState<'login' | 'guest'>('login');
+  // Set once the order is created — flips the sheet to the pay-confirm step.
+  const [placedOrder, setPlacedOrder] = useState<any>(null);
+  // Pay online right after placing only when the cafe collects up-front
+  // (prepaid). Postpaid cafes bill later, so those go straight to tracking.
+  const payOnline =
+    cafe.settings?.paymentEnabled !== false &&
+    (cafe.settings?.paymentTiming ?? 'prepaid') !== 'postpaid';
+
   const totals = calcCart(cart, cafe.settings, type);
 
   // Build the visible order-type buttons from the cafe's settings. When only
@@ -71,7 +90,10 @@ export function CustomerCart({
   ].filter(Boolean) as any;
 
   const nameValid = name.trim().length >= 2;
-  const phoneValid = phoneVerified;
+  const guestPhoneValid = phone.replace(/\D/g, '').length >= 10;
+  // Logged-in or 1-tap-verified numbers always pass. Guests just need a
+  // plausible 10-digit number — and only when the cafe allows guest checkout.
+  const phoneValid = phoneVerified || (mode === 'guest' && allowGuest && guestPhoneValid);
   const addressValid = type !== 'DELIVERY' || address.trim().length >= 6;
   const canPlace = nameValid && phoneValid && addressValid && cart.length > 0 && !submitting;
 
@@ -142,7 +164,11 @@ export function CustomerCart({
   async function placeOrder() {
     if (!cart.length) return;
     if (!nameValid) return toast.error('Please enter your name');
-    if (!phoneValid) return toast.error('Please verify your WhatsApp number');
+    if (!phoneValid) {
+      return toast.error(
+        mode === 'guest' ? 'Please enter a valid phone number' : 'Please verify your WhatsApp number',
+      );
+    }
     if (!addressValid) return toast.error('Please enter a delivery address');
     setSubmitting(true);
     try {
@@ -163,8 +189,15 @@ export function CustomerCart({
       });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error ?? 'Could not place order');
-      onClear();
-      router.push(`/order/${data.order.id}?placed=1`);
+      if (payOnline) {
+        // Empty the saved cart but keep the sheet open so the customer can
+        // confirm the unique payable amount before the payment page opens.
+        onPlaced?.();
+        setPlacedOrder(data.order);
+      } else {
+        onClear();
+        router.push(`/order/${data.order.id}?placed=1`);
+      }
     } catch (e: any) {
       toast.error('Order failed', e?.message);
     } finally {
@@ -173,11 +206,20 @@ export function CustomerCart({
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-end md:items-center justify-center" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-end md:items-center justify-center" onClick={placedOrder ? undefined : onClose}>
       <div
         className="w-full md:max-w-lg bg-cream-50 rounded-t-3xl md:rounded-3xl max-h-[92vh] overflow-y-auto animate-fade-up"
         onClick={(e) => e.stopPropagation()}
       >
+        {placedOrder ? (
+          <PayConfirm
+            order={placedOrder}
+            cafeName={cafe.name}
+            onPay={() => router.push(`/pay/${placedOrder.id}`)}
+            onLater={() => router.push(`/order/${placedOrder.id}?placed=1`)}
+          />
+        ) : (
+        <>
         <div className="sticky top-0 bg-cream-50 z-10 px-5 py-4 border-b border-coffee-100 flex items-center justify-between">
           <h2 className="font-display text-xl font-bold text-coffee-900">Your cart</h2>
           <button onClick={onClose} className="h-8 w-8 grid place-items-center rounded-full hover:bg-cream-200">
@@ -228,6 +270,28 @@ export function CustomerCart({
 
           <div className="card-warm !p-4">
             <div className="text-xs font-semibold text-coffee-700 mb-2">YOUR DETAILS *</div>
+
+            {/* Login vs guest chooser — hidden once logged in. When the cafe
+                disallows guest checkout we keep only the 1-tap login path. */}
+            {!loggedIn && allowGuest && (
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <button
+                  type="button"
+                  onClick={() => setMode('login')}
+                  className={`rounded-xl border p-2.5 text-sm font-semibold flex items-center justify-center gap-1.5 ${mode === 'login' ? 'border-coffee-700 bg-cream-100 text-coffee-900' : 'border-coffee-200 bg-white text-coffee-600'}`}
+                >
+                  <MessageSquare className="h-3.5 w-3.5" /> Login · 1-tap
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode('guest')}
+                  className={`rounded-xl border p-2.5 text-sm font-semibold flex items-center justify-center gap-1.5 ${mode === 'guest' ? 'border-coffee-700 bg-cream-100 text-coffee-900' : 'border-coffee-200 bg-white text-coffee-600'}`}
+                >
+                  <User className="h-3.5 w-3.5" /> Guest order
+                </button>
+              </div>
+            )}
+
             <div className="grid gap-2.5">
               <div>
                 <Input
@@ -241,7 +305,39 @@ export function CustomerCart({
                 )}
               </div>
 
-              {!phoneVerified ? (
+              {phoneVerified ? (
+                <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-sm text-emerald-800 flex items-center gap-2">
+                  <Check className="h-4 w-4" />
+                  {customer?.phone === phone ? (
+                    <>
+                      Logged in as <span className="font-semibold">{phone}</span>
+                      {customer.loyaltyEnabled && customer.points > 0 && (
+                        <span className="ml-auto text-xs font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+                          {customer.points.toLocaleString()} pts
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <>Verified · {phone}</>
+                  )}
+                </div>
+              ) : mode === 'guest' ? (
+                <div>
+                  <Input
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="Phone number *"
+                    inputMode="tel"
+                    aria-invalid={!guestPhoneValid && phone.length > 0}
+                  />
+                  <div className="helper">
+                    We'll send order updates to this number on WhatsApp — no login needed.
+                    {!guestPhoneValid && phone.length > 0 && (
+                      <span className="text-rose-600 font-semibold"> Enter a 10-digit number.</span>
+                    )}
+                  </div>
+                </div>
+              ) : (
                 <div>
                   <div className="flex gap-2">
                     <Input
@@ -274,23 +370,7 @@ export function CustomerCart({
                       </div>
                     </div>
                   )}
-                  <div className="helper">Required — we'll send order updates here. {!phoneVerified && phone && !linkSent && <span className="text-rose-600 font-semibold">Please verify before placing the order.</span>}</div>
-                </div>
-              ) : (
-                <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-sm text-emerald-800 flex items-center gap-2">
-                  <Check className="h-4 w-4" />
-                  {customer?.phone === phone ? (
-                    <>
-                      Logged in as <span className="font-semibold">{phone}</span>
-                      {customer.loyaltyEnabled && customer.points > 0 && (
-                        <span className="ml-auto text-xs font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
-                          {customer.points.toLocaleString()} pts
-                        </span>
-                      )}
-                    </>
-                  ) : (
-                    <>Verified · {phone}</>
-                  )}
+                  <div className="helper">Required — we'll send order updates here. {phone && !linkSent && <span className="text-rose-600 font-semibold">Tap Verify to get your 1-tap login link.</span>}</div>
                 </div>
               )}
 
@@ -335,18 +415,20 @@ export function CustomerCart({
             onClick={placeOrder}
           >
             {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Place order · {formatCurrency(totals.totalAmount)}
+            {payOnline ? 'Place order & pay' : 'Place order'} · {formatCurrency(totals.totalAmount)}
           </Button>
           {!canPlace && cart.length > 0 && !submitting && (
             <p className="helper text-center text-rose-600">
               {!nameValid ? 'Add your name to continue.'
-                : !phoneValid ? 'Verify your WhatsApp number to continue.'
+                : !phoneValid ? (mode === 'guest' ? 'Add a valid 10-digit number to continue.' : 'Verify your WhatsApp number to continue.')
                   : !addressValid ? 'Add a delivery address to continue.'
                     : ''}
             </p>
           )}
           <p className="helper text-center">By placing the order, you confirm the items above.</p>
         </div>
+        </>
+        )}
       </div>
     </div>
   );
@@ -357,6 +439,60 @@ function Row({ l, v }: { l: any; v: any }) {
     <div className="flex justify-between text-coffee-700">
       <span>{l}</span>
       <span>{v}</span>
+    </div>
+  );
+}
+
+/**
+ * Post-placement step: shows the unique payable amount and asks the customer
+ * to confirm before the payment page opens. The paise nonce baked into
+ * payableAmount is what the cafe's bank-inbox matcher uses to auto-confirm
+ * the payment, so we ask them to pay that exact figure.
+ */
+function PayConfirm({
+  order,
+  cafeName,
+  onPay,
+  onLater,
+}: {
+  order: any;
+  cafeName: string;
+  onPay: () => void;
+  onLater: () => void;
+}) {
+  const amount: number = order.payableAmount ?? order.totalAmount;
+  const hasNonce = order.payableAmount != null && order.payableAmount !== order.totalAmount;
+  return (
+    <div className="px-5 py-7 text-center space-y-4">
+      <div className="mx-auto h-14 w-14 rounded-full bg-emerald-100 grid place-items-center">
+        <Check className="h-7 w-7 text-emerald-600" />
+      </div>
+      <div>
+        <h2 className="font-display text-2xl font-bold text-coffee-900">Order placed!</h2>
+        <p className="helper mt-0.5">Order #{order.orderNumber} · {cafeName} has been notified.</p>
+      </div>
+
+      <div className="rounded-2xl border border-coffee-200 bg-white p-4">
+        <div className="text-[11px] font-semibold text-coffee-500 uppercase tracking-wider">Pay this exact amount</div>
+        <div className="text-3xl font-extrabold text-coffee-900 mt-1">{formatCurrency(amount)}</div>
+        {hasNonce && (
+          <p className="text-[11px] text-coffee-500 mt-1.5 leading-relaxed">
+            {formatCurrency(order.totalAmount)} + a unique tag so your payment is matched and confirmed
+            automatically. Please pay the exact amount shown.
+          </p>
+        )}
+      </div>
+
+      <Button size="lg" variant="accent" className="w-full" onClick={onPay}>
+        <CreditCard className="h-4 w-4" /> OK · Pay {formatCurrency(amount)}
+      </Button>
+      <button
+        type="button"
+        onClick={onLater}
+        className="text-sm text-coffee-600 hover:text-coffee-900 underline w-full"
+      >
+        I'll pay later · track my order
+      </button>
     </div>
   );
 }

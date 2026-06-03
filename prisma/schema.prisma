@@ -209,6 +209,10 @@ model CafeSettings {
   acceptDineIn              Boolean    @default(true)
   acceptTakeaway            Boolean    @default(true)
   acceptDelivery            Boolean    @default(false)
+  // Let customers order without proving their phone via the 1-tap WhatsApp
+  // login — they just enter name + number ("guest order"). When off, the
+  // cart forces the verified-login path (the pre-guest-checkout behaviour).
+  allowGuestCheckout        Boolean    @default(true)
   openingHours              Json? // { mon: {open: "09:00", close: "22:00", closed: false}, ... }
   primaryColor              String     @default("#6B4E3D")
   accentColor               String     @default("#D4A574")
@@ -276,6 +280,15 @@ model CafeSettings {
   welcomeAutoReply          Boolean    @default(false)
   welcomeMessage            String?
   welcomeTriggers           String[]   @default(["hi", "hello"])
+  // One-tap WhatsApp login: when a customer DMs the cafe's WhatsApp number
+  // with a login trigger word ("login", "sign in", ...), the Baileys session
+  // replies with a single-use, 5-minute magic link that signs them into the
+  // cafe's /account page (mints the cqr_customer cookie). On by default so
+  // Baileys cafes get it out of the box; only fires on the Baileys provider
+  // (the one with an inbound listener) and is independent of the welcome
+  // auto-reply above.
+  waLoginEnabled            Boolean    @default(true)
+  waLoginTriggers           String[]   @default(["login", "log in", "sign in", "signin"])
   createdAt                 DateTime   @default(now())
   updatedAt                 DateTime   @updatedAt
 

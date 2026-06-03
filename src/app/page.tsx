@@ -9,12 +9,22 @@ import { PhoneFrame } from '@/components/mockups/phone-frame';
 import {
   MenuScreen, DashboardMini, QRPrintCard, OrderToast,
 } from '@/components/mockups/screens';
+import type { Metadata } from 'next';
 import { prisma } from '@/lib/prisma';
+import { getPlatformBranding } from '@/lib/platform-branding';
+import { JsonLd } from '@/components/seo/json-ld';
+import { SITE_URL, SITE_NAME } from '@/lib/site';
 
 // Re-render every 60s so admin updates to PlatformBranding (logo, app icon,
 // splash, APK URLs) propagate to the home page within a minute without
 // forcing every visit to hit the DB.
 export const revalidate = 60;
+
+export const metadata: Metadata = {
+  description:
+    'WatShop Cafe turns every cafe table into a QR ordering store — no app, no code. Take orders, send WhatsApp updates, accept UPI payments and track sales from one dashboard. Free for your first 30 orders a month.',
+  alternates: { canonical: '/' },
+};
 
 async function getPlans() {
   try {
@@ -25,22 +35,34 @@ async function getPlans() {
   } catch { return []; }
 }
 
-async function getBranding() {
-  try {
-    return await prisma.platformBranding.findUnique({ where: { id: 'singleton' } });
-  } catch { return null; }
-}
-
 export default async function LandingPage() {
-  const [plans, branding] = await Promise.all([getPlans(), getBranding()]);
-  const appIcon = branding?.appIconDataUrl ?? '';
-  const splash = branding?.splashImageDataUrl ?? '';
-  const apkGoogle = branding?.apkUrlGoogle?.trim() || '/downloads/app-google-debug.apk';
-  const apkAmazon = branding?.apkUrlAmazon?.trim() || '/downloads/app-amazon-debug.apk';
-  const brandName = branding?.brandName?.trim() || 'WatShop Cafe';
+  const [plans, branding] = await Promise.all([getPlans(), getPlatformBranding()]);
+  const appIcon = branding.appIconUrl;
+  const splash = branding.splashUrl;
+  const apkGoogle = branding.apkUrlGoogle?.trim() || '/downloads/app-google-debug.apk';
+  const apkAmazon = branding.apkUrlAmazon?.trim() || '/downloads/app-amazon-debug.apk';
+  const brandName = branding.brandName?.trim() || 'WatShop Cafe';
 
   return (
     <div className="min-h-screen bg-cream-50 overflow-x-clip">
+      <JsonLd
+        data={{
+          '@context': 'https://schema.org',
+          '@type': 'SoftwareApplication',
+          name: SITE_NAME,
+          applicationCategory: 'BusinessApplication',
+          operatingSystem: 'Web, Android',
+          url: SITE_URL,
+          description:
+            'QR menu & ordering platform for cafes and restaurants — orders, WhatsApp notifications, UPI payments and analytics.',
+          offers: {
+            '@type': 'Offer',
+            price: '0',
+            priceCurrency: 'INR',
+            description: 'Free for your first 30 orders every month',
+          },
+        }}
+      />
       <PublicNavbar />
 
       {/* ═══════════ HERO ═══════════ */}

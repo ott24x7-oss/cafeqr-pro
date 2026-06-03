@@ -158,14 +158,15 @@ export function generateReviewMessage(order: OrderForWA, cafe: WACafe, appUrl?: 
     .join('\n');
 }
 
-export function generateMagicLinkMessage(url: string, cafeName?: string) {
+export function generateMagicLinkMessage(url: string, cafeName?: string, expiryMinutes = 10) {
+  const name = cafeName ?? 'CafeQR Pro';
+  const mins = `${expiryMinutes} minute${expiryMinutes === 1 ? '' : 's'}`;
   return [
-    `🔐 *${cafeName ?? 'CafeQR Pro'}* — one-tap login`,
+    `🔓 *Tap to sign in to ${name}*`,
     '',
-    `Tap to log in:`,
     url,
     '',
-    `Link expires in 10 minutes. Don't share it with anyone.`,
+    `This link expires in ${mins} and works only once. If you didn't request it, ignore this message.`,
   ].join('\n');
 }
 

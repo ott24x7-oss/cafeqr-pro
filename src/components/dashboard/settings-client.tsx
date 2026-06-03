@@ -62,6 +62,7 @@ export function SettingsClient({ cafe }: { cafe: any }) {
     acceptDineIn: cafe.settings?.acceptDineIn ?? true,
     acceptTakeaway: cafe.settings?.acceptTakeaway ?? true,
     acceptDelivery: cafe.settings?.acceptDelivery ?? false,
+    allowGuestCheckout: cafe.settings?.allowGuestCheckout ?? true,
     whatsappProvider: cafe.settings?.whatsappProvider ?? 'manual',
     notifyOwnerWA: cafe.settings?.notifyOwnerWA ?? true,
     notifyCustomerWA: cafe.settings?.notifyCustomerWA ?? true,
@@ -94,9 +95,12 @@ export function SettingsClient({ cafe }: { cafe: any }) {
     welcomeAutoReply: cafe.settings?.welcomeAutoReply ?? false,
     welcomeMessage: cafe.settings?.welcomeMessage ?? '',
     welcomeTriggers: (cafe.settings?.welcomeTriggers ?? ['hi', 'hello']) as string[],
+    waLoginEnabled: cafe.settings?.waLoginEnabled ?? true,
+    waLoginTriggers: (cafe.settings?.waLoginTriggers ?? ['login', 'log in', 'sign in', 'signin']) as string[],
   });
 
   const [newWelcomeTrigger, setNewWelcomeTrigger] = useState('');
+  const [newLoginTrigger, setNewLoginTrigger] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [showWaToken, setShowWaToken] = useState(false);
@@ -342,6 +346,28 @@ export function SettingsClient({ cafe }: { cafe: any }) {
                   Accept {l}
                 </label>
               ))}
+            </div>
+
+            {/* Guest checkout */}
+            <div className="md:col-span-2 rounded-2xl border border-coffee-200 bg-white p-4">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 mt-0.5 accent-coffee-700"
+                  checked={settings.allowGuestCheckout}
+                  onChange={(e) => setSettings({ ...settings, allowGuestCheckout: e.target.checked })}
+                />
+                <span>
+                  <span className="font-semibold text-coffee-900">Allow guest checkout</span>
+                  <span className="block text-[13px] text-coffee-600 font-normal">
+                    Customers can order with just their name + number — no WhatsApp login needed.
+                    Turn off to require the 1-tap WhatsApp login before every order.
+                  </span>
+                  <span className="block text-[13px] text-coffee-400 font-normal">
+                    ग्राहक सिर्फ़ नाम + नंबर से ऑर्डर कर सकते हैं। बंद करने पर हर ऑर्डर के लिए WhatsApp लॉगिन ज़रूरी होगा।
+                  </span>
+                </span>
+              </label>
             </div>
 
             {settings.acceptDelivery && (
@@ -626,6 +652,114 @@ export function SettingsClient({ cafe }: { cafe: any }) {
                 <p className="helper">
                   Match is case-insensitive and "starts with" — so <b>hi</b> triggers on
                   &quot;hi there&quot; but not on &quot;please call hi&quot;.
+                </p>
+              </div>
+            </div>
+
+            {/* One-tap WhatsApp login (Baileys only) */}
+            <div className="md:col-span-2 rounded-2xl border border-coffee-200 bg-white p-4 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="font-semibold text-coffee-900 flex items-center gap-1.5">
+                    <Lock className="h-4 w-4 text-coffee-700" /> One-tap login via WhatsApp
+                  </div>
+                  <p className="helper">
+                    When a customer DMs you a login word, your bot replies with a one-tap
+                    sign-in link — single-use and valid for 5 minutes — that signs them into
+                    their account on your menu. No OTP to type.
+                    {settings.whatsappProvider !== 'baileys' && (
+                      <span className="block mt-1 text-amber-700">
+                        Only works with the <b>Baileys</b> provider. Switch above to enable.
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <label className="inline-flex items-center gap-2 cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-coffee-700"
+                    checked={settings.waLoginEnabled}
+                    onChange={(e) => setSettings({ ...settings, waLoginEnabled: e.target.checked })}
+                    disabled={settings.whatsappProvider !== 'baileys'}
+                  />
+                  <span className="text-sm font-medium text-coffee-800">
+                    {settings.waLoginEnabled ? 'On' : 'Off'}
+                  </span>
+                </label>
+              </div>
+
+              <div>
+                <label className="label">Login trigger words</label>
+                <div className="flex gap-2 mb-2">
+                  <Input
+                    value={newLoginTrigger}
+                    onChange={(e) => setNewLoginTrigger(e.target.value)}
+                    placeholder="login, sign in, log in…"
+                    disabled={!settings.waLoginEnabled}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const v = newLoginTrigger.trim().toLowerCase();
+                        if (!v) return;
+                        if (settings.waLoginTriggers.includes(v)) {
+                          setNewLoginTrigger('');
+                          return;
+                        }
+                        setSettings({
+                          ...settings,
+                          waLoginTriggers: [...settings.waLoginTriggers, v].slice(0, 12),
+                        });
+                        setNewLoginTrigger('');
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={!settings.waLoginEnabled || !newLoginTrigger.trim()}
+                    onClick={() => {
+                      const v = newLoginTrigger.trim().toLowerCase();
+                      if (!v || settings.waLoginTriggers.includes(v)) return;
+                      setSettings({
+                        ...settings,
+                        waLoginTriggers: [...settings.waLoginTriggers, v].slice(0, 12),
+                      });
+                      setNewLoginTrigger('');
+                    }}
+                  >
+                    <Plus className="h-4 w-4" /> Add
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {settings.waLoginTriggers.length === 0 && (
+                    <span className="text-xs text-coffee-500">No login words yet — add at least one.</span>
+                  )}
+                  {settings.waLoginTriggers.map((t) => (
+                    <span
+                      key={t}
+                      className="inline-flex items-center gap-1 rounded-full bg-cream-200 text-coffee-800 px-2.5 py-1 text-xs font-medium"
+                    >
+                      {t}
+                      <button
+                        type="button"
+                        className="text-coffee-600 hover:text-coffee-900"
+                        onClick={() =>
+                          setSettings({
+                            ...settings,
+                            waLoginTriggers: settings.waLoginTriggers.filter((x) => x !== t),
+                          })
+                        }
+                        disabled={!settings.waLoginEnabled}
+                        aria-label={`Remove ${t}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <p className="helper">
+                  A customer texting e.g. <b>login</b> to your WhatsApp gets a private,
+                  single-use sign-in link. Match is case-insensitive and "starts with".
                 </p>
               </div>
             </div>

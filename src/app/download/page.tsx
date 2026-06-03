@@ -8,6 +8,7 @@ export const metadata = {
   title: 'Download the WatShop Cafe Android app',
   description:
     'Install the WatShop Cafe Android app on your phone or Fire tablet. Live order alerts, QR ordering, and your full owner dashboard in one tap.',
+  alternates: { canonical: '/download' },
 };
 
 const APK_URL = '/downloads/WatShopCafe.apk';

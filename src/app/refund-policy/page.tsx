@@ -2,7 +2,11 @@ import { PublicNavbar } from '@/components/public/navbar';
 import { PublicFooter } from '@/components/public/footer';
 import { prisma } from '@/lib/prisma';
 
-export const metadata = { title: 'Refund Policy' };
+export const metadata = {
+  title: 'Refund Policy',
+  description: 'WatShop Cafe cancellation and refund policy for subscriptions and orders.',
+  alternates: { canonical: '/refund-policy' },
+};
 export const revalidate = 3600;
 
 async function getBrandName() {

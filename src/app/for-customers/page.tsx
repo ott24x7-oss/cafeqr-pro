@@ -11,7 +11,12 @@ import {
   ScanQRScreen, MenuScreen, CartScreen, TrackingScreen, PayScreen, ReviewScreen,
 } from '@/components/mockups/screens';
 
-export const metadata = { title: 'For customers — Order in seconds' };
+export const metadata = {
+  title: 'For customers — Order in seconds',
+  description:
+    'Scan the table QR, browse the menu and order in seconds — no app to download. Pay by UPI and track your order live with WhatsApp updates.',
+  alternates: { canonical: '/for-customers' },
+};
 
 export default function ForCustomersPage() {
   return (

@@ -11,7 +11,12 @@ import {
   DashboardMini, QRPrintCard, WANotificationMockup, MenuScreen, OrderToast,
 } from '@/components/mockups/screens';
 
-export const metadata = { title: 'For cafe owners — Setup in 5 minutes' };
+export const metadata = {
+  title: 'For cafe owners — Setup in 5 minutes',
+  description:
+    'Run your cafe from one dashboard — QR menu, live order board, WhatsApp alerts, UPI payments and analytics. No app, no hardware; set up in 5 minutes.',
+  alternates: { canonical: '/for-owners' },
+};
 
 export default function ForOwnersPage() {
   return (

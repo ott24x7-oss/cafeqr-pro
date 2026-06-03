@@ -350,6 +350,7 @@ export function CustomerMenu({
           onAdjust={adjust}
           onClose={() => setShowCart(false)}
           onClear={() => { setCart([]); setShowCart(false); }}
+          onPlaced={() => setCart([])}
         />
       )}
     </div>
