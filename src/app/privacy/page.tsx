@@ -2,7 +2,11 @@ import { PublicNavbar } from '@/components/public/navbar';
 import { PublicFooter } from '@/components/public/footer';
 import { prisma } from '@/lib/prisma';
 
-export const metadata = { title: 'Privacy Policy' };
+export const metadata = {
+  title: 'Privacy Policy',
+  description: 'How WatShop Cafe collects, uses and protects your information.',
+  alternates: { canonical: '/privacy' },
+};
 export const revalidate = 3600;
 
 async function getBrandName() {

@@ -9,8 +9,9 @@ import { PublicFooter } from '@/components/public/footer';
 import { Button } from '@/components/ui/button';
 
 export const metadata = {
-  title: 'Live Demo — CafeQR Pro',
+  title: 'Live demo',
   description: 'Scan the QR or play with the live cafe inside the mobile mock — see exactly what your customers will see.',
+  alternates: { canonical: '/demo' },
 };
 
 const DEMO_QR_URL = 'https://i.ibb.co/tTYvFQ4c/cafe-dk-qr-mockup.png';

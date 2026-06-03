@@ -26,6 +26,9 @@ export const revalidate = 60;
 export const metadata = {
   title: 'Cafe owner tutorial — print-ready deck',
   description: 'Tutorial deck for cafe owners. Open in Chrome and Cmd/Ctrl+P → Save as PDF.',
+  // Internal print utility — not in the sitemap, low search value. Keep it
+  // out of the index but let crawlers follow its links.
+  robots: { index: false, follow: true },
 };
 
 async function getBranding() {
