@@ -94,7 +94,105 @@
   }
   .scroll-snap-x { scroll-snap-type: x mandatory; }
   .snap-start { scroll-snap-align: start; }
+  .scrollbar-none { scrollbar-width: none; -ms-overflow-style: none; }
+  .scrollbar-none::-webkit-scrollbar { display: none; }
 }
+
+/* ─── Customer "app" — glass-morphism storefront, 5 owner-selectable themes ───
+   Scoped under .cafe-app so none of this leaks into the cream dashboard /
+   public marketing site. The owner picks a theme in Settings; the storefront
+   sets data-theme on the .cafe-app wrapper. Every colour below is driven by a
+   handful of CSS variables so a theme is just a variable swap.
+
+   Default (no data-theme / "coffee") = the original dark amber design. */
+.cafe-app {
+  --app-accent: #E0A458;          /* primary accent (buttons, active, links) */
+  --app-accent-deep: #C98A3C;     /* gradient bottom / hover */
+  --app-on-accent: #2a1c0d;       /* text/icon colour ON an accent surface */
+  --app-bg: #16110D;              /* page base */
+  --app-tint: rgba(224,164,88,0.10); /* top radial glow */
+  --app-surface-a: rgba(255,255,255,0.055);
+  --app-surface-b: rgba(255,255,255,0.02);
+  --app-chip: rgba(255,255,255,0.04);
+  --app-border: rgba(255,255,255,0.08);
+  --app-nav: rgba(22,17,13,0.78);
+  background: radial-gradient(120% 80% at 50% -10%, var(--app-tint), transparent 60%), var(--app-bg);
+  color: #F2E9DD;
+  min-height: 100vh;
+}
+
+/* Theme: Maroon / Wine — soft rose accent on deep burgundy. */
+.cafe-app[data-theme="maroon"] {
+  --app-accent: #E58A9B; --app-accent-deep: #C45A70; --app-on-accent: #2a0d14;
+  --app-bg: #1b0d11; --app-tint: rgba(229,138,155,0.12);
+  --app-nav: rgba(27,13,17,0.8);
+}
+/* Theme: Midnight — sky/cyan accent on navy. */
+.cafe-app[data-theme="midnight"] {
+  --app-accent: #4FC3F7; --app-accent-deep: #2196D6; --app-on-accent: #04131f;
+  --app-bg: #0a1726; --app-tint: rgba(79,195,247,0.12);
+  --app-nav: rgba(10,23,38,0.82);
+}
+/* Theme: Forest — green accent on deep forest. */
+.cafe-app[data-theme="forest"] {
+  --app-accent: #74C98A; --app-accent-deep: #46A368; --app-on-accent: #052012;
+  --app-bg: #0d1a12; --app-tint: rgba(116,201,138,0.12);
+  --app-nav: rgba(13,26,18,0.82);
+}
+/* Theme: Latte — LIGHT mode. Brown accent on cream, dark text. */
+.cafe-app[data-theme="latte"] {
+  --app-accent: #6B4E3D; --app-accent-deep: #523C30; --app-on-accent: #FFF7EC;
+  --app-bg: #FBF6EE; --app-tint: rgba(107,78,61,0.06);
+  --app-surface-a: rgba(255,255,255,0.92); --app-surface-b: rgba(255,255,255,0.78);
+  --app-chip: rgba(107,78,61,0.06); --app-border: rgba(107,78,61,0.16);
+  --app-nav: rgba(255,251,245,0.9);
+  color: #2a1c12;
+}
+
+.cafe-app .glass-card {
+  background: linear-gradient(180deg, var(--app-surface-a), var(--app-surface-b));
+  border: 1px solid var(--app-border);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-radius: 1rem;
+  box-shadow: 0 8px 30px -12px rgba(0,0,0,0.45);
+}
+.cafe-app .glass-chip {
+  background: var(--app-chip);
+  border: 1px solid var(--app-border);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.cafe-app .glass-nav {
+  background: var(--app-nav);
+  border-top: 1px solid var(--app-border);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+}
+.cafe-app .app-amber { color: var(--app-accent); }
+.cafe-app .on-acc { color: var(--app-on-accent); }
+.cafe-app .on-acc-soft { color: color-mix(in srgb, var(--app-on-accent) 80%, transparent); }
+.cafe-app .btn-amber {
+  background: linear-gradient(180deg, var(--app-accent), var(--app-accent-deep));
+  color: var(--app-on-accent);
+  box-shadow: 0 10px 26px -10px color-mix(in srgb, var(--app-accent) 55%, transparent);
+}
+.cafe-app .btn-amber:active { transform: scale(0.99); }
+.cafe-app .ring-amber { box-shadow: 0 0 0 1px color-mix(in srgb, var(--app-accent) 60%, transparent); }
+
+/* Latte (light) theme: remap the dark-on-light text + surface utilities the
+   components use as their dark-theme baseline, so the same markup reads on a
+   cream background without rewriting every class. */
+.cafe-app[data-theme="latte"] [class*="text-cream-5"],
+.cafe-app[data-theme="latte"] [class*="text-cream-100"] { color: #2a1c12 !important; }
+.cafe-app[data-theme="latte"] [class*="text-cream-200"] { color: #6b5747 !important; }
+.cafe-app[data-theme="latte"] input,
+.cafe-app[data-theme="latte"] textarea { color: #2a1c12; }
+.cafe-app[data-theme="latte"] input::placeholder,
+.cafe-app[data-theme="latte"] textarea::placeholder { color: #9a8676; }
+.cafe-app[data-theme="latte"] .border-white\/10 { border-color: rgba(107,78,61,0.14) !important; }
+.cafe-app[data-theme="latte"] .bg-black\/30,
+.cafe-app[data-theme="latte"] .bg-black\/40 { background: rgba(107,78,61,0.08) !important; }
 
 @media print {
   body { background: white; }

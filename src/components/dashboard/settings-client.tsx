@@ -33,6 +33,15 @@ const NOTIFY_STATUSES: { key: string; label: string; help: string }[] = [
 ];
 const DEFAULT_NOTIFY_STATUSES = ['PLACED', 'ACCEPTED', 'SERVED', 'PAID'];
 
+// Customer-app colour themes (mirrors globals.css .cafe-app[data-theme=...]).
+const APP_THEMES: { k: string; label: string; bg: string; accent: string; text: string }[] = [
+  { k: 'coffee',   label: 'Coffee (default)', bg: '#16110D', accent: '#E0A458', text: '#F2E9DD' },
+  { k: 'maroon',   label: 'Maroon Wine',      bg: '#1b0d11', accent: '#E58A9B', text: '#F2E9DD' },
+  { k: 'midnight', label: 'Midnight Blue',    bg: '#0a1726', accent: '#4FC3F7', text: '#EAF4FB' },
+  { k: 'forest',   label: 'Forest Green',     bg: '#0d1a12', accent: '#74C98A', text: '#EAF6EE' },
+  { k: 'latte',    label: 'Latte (light)',    bg: '#FBF6EE', accent: '#6B4E3D', text: '#2a1c12' },
+];
+
 const COUNTRY_OPTIONS = Object.entries(COUNTRY_DIAL)
   .sort((a, b) => a[0].localeCompare(b[0]))
   .map(([iso, dial]) => ({ iso, dial, label: `${iso} · +${dial}` }));
@@ -85,6 +94,7 @@ export function SettingsClient({ cafe }: { cafe: any }) {
     paymentMatchWindowMinutes: cafe.settings?.paymentMatchWindowMinutes ?? 30,
     primaryColor: cafe.settings?.primaryColor ?? '#6B4E3D',
     accentColor: cafe.settings?.accentColor ?? '#D4A574',
+    appTheme: (cafe.settings?.appTheme ?? 'coffee') as string,
     googleReviewUrl: cafe.settings?.googleReviewUrl ?? '',
     enableSound: cafe.settings?.enableSound ?? true,
     country: (cafe.settings?.country ?? 'IN') as string,
@@ -986,6 +996,34 @@ export function SettingsClient({ cafe }: { cafe: any }) {
               Custom branding requires a Pro plan or higher.
               <span className="block text-coffee-400">अपने रंग सेट करने के लिए Pro plan ज़रूरी है।</span>
             </p>
+
+            <div className="md:col-span-2 mt-2">
+              <label className="label">Customer app theme</label>
+              <p className="helper text-coffee-400 mb-3">Pick the colour theme for your customer ordering app (the dark glass UI customers see after scanning the QR).</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {APP_THEMES.map((t) => {
+                  const active = settings.appTheme === t.k;
+                  return (
+                    <button
+                      key={t.k}
+                      type="button"
+                      onClick={() => setSettings({ ...settings, appTheme: t.k })}
+                      className={`relative rounded-2xl p-3 text-left border-2 transition ${active ? 'border-coffee-700' : 'border-transparent hover:border-coffee-200'}`}
+                      style={{ background: t.bg }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="h-7 w-7 rounded-full" style={{ background: t.accent }} />
+                        <span className="h-4 w-16 rounded-full" style={{ background: 'rgba(255,255,255,0.18)' }} />
+                      </div>
+                      <div className="mt-3 text-sm font-semibold" style={{ color: t.text }}>{t.label}</div>
+                      {active && (
+                        <span className="absolute top-2 right-2 h-5 w-5 rounded-full grid place-items-center text-[11px] font-bold" style={{ background: t.accent, color: t.bg }}>✓</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
 

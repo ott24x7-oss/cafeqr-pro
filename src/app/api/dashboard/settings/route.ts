@@ -90,7 +90,7 @@ export async function POST(req: Request) {
     'waCloudPhoneId', 'baileysSessionId', 'notifyNumbers',
     'gmailUser', 'gmailSenderFilter', 'gmailSubjectFilter', 'paymentMatchWindowMinutes',
     'upiId', 'upiQrUrl', 'paymentEnabled', 'paymentTiming', 'paymentNote',
-    'reviewEnabled', 'googleReviewUrl', 'primaryColor', 'accentColor',
+    'reviewEnabled', 'googleReviewUrl', 'primaryColor', 'accentColor', 'appTheme',
     'enableSound', 'language',
     'country', 'deliveryPartnerPhone',
     'invoiceTemplate',
@@ -136,6 +136,13 @@ export async function POST(req: Request) {
 
   if (plain.paymentTiming !== undefined) {
     plain.paymentTiming = plain.paymentTiming === 'postpaid' ? 'postpaid' : 'prepaid';
+  }
+
+  // Whitelist the customer-app theme so a tampered payload can't inject a
+  // bogus data-theme value into the storefront.
+  const ALLOWED_THEMES = new Set(['coffee', 'maroon', 'midnight', 'forest', 'latte']);
+  if (plain.appTheme !== undefined && !ALLOWED_THEMES.has(plain.appTheme)) {
+    plain.appTheme = 'coffee';
   }
 
   // Whitelist invoice template values so a tampered payload can't store
