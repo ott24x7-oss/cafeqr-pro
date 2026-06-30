@@ -173,38 +173,38 @@ export function CustomerCart({
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-end md:items-center justify-center" onClick={onClose}>
+    <div className="cafe-dark fixed inset-0 z-50 bg-black/60 flex items-end md:items-center justify-center" onClick={onClose}>
       <div
-        className="w-full md:max-w-lg bg-cream-50 rounded-t-3xl md:rounded-3xl max-h-[92vh] overflow-y-auto animate-fade-up"
+        className="w-full md:max-w-lg bg-forest-850 text-cream-50 rounded-t-3xl md:rounded-3xl max-h-[92vh] overflow-y-auto animate-fade-up"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="sticky top-0 bg-cream-50 z-10 px-5 py-4 border-b border-coffee-100 flex items-center justify-between">
-          <h2 className="font-display text-xl font-bold text-coffee-900">Your cart</h2>
-          <button onClick={onClose} className="h-8 w-8 grid place-items-center rounded-full hover:bg-cream-200">
+        <div className="sticky top-0 bg-forest-850 z-10 px-5 py-4 border-b border-white/10 flex items-center justify-between">
+          <h2 className="font-display text-xl font-bold text-gradient-gold">Your cart</h2>
+          <button onClick={onClose} className="h-8 w-8 grid place-items-center rounded-full text-cream-50 hover:bg-white/10">
             <X className="h-4 w-4" />
           </button>
         </div>
 
         <div className="px-5 py-4 space-y-3">
           {cart.map((it, idx) => (
-            <div key={idx} className="card-warm !p-3 flex gap-3 items-start">
+            <div key={idx} className="cafe-card p-3 flex gap-3 items-start">
               <div className="flex-1 min-w-0">
-                <div className="font-semibold text-coffee-900 leading-tight">{it.name}</div>
-                <div className="text-xs text-coffee-500">
+                <div className="font-semibold text-cream-50 leading-tight">{it.name}</div>
+                <div className="text-xs text-forest-300">
                   {it.variantName ? `${it.variantName} · ` : ''}
                   {(it.addons?.length ?? 0) > 0 && it.addons!.map((a) => a.name).join(', ')}
                 </div>
-                {it.note && <div className="text-xs text-coffee-600 italic mt-1">📝 {it.note}</div>}
-                <div className="text-sm font-bold text-coffee-800 mt-1">
+                {it.note && <div className="text-xs text-forest-300 italic mt-1">📝 {it.note}</div>}
+                <div className="text-sm font-bold text-gold-light mt-1">
                   {formatCurrency(((it.variantPrice ?? it.unitPrice) + (it.addons?.reduce((s, a) => s + a.price, 0) ?? 0)) * it.quantity)}
                 </div>
               </div>
-              <div className="flex items-center gap-1 bg-white rounded-full border border-coffee-200">
-                <button onClick={() => onAdjust(idx, -1)} className="h-8 w-8 grid place-items-center text-coffee-700">
+              <div className="flex items-center gap-1 bg-forest-800 rounded-full border border-white/10">
+                <button onClick={() => onAdjust(idx, -1)} className="h-8 w-8 grid place-items-center text-gold">
                   {it.quantity === 1 ? <Trash2 className="h-3.5 w-3.5" /> : <Minus className="h-3.5 w-3.5" />}
                 </button>
-                <span className="w-6 text-center font-bold text-coffee-900 text-sm">{it.quantity}</span>
-                <button onClick={() => onAdjust(idx, +1)} className="h-8 w-8 grid place-items-center text-coffee-700">
+                <span className="w-6 text-center font-bold text-cream-50 text-sm">{it.quantity}</span>
+                <button onClick={() => onAdjust(idx, +1)} className="h-8 w-8 grid place-items-center text-gold">
                   <Plus className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -217,7 +217,7 @@ export function CustomerCart({
                 <button
                   key={t.v}
                   onClick={() => setType(t.v)}
-                  className={`rounded-xl border p-3 text-sm font-semibold flex items-center justify-center gap-1.5 ${type === t.v ? 'border-coffee-700 bg-cream-100 text-coffee-900' : 'border-coffee-200 bg-white text-coffee-600'}`}
+                  className={`rounded-xl border p-3 text-sm font-semibold flex items-center justify-center gap-1.5 ${type === t.v ? 'border-gold bg-forest-700 text-cream-50' : 'border-white/10 bg-forest-800 text-forest-300'}`}
                 >
                   {t.icon && <t.icon className="h-3.5 w-3.5" />}
                   {t.l}
@@ -226,8 +226,8 @@ export function CustomerCart({
             </div>
           )}
 
-          <div className="card-warm !p-4">
-            <div className="text-xs font-semibold text-coffee-700 mb-2">YOUR DETAILS *</div>
+          <div className="cafe-card p-4">
+            <div className="text-xs font-semibold text-gold-light mb-2">YOUR DETAILS *</div>
             <div className="grid gap-2.5">
               <div>
                 <Input
@@ -235,9 +235,10 @@ export function CustomerCart({
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Your name *"
                   aria-invalid={!nameValid}
+                  className="bg-forest-800 border-white/10 text-cream-50 placeholder:text-forest-300 focus:border-gold focus:ring-gold/30"
                 />
                 {!nameValid && name.length > 0 && (
-                  <div className="text-xs text-rose-600 mt-1">Please enter at least 2 characters</div>
+                  <div className="text-xs text-rose-400 mt-1">Please enter at least 2 characters</div>
                 )}
               </div>
 
@@ -250,6 +251,7 @@ export function CustomerCart({
                       placeholder="WhatsApp number *"
                       inputMode="tel"
                       disabled={linkSent}
+                      className="bg-forest-800 border-white/10 text-cream-50 placeholder:text-forest-300 focus:border-gold focus:ring-gold/30"
                     />
                     <Button variant="wa" onClick={requestLink} disabled={linkSent || linkLoading}>
                       {linkLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
@@ -257,7 +259,7 @@ export function CustomerCart({
                     </Button>
                   </div>
                   {linkSent && (
-                    <div className="mt-2 rounded-xl border border-emerald-200 bg-emerald-50 p-2.5 text-xs text-emerald-800 flex items-start gap-2">
+                    <div className="mt-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-2.5 text-xs text-emerald-300 flex items-start gap-2">
                       <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0 mt-0.5" />
                       <div className="flex-1">
                         Tap the WhatsApp link we sent to {phone}. Once you do, this page will mark your number as verified — keep this tab open.
@@ -274,16 +276,16 @@ export function CustomerCart({
                       </div>
                     </div>
                   )}
-                  <div className="helper">Required — we'll send order updates here. {!phoneVerified && phone && !linkSent && <span className="text-rose-600 font-semibold">Please verify before placing the order.</span>}</div>
+                  <div className="helper text-forest-300">Required — we'll send order updates here. {!phoneVerified && phone && !linkSent && <span className="text-rose-400 font-semibold">Please verify before placing the order.</span>}</div>
                 </div>
               ) : (
-                <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-sm text-emerald-800 flex items-center gap-2">
+                <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/40 p-3 text-sm text-emerald-300 flex items-center gap-2">
                   <Check className="h-4 w-4" />
                   {customer?.phone === phone ? (
                     <>
                       Logged in as <span className="font-semibold">{phone}</span>
                       {customer.loyaltyEnabled && customer.points > 0 && (
-                        <span className="ml-auto text-xs font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+                        <span className="ml-auto text-xs font-bold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full">
                           {customer.points.toLocaleString()} pts
                         </span>
                       )}
@@ -296,7 +298,7 @@ export function CustomerCart({
 
               {type === 'DELIVERY' && (
                 <div>
-                  <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800 mb-2">
+                  <div className="flex items-start gap-2 rounded-xl border border-amber-400/40 bg-amber-400/10 p-2 text-xs text-amber-300 mb-2">
                     <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                     <span>Delivery address is needed so the rider can find you.</span>
                   </div>
@@ -306,29 +308,36 @@ export function CustomerCart({
                     placeholder="Delivery address with landmark *"
                     aria-invalid={!addressValid}
                     rows={3}
+                    className="bg-forest-800 border-white/10 text-cream-50 placeholder:text-forest-300 focus:border-gold focus:ring-gold/30"
                   />
                   {!addressValid && address.length > 0 && (
-                    <div className="text-xs text-rose-600 mt-1">Address looks too short</div>
+                    <div className="text-xs text-rose-400 mt-1">Address looks too short</div>
                   )}
                 </div>
               )}
 
-              <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Any special request? (optional)" />
+              <Textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Any special request? (optional)"
+                className="bg-forest-800 border-white/10 text-cream-50 placeholder:text-forest-300 focus:border-gold focus:ring-gold/30"
+              />
             </div>
           </div>
 
-          <div className="card-warm !p-4 space-y-1.5 text-sm">
+          <div className="cafe-card p-4 space-y-1.5 text-sm">
             <Row l="Subtotal" v={formatCurrency(totals.subtotal)} />
             {totals.taxAmount > 0 && <Row l={`Tax (${cafe.settings?.taxPercent ?? 0}%)`} v={formatCurrency(totals.taxAmount)} />}
             {totals.serviceAmount > 0 && <Row l="Service charge" v={formatCurrency(totals.serviceAmount)} />}
             {totals.packingAmount > 0 && <Row l="Packing" v={formatCurrency(totals.packingAmount)} />}
             {totals.deliveryAmount > 0 && <Row l="Delivery" v={formatCurrency(totals.deliveryAmount)} />}
-            <div className="border-t border-coffee-100 pt-2 mt-1">
-              <Row l={<span className="font-bold text-coffee-900">Total</span>} v={<span className="font-bold text-lg text-coffee-900">{formatCurrency(totals.totalAmount)}</span>} />
+            <div className="border-t border-white/10 pt-2 mt-1">
+              <Row l={<span className="font-bold text-cream-50">Total</span>} v={<span className="font-bold text-lg text-gold-light">{formatCurrency(totals.totalAmount)}</span>} />
             </div>
           </div>
 
           <Button
+            variant="accent"
             size="lg"
             className="w-full"
             disabled={!canPlace}
@@ -338,14 +347,14 @@ export function CustomerCart({
             Place order · {formatCurrency(totals.totalAmount)}
           </Button>
           {!canPlace && cart.length > 0 && !submitting && (
-            <p className="helper text-center text-rose-600">
+            <p className="helper text-center text-rose-400">
               {!nameValid ? 'Add your name to continue.'
                 : !phoneValid ? 'Verify your WhatsApp number to continue.'
                   : !addressValid ? 'Add a delivery address to continue.'
                     : ''}
             </p>
           )}
-          <p className="helper text-center">By placing the order, you confirm the items above.</p>
+          <p className="helper text-center text-forest-300">By placing the order, you confirm the items above.</p>
         </div>
       </div>
     </div>
@@ -354,7 +363,7 @@ export function CustomerCart({
 
 function Row({ l, v }: { l: any; v: any }) {
   return (
-    <div className="flex justify-between text-coffee-700">
+    <div className="flex justify-between text-forest-300">
       <span>{l}</span>
       <span>{v}</span>
     </div>

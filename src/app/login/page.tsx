@@ -86,11 +86,6 @@ function LoginInner() {
               Sign in
             </Button>
           </form>
-
-          <div className="mt-6 text-center text-sm text-coffee-600">
-            New here?{' '}
-            <Link href="/signup" className="text-coffee-900 font-semibold hover:underline">Start your free trial</Link>
-          </div>
         </div>
       </main>
     </div>

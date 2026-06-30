@@ -26,6 +26,24 @@ const config: Config = {
           300: '#F5DDB7',
         },
         caramel: { DEFAULT: '#D4A574', dark: '#B8864F' },
+        // Dark-green + gold customer ordering theme.
+        forest: {
+          950: '#0B130D',
+          900: '#0F1A13', // app background
+          850: '#13201A',
+          800: '#16241B', // card surface
+          700: '#1D2F25', // raised / hover
+          600: '#26402F', // borders
+          500: '#33513D',
+          400: '#4E6B58', // muted text
+          300: '#7E978A', // secondary text
+        },
+        gold: {
+          DEFAULT: '#D4A574',
+          light: '#E6C079',
+          bright: '#E0AE4E',
+          dark: '#B8864F',
+        },
         espresso: '#3E2723',
         wagreen: { DEFAULT: '#25D366', dark: '#128C7E' },
         background: 'hsl(var(--background))',
@@ -53,6 +71,9 @@ const config: Config = {
         'coffee-gradient': 'linear-gradient(135deg, #6B4E3D 0%, #A0775A 50%, #D4A574 100%)',
         'cream-gradient': 'linear-gradient(135deg, #FFFBF5 0%, #FCEED8 100%)',
         'warm-radial': 'radial-gradient(circle at top right, rgba(212,165,116,0.18), transparent 60%)',
+        'gold-gradient': 'linear-gradient(135deg, #E6C079 0%, #D4A574 50%, #B8864F 100%)',
+        'forest-gradient': 'linear-gradient(160deg, #16241B 0%, #0F1A13 60%, #0B130D 100%)',
+        'forest-glow': 'radial-gradient(circle at top right, rgba(212,165,116,0.16), transparent 55%)',
       },
       keyframes: {
         'fade-up': { '0%': { opacity: '0', transform: 'translateY(8px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },

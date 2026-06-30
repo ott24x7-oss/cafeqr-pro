@@ -80,20 +80,20 @@ export default function CustomerLoginPage({ params }: { params: { slug: string }
   }
 
   return (
-    <div className="min-h-screen bg-cream-50 flex flex-col">
-      <div className="bg-coffee-gradient text-cream-50 px-4 py-5">
-        <Link href={`/cafe/${params.slug}`} className="text-cream-200/90 inline-flex items-center gap-1 text-sm">
+    <div className="cafe-dark min-h-screen bg-forest-900 text-cream-50 bg-forest-glow bg-fixed flex flex-col">
+      <div className="bg-forest-gradient text-cream-50 px-4 py-5">
+        <Link href={`/cafe/${params.slug}`} className="text-forest-300 hover:text-gold inline-flex items-center gap-1 text-sm">
           <ArrowLeft className="h-4 w-4" /> Back to cafe
         </Link>
-        <h1 className="font-display text-2xl font-bold mt-2">Customer login</h1>
-        <p className="text-cream-200/80 text-sm mt-0.5">
+        <h1 className="font-display text-2xl font-bold mt-2 text-gradient-gold">Customer login</h1>
+        <p className="text-forest-300 text-sm mt-0.5">
           Sign in with one tap — we'll WhatsApp you a login link.
         </p>
       </div>
 
       <div className="container max-w-md py-6">
         {errorParam && (
-          <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800 flex items-start gap-2">
+          <div className="mb-4 rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 text-sm text-rose-300 flex items-start gap-2">
             <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
             <span>
               {errorParam === 'link_expired'
@@ -108,9 +108,9 @@ export default function CustomerLoginPage({ params }: { params: { slug: string }
         )}
 
         {step === 'phone' && (
-          <form onSubmit={sendLink} className="card-warm space-y-4">
+          <form onSubmit={sendLink} className="cafe-card p-5 space-y-4">
             <div>
-              <label className="label">WhatsApp number</label>
+              <label className="mb-1.5 block text-sm font-medium text-cream-50">WhatsApp number</label>
               <Input
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
@@ -118,10 +118,11 @@ export default function CustomerLoginPage({ params }: { params: { slug: string }
                 inputMode="tel"
                 required
                 autoFocus
+                className="bg-forest-700 border-white/10 text-cream-50 placeholder:text-forest-300 focus:border-gold focus:ring-gold/30"
               />
-              <p className="helper">We'll WhatsApp you a one-tap login link. No code to type.</p>
+              <p className="helper text-forest-300">We'll WhatsApp you a one-tap login link. No code to type.</p>
             </div>
-            <Button type="submit" disabled={loading || phone.length < 10} className="w-full" size="lg">
+            <Button variant="accent" type="submit" disabled={loading || phone.length < 10} className="w-full" size="lg">
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
               Send login link
             </Button>
@@ -129,20 +130,20 @@ export default function CustomerLoginPage({ params }: { params: { slug: string }
         )}
 
         {step === 'sent' && (
-          <div className="card-warm space-y-4 text-center">
-            <div className="mx-auto h-12 w-12 rounded-full bg-emerald-100 grid place-items-center">
-              <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+          <div className="cafe-card p-5 space-y-4 text-center">
+            <div className="mx-auto h-12 w-12 rounded-full bg-emerald-500/15 grid place-items-center">
+              <CheckCircle2 className="h-6 w-6 text-emerald-400" />
             </div>
             <div>
-              <div className="font-semibold text-coffee-900">Check WhatsApp on {phone}</div>
-              <p className="helper mt-1">
+              <div className="font-semibold text-cream-50">Check WhatsApp on {phone}</div>
+              <p className="helper mt-1 text-forest-300">
                 {delivered
                   ? 'We just sent a login link. Tap it and you\'re in — this page will refresh automatically.'
                   : 'WhatsApp delivery is not configured for this cafe. Use the share button below to forward the link to yourself.'}
               </p>
             </div>
 
-            <div className="flex items-center justify-center gap-2 text-xs text-coffee-500">
+            <div className="flex items-center justify-center gap-2 text-xs text-forest-300">
               <Loader2 className="h-3.5 w-3.5 animate-spin" /> Waiting for tap…
             </div>
 
@@ -166,7 +167,7 @@ export default function CustomerLoginPage({ params }: { params: { slug: string }
 
             <button
               type="button"
-              className="text-xs text-coffee-600 hover:text-coffee-900 underline w-full inline-flex items-center justify-center gap-1"
+              className="text-xs text-forest-300 hover:text-gold underline w-full inline-flex items-center justify-center gap-1"
               onClick={() => setStep('phone')}
             >
               <Phone className="h-3 w-3" /> Use a different number

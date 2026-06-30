@@ -5,9 +5,9 @@
  * project uses `src/app/`. With that layout Next.js refuses to load a
  * root-level `instrumentation.ts` and the hook silently never runs.
  *
- *   - Bootstraps the database (plans + super admin from env vars) so a
- *     fresh Railway deploy is usable without a manual `npm run db:seed`.
- *   - Re-opens every paired Baileys session, so cafe owners stay
+ *   - Bootstraps the database (super admin from env vars) so a fresh
+ *     Railway deploy is usable without a manual `npm run db:seed`.
+ *   - Re-opens every paired Baileys session, so the cafe stays
  *     connected through redeploys.
  *
  * Both steps are idempotent and best-effort — failures here log a
@@ -40,32 +40,4 @@ export async function register() {
     console.warn('[boot] Baileys hydrate skipped:', (e as any)?.message ?? e);
   }
 
-  // 3) Renewal-reminder scheduler — fires every 6 hours in-process.
-  //    Idempotent (per-subscription dedupe via lastReminderAt) so even
-  //    if Railway restarts mid-day, missed runs are picked up on the
-  //    next boot. /api/cron/renewal-reminders is also exposed for
-  //    external triggers (uptime monitor / Railway cron) — both paths
-  //    call the same runRenewalReminders() function.
-  try {
-    const SIX_HOURS = 6 * 60 * 60 * 1000;
-    const tick = async () => {
-      try {
-        const { runRenewalReminders } = await import('./lib/renewal-reminders');
-        const r = await runRenewalReminders();
-        if (r.scanned > 0) {
-          // eslint-disable-next-line no-console
-          console.log(`[cron] renewal-reminders scanned=${r.scanned} sent=${r.sent} skipped=${r.skipped}`);
-        }
-      } catch (e) {
-        // eslint-disable-next-line no-console
-        console.warn('[cron] renewal-reminders tick failed:', (e as any)?.message ?? e);
-      }
-    };
-    // Fire once 30s after boot (so DB pool is warm), then every 6 hours.
-    setTimeout(tick, 30_000);
-    setInterval(tick, SIX_HOURS);
-  } catch (e) {
-    // eslint-disable-next-line no-console
-    console.warn('[boot] reminder scheduler skipped:', (e as any)?.message ?? e);
-  }
 }

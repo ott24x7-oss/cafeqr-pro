@@ -1,26 +1,18 @@
-import { PublicNavbar } from '@/components/public/navbar';
-import { PublicFooter } from '@/components/public/footer';
-import { prisma } from '@/lib/prisma';
+import Link from 'next/link';
 
 export const metadata = { title: 'Privacy Policy' };
-export const revalidate = 3600;
 
-async function getBrandName() {
-  try {
-    const row = await prisma.platformBranding.findUnique({ where: { id: 'singleton' } });
-    return row?.brandName?.trim() || 'WatShop Cafe';
-  } catch {
-    return 'WatShop Cafe';
-  }
-}
-
-export default async function PrivacyPage() {
-  const brand = await getBrandName();
+export default function PrivacyPage() {
+  const brand = 'Cafe QR';
   const updated = '29 April 2026';
 
   return (
     <div className="min-h-screen bg-cream-50">
-      <PublicNavbar />
+      <header className="border-b border-coffee-100 bg-white">
+        <div className="container max-w-3xl h-14 flex items-center">
+          <Link href="/" className="font-display font-bold text-coffee-900">{brand}</Link>
+        </div>
+      </header>
       <main className="container max-w-3xl py-12 md:py-16">
         <div className="mb-8">
           <h1 className="font-display text-3xl md:text-5xl font-bold text-coffee-900">Privacy Policy</h1>
@@ -115,7 +107,12 @@ export default async function PrivacyPage() {
           </Section>
         </article>
       </main>
-      <PublicFooter />
+      <footer className="border-t border-coffee-100 bg-white">
+        <div className="container max-w-3xl py-6 text-sm text-coffee-500 flex items-center justify-between">
+          <span>© {brand}</span>
+          <Link href="/terms" className="hover:underline">Terms</Link>
+        </div>
+      </footer>
     </div>
   );
 }

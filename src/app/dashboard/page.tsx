@@ -1,15 +1,11 @@
 import Link from 'next/link';
-import { ArrowUpRight, Coffee, ListOrdered, Star, CreditCard, ChefHat, AlertCircle } from 'lucide-react';
+import { ArrowUpRight, Coffee, ListOrdered, Star, CreditCard, ChefHat } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { getOwnerCafe } from '@/lib/guards';
 import { formatCurrency } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 import { CafeStoreLink } from '@/components/dashboard/cafe-store-link';
 import { RevenueSparkline } from '@/components/dashboard/revenue-sparkline';
 import { SetupChecklist } from '@/components/dashboard/setup-checklist';
-import { UsageBanner } from '@/components/dashboard/usage-banner';
-import { PlanCard } from '@/components/dashboard/plan-card';
-import { planToLimits, evaluateOrderLimit } from '@/lib/plan-limits';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,20 +19,10 @@ export default async function DashboardOverview() {
   const sparkSince = new Date(Date.now() - 30 * 86400000);
   sparkSince.setHours(0, 0, 0, 0);
 
-  // Resolve plan limits from the already-loaded cafe.plan — saves an
-  // entire Cafe + Plan round-trip vs calling getPlanLimits(cafe.id).
-  const limits = planToLimits((cafe as any).plan);
-  const monthStart = new Date();
-  monthStart.setDate(1);
-  monthStart.setHours(0, 0, 0, 0);
-
-  // Single Promise.all for every query the overview needs — including
-  // the order-count for plan-usage which used to live in PlanCard /
-  // UsageBanner. Browsers see one round-trip-shaped wait instead of
-  // one for the page + two more for the lazy children.
+  // Single Promise.all for every query the overview needs.
   const [
     todayOrders, allTodayOrders, pendingOrders, completedToday, reviewAgg,
-    latestOrders, topItems, sparkOrders, menuItemCount, tableCount, ordersThisMonth,
+    latestOrders, topItems, sparkOrders, menuItemCount, tableCount,
   ] = await Promise.all([
     prisma.order.aggregate({
       where: { cafeId: cafe.id, createdAt: { gte: since } },
@@ -66,12 +52,7 @@ export default async function DashboardOverview() {
     }),
     prisma.menuItem.count({ where: { cafeId: cafe.id } }),
     prisma.table.count({ where: { cafeId: cafe.id } }),
-    prisma.order.count({
-      where: { cafeId: cafe.id, createdAt: { gte: monthStart }, status: { not: 'CANCELLED' } },
-    }),
   ]);
-
-  const orderDecision = evaluateOrderLimit(ordersThisMonth, limits.maxOrdersPerMonth);
 
   // First-time setup checklist — shown until everything is ✓.
   const setupItems = [
@@ -139,10 +120,6 @@ export default async function DashboardOverview() {
         </p>
       </div>
 
-      <UsageBanner plan={limits} decision={orderDecision} />
-
-      <PlanCard limits={limits} current={ordersThisMonth} />
-
       <SetupChecklist items={setupItems} />
 
       <CafeStoreLink
@@ -153,17 +130,6 @@ export default async function DashboardOverview() {
         customDomainStatus={cafe.customDomainStatus}
         full={false}
       />
-
-      {cafe.status === 'TRIAL' && cafe.trialEndsAt && (
-        <div className="card-warm border-amber-200 bg-amber-50 flex items-center gap-3">
-          <AlertCircle className="h-5 w-5 text-amber-600 shrink-0" />
-          <div className="text-sm flex-1">
-            <span className="font-semibold text-amber-900">You're on trial.</span>
-            <span className="text-amber-800"> Upgrade before {new Date(cafe.trialEndsAt).toLocaleDateString('en-IN')} to keep all features.</span>
-          </div>
-          <Link href="/dashboard/billing"><Button size="sm">Upgrade</Button></Link>
-        </div>
-      )}
 
       <RevenueSparkline
         buckets={buckets}

@@ -32,10 +32,10 @@ export default async function CustomerMenuPage({ params }: { params: { slug: str
   if (!cafe) notFound();
   if (cafe.status === 'SUSPENDED') {
     return (
-      <div className="min-h-screen grid place-items-center bg-cream-50 p-6 text-center">
+      <div className="min-h-screen grid place-items-center bg-forest-900 text-cream-50 p-6 text-center bg-forest-glow bg-fixed">
         <div>
-          <h1 className="font-display text-3xl font-bold text-coffee-900">{cafe.name}</h1>
-          <p className="mt-2 text-coffee-600">This cafe is currently not accepting orders. Please ask staff for help.</p>
+          <h1 className="font-display text-3xl font-bold text-gradient-gold">{cafe.name}</h1>
+          <p className="mt-2 text-forest-300">This cafe is currently not accepting orders. Please ask staff for help.</p>
         </div>
       </div>
     );

@@ -38,13 +38,13 @@ export function ReviewForm({ order }: { order: any }) {
 
   if (submitted) {
     return (
-      <div className="min-h-screen grid place-items-center bg-cream-50 p-6">
-        <div className="card-warm max-w-md w-full text-center">
-          <div className="mx-auto h-14 w-14 rounded-full bg-cream-200 grid place-items-center">
-            <Heart className="h-7 w-7 text-coffee-700" />
+      <div className="cafe-dark min-h-screen grid place-items-center bg-forest-900 text-cream-50 bg-forest-glow bg-fixed p-6">
+        <div className="cafe-card p-5 max-w-md w-full text-center">
+          <div className="mx-auto h-14 w-14 rounded-full bg-gold-gradient grid place-items-center text-forest-950">
+            <Heart className="h-7 w-7" />
           </div>
-          <h1 className="font-display text-2xl font-bold mt-4 text-coffee-900">Thank you!</h1>
-          <p className="text-coffee-600 mt-1">Your feedback means a lot to us.</p>
+          <h1 className="font-display text-2xl font-bold mt-4 text-gradient-gold">Thank you!</h1>
+          <p className="text-forest-300 mt-1">Your feedback means a lot to us.</p>
           {cafe.settings?.googleReviewUrl && rating >= 4 && (
             <a href={cafe.settings.googleReviewUrl} target="_blank" rel="noreferrer" className="mt-5 inline-block">
               <Button variant="wa" size="lg">
@@ -53,7 +53,7 @@ export function ReviewForm({ order }: { order: any }) {
             </a>
           )}
           <div className="mt-3">
-            <Link href={`/order/${order.id}`} className="text-sm text-coffee-600 hover:underline">Back to order</Link>
+            <Link href={`/order/${order.id}`} className="text-sm text-forest-300 hover:text-gold hover:underline">Back to order</Link>
           </div>
         </div>
       </div>
@@ -61,17 +61,17 @@ export function ReviewForm({ order }: { order: any }) {
   }
 
   return (
-    <div className="min-h-screen bg-cream-50">
-      <div className="bg-coffee-gradient text-cream-50">
+    <div className="cafe-dark min-h-screen bg-forest-900 text-cream-50 bg-forest-glow bg-fixed">
+      <div className="bg-forest-gradient text-cream-50">
         <div className="container py-10 text-center">
-          <div className="text-cream-200/80 text-sm">Order #{order.orderNumber}</div>
-          <h1 className="font-display text-3xl font-bold mt-1">How was your experience?</h1>
-          <p className="text-cream-200/80 mt-1">{cafe.name}</p>
+          <div className="text-forest-300 text-sm">Order #{order.orderNumber}</div>
+          <h1 className="font-display text-3xl font-bold mt-1 text-gradient-gold">How was your experience?</h1>
+          <p className="text-forest-300 mt-1">{cafe.name}</p>
         </div>
       </div>
 
       <div className="container max-w-md -mt-4 relative">
-        <div className="card-warm space-y-4">
+        <div className="cafe-card p-5 space-y-4">
           <div className="text-center">
             <div className="flex justify-center gap-1.5 my-3">
               {Array.from({ length: 5 }).map((_, i) => {
@@ -79,12 +79,12 @@ export function ReviewForm({ order }: { order: any }) {
                 const filled = idx <= (hover || rating);
                 return (
                   <button key={i} onClick={() => setRating(idx)} onMouseEnter={() => setHover(idx)} onMouseLeave={() => setHover(0)}>
-                    <Star className={`h-10 w-10 transition ${filled ? 'fill-caramel text-caramel scale-110' : 'text-coffee-200'}`} />
+                    <Star className={`h-10 w-10 transition ${filled ? 'fill-gold text-gold scale-110' : 'text-forest-600'}`} />
                   </button>
                 );
               })}
             </div>
-            <div className="text-sm text-coffee-600 h-5">
+            <div className="text-sm text-forest-300 h-5">
               {hover === 5 || rating === 5 ? 'Loved it! 🤩' :
                 hover === 4 || rating === 4 ? 'Great experience' :
                 hover === 3 || rating === 3 ? 'Good, could be better' :
@@ -94,14 +94,14 @@ export function ReviewForm({ order }: { order: any }) {
           </div>
 
           <div>
-            <label className="label">Your name <span className="text-xs text-coffee-500 font-normal">(optional)</span></label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Riya M." />
+            <label className="mb-1.5 block text-sm font-medium text-cream-50">Your name <span className="text-xs text-forest-300 font-normal">(optional)</span></label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Riya M." className="bg-forest-700 border-white/10 text-cream-50 placeholder:text-forest-300 focus:border-gold focus:ring-gold/30" />
           </div>
           <div>
-            <label className="label">What stood out? <span className="text-xs text-coffee-500 font-normal">(optional)</span></label>
-            <Textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Tell us what you loved or what could improve…" />
+            <label className="mb-1.5 block text-sm font-medium text-cream-50">What stood out? <span className="text-xs text-forest-300 font-normal">(optional)</span></label>
+            <Textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Tell us what you loved or what could improve…" className="bg-forest-700 border-white/10 text-cream-50 placeholder:text-forest-300 focus:border-gold focus:ring-gold/30" />
           </div>
-          <Button className="w-full" size="lg" disabled={!rating || loading} onClick={submit}>
+          <Button variant="accent" className="w-full" size="lg" disabled={!rating || loading} onClick={submit}>
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
             Submit review
           </Button>

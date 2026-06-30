@@ -137,14 +137,14 @@ export function PayClient({ order: initialOrder }: { order: any }) {
   }
 
   return (
-    <div className="min-h-screen bg-cream-50 pb-20">
-      <div className="bg-coffee-gradient text-cream-50">
+    <div className="cafe-dark min-h-screen bg-forest-900 text-cream-50 bg-forest-glow bg-fixed pb-20">
+      <div className="bg-forest-gradient text-cream-50">
         <div className="container py-8 text-center">
-          <div className="text-cream-200/80 text-sm">Order #{order.orderNumber}</div>
-          <h1 className="font-display text-3xl font-bold mt-1">{cafe.name}</h1>
-          <div className="text-2xl font-bold mt-3">{formatCurrency(chargeAmount)}</div>
+          <div className="text-forest-300 text-sm">Order #{order.orderNumber}</div>
+          <h1 className="font-display text-3xl font-bold mt-1 text-gradient-gold">{cafe.name}</h1>
+          <div className="text-2xl font-bold mt-3 text-gold-light">{formatCurrency(chargeAmount)}</div>
           {order.payableAmount && order.payableAmount !== order.totalAmount && (
-            <div className="text-[11px] text-cream-200/80 mt-1">
+            <div className="text-[11px] text-forest-300 mt-1">
               ({formatCurrency(order.totalAmount)} + auto-verify tag)
             </div>
           )}
@@ -153,44 +153,44 @@ export function PayClient({ order: initialOrder }: { order: any }) {
 
       <div className="container max-w-md -mt-4 relative space-y-4">
         {isPaid ? (
-          <div className="card-warm text-center py-10">
-            <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-600" />
-            <h2 className="font-display text-2xl font-bold text-coffee-900 mt-3">Paid ✓</h2>
-            <p className="text-coffee-600 mt-1">Thank you! Your payment has been confirmed.</p>
-            <p className="text-coffee-500 text-xs mt-3 inline-flex items-center gap-1">
+          <div className="cafe-card p-5 text-center py-10">
+            <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-400" />
+            <h2 className="font-display text-2xl font-bold text-gradient-gold mt-3">Paid ✓</h2>
+            <p className="text-forest-300 mt-1">Thank you! Your payment has been confirmed.</p>
+            <p className="text-forest-300 text-xs mt-3 inline-flex items-center gap-1">
               <FileText className="h-3 w-3" /> Invoice sent to your WhatsApp
             </p>
             {order.payment?.transactionId && (
-              <p className="text-coffee-500 text-[11px] mt-1">UTR: {order.payment.transactionId}</p>
+              <p className="text-forest-300 text-[11px] mt-1">UTR: {order.payment.transactionId}</p>
             )}
             <Link href={`/order/${order.id}`} className="mt-4 inline-block">
-              <Button>Back to order</Button>
+              <Button variant="accent">Back to order</Button>
             </Link>
           </div>
         ) : (
           <>
             {!upiId && (
-              <div className="card-warm text-center text-coffee-600">
+              <div className="cafe-card p-5 text-center text-forest-300">
                 Cafe has not configured UPI yet. Please pay at counter.
               </div>
             )}
 
             {upiId && (
-              <div className="card-warm">
-                <div className="font-semibold text-coffee-900 mb-3">Scan & Pay</div>
+              <div className="cafe-card p-5">
+                <div className="font-semibold text-cream-50 mb-3">Scan & Pay</div>
                 <div className="flex justify-center">
                   {upiQrUrl ? (
                     <Image src={upiQrUrl} alt="UPI QR" width={220} height={220} className="rounded-xl" />
                   ) : (
-                    <div className="p-3 bg-white rounded-xl border border-coffee-200">
+                    <div className="p-3 bg-white rounded-xl border border-white/10">
                       <QRCodeCanvas value={upiLink} size={200} fgColor="#3E2D24" />
                     </div>
                   )}
                 </div>
                 <div className="mt-4">
-                  <div className="text-xs text-coffee-500 mb-1">Or pay to UPI ID</div>
+                  <div className="text-xs text-forest-300 mb-1">Or pay to UPI ID</div>
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 truncate rounded-lg bg-cream-100 px-3 py-2 text-sm">{upiId}</code>
+                    <code className="flex-1 truncate rounded-lg bg-forest-700 text-cream-50 px-3 py-2 text-sm">{upiId}</code>
                     <Button
                       variant="outline"
                       size="sm"
@@ -211,9 +211,9 @@ export function PayClient({ order: initialOrder }: { order: any }) {
 
             {/* Stage 1 — idle: prompt the customer to confirm payment */}
             {stage === 'idle' && (
-              <div className="card-warm">
-                <div className="font-semibold text-coffee-900 mb-1">Already paid?</div>
-                <p className="text-sm text-coffee-600 mb-3">
+              <div className="cafe-card p-5">
+                <div className="font-semibold text-cream-50 mb-1">Already paid?</div>
+                <p className="text-sm text-forest-300 mb-3">
                   {canAutoVerify
                     ? "Tap below — we'll scan the cafe's bank inbox in real time and confirm within seconds."
                     : "Drop the UPI Txn ID and the cafe will verify manually."}
@@ -224,8 +224,8 @@ export function PayClient({ order: initialOrder }: { order: any }) {
                   </Button>
                 ) : (
                   <div className="flex gap-2">
-                    <Input value={txn} onChange={(e) => setTxn(e.target.value)} placeholder="UPI Txn ID" />
-                    <Button onClick={submitTxn} disabled={submitting}>
+                    <Input value={txn} onChange={(e) => setTxn(e.target.value)} placeholder="UPI Txn ID" className="bg-forest-700 border-white/10 text-cream-50 placeholder:text-forest-300 focus:border-gold focus:ring-gold/30" />
+                    <Button variant="accent" onClick={submitTxn} disabled={submitting}>
                       {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                       Submit
                     </Button>
@@ -236,35 +236,35 @@ export function PayClient({ order: initialOrder }: { order: any }) {
 
             {/* Stage 2 — verifying: live scan with countdown */}
             {stage === 'verifying' && (
-              <div className="card-warm border-emerald-200 bg-emerald-50/40">
+              <div className="cafe-card p-5 border-emerald-500/30 bg-emerald-500/5">
                 <div className="flex items-start gap-3">
-                  <div className="h-10 w-10 grid place-items-center rounded-xl bg-emerald-100 text-emerald-700 shrink-0">
+                  <div className="h-10 w-10 grid place-items-center rounded-xl bg-emerald-500/15 text-emerald-300 shrink-0">
                     <Loader2 className="h-5 w-5 animate-spin" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="font-semibold text-coffee-900">Verifying payment…</div>
-                    <p className="text-xs text-coffee-700">
+                    <div className="font-semibold text-cream-50">Verifying payment…</div>
+                    <p className="text-xs text-forest-300">
                       Scanning the cafe's bank inbox every {Math.round(POLL_MS / 1000)}s. Looking for your UPI credit alert
                       from the last 10 minutes.
                     </p>
-                    <div className="mt-2 flex flex-wrap gap-2 items-center text-[11px] text-coffee-600">
+                    <div className="mt-2 flex flex-wrap gap-2 items-center text-[11px] text-forest-300">
                       <span className="inline-flex items-center gap-1">
                         <Clock className="h-3 w-3" /> {secondsLeft}s left
                       </span>
                       <span>Scans: {scans}</span>
                       {transport && (
-                        <span className={`pill text-[10px] ${transport === 'relay' ? 'bg-amber-100 text-amber-800' : 'bg-coffee-100 text-coffee-700'}`}>
+                        <span className={`pill text-[10px] ${transport === 'relay' ? 'bg-amber-400/15 text-amber-300' : 'bg-white/5 text-forest-300'}`}>
                           via {transport === 'relay' ? 'PHP relay' : 'direct IMAP'}
                         </span>
                       )}
                     </div>
                     {lastErr && (
-                      <p className="text-[11px] text-rose-700 mt-1 truncate">{lastErr}</p>
+                      <p className="text-[11px] text-rose-400 mt-1 truncate">{lastErr}</p>
                     )}
                   </div>
                   <button
                     onClick={cancelVerifying}
-                    className="text-coffee-500 hover:text-coffee-900 shrink-0"
+                    className="text-forest-300 hover:text-gold shrink-0"
                     title="Stop verifying"
                   >
                     <X className="h-4 w-4" />
@@ -275,20 +275,20 @@ export function PayClient({ order: initialOrder }: { order: any }) {
 
             {/* Stage 3 — timeout: didn't catch the email, fallback to manual UTR */}
             {stage === 'timeout' && (
-              <div className="card-warm">
-                <div className="font-semibold text-coffee-900 mb-1">Couldn't auto-verify yet</div>
-                <p className="text-sm text-coffee-600 mb-3">
+              <div className="cafe-card p-5">
+                <div className="font-semibold text-cream-50 mb-1">Couldn't auto-verify yet</div>
+                <p className="text-sm text-forest-300 mb-3">
                   Bank emails sometimes take a couple of minutes. You can keep scanning, or drop your UPI Txn ID
                   and the cafe will verify manually within a minute.
                 </p>
                 <div className="flex gap-2 mb-3">
-                  <Input value={txn} onChange={(e) => setTxn(e.target.value)} placeholder="UPI Txn ID (optional)" />
-                  <Button onClick={submitTxn} disabled={submitting}>
+                  <Input value={txn} onChange={(e) => setTxn(e.target.value)} placeholder="UPI Txn ID (optional)" className="bg-forest-700 border-white/10 text-cream-50 placeholder:text-forest-300 focus:border-gold focus:ring-gold/30" />
+                  <Button variant="accent" onClick={submitTxn} disabled={submitting}>
                     {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                     Submit
                   </Button>
                 </div>
-                <Button onClick={startVerifying} variant="outline" className="w-full">
+                <Button onClick={startVerifying} variant="accent" className="w-full">
                   <ShieldCheck className="h-4 w-4" /> Scan again for 3 min
                 </Button>
               </div>

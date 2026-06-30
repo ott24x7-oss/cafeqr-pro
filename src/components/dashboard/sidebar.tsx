@@ -5,8 +5,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import {
-  LayoutDashboard, ListOrdered, Utensils, QrCode, CreditCard, Star, Users, Settings, BarChart3, Receipt,
-  Coffee, LogOut, Shield, Tag, History, Globe, Palette, Award, Smartphone, Menu, X,
+  LayoutDashboard, ListOrdered, Utensils, QrCode, CreditCard, Star, Users, Settings, BarChart3,
+  Coffee, LogOut, Tag, History, Globe, Award, Menu, X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -24,23 +24,12 @@ const OWNER_NAV: NavItem[] = [
   { href: '/dashboard/loyalty', label: 'Loyalty', icon: Award },
   { href: '/dashboard/staff', label: 'Staff', icon: Users },
   { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
-  { href: '/dashboard/billing', label: 'Billing', icon: Receipt },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },
 ];
 
-const ADMIN_NAV: NavItem[] = [
-  { href: '/admin', label: 'Overview', icon: LayoutDashboard },
-  { href: '/admin/cafes', label: 'Cafes', icon: Coffee },
-  { href: '/admin/users', label: 'Users', icon: Users },
-  { href: '/admin/plans', label: 'Plans', icon: CreditCard },
-  { href: '/admin/subscriptions', label: 'Subscriptions', icon: Receipt },
-  { href: '/admin/site', label: 'Site & Email', icon: Globe },
-  { href: '/admin/branding', label: 'Frontend Branding', icon: Palette },
-  { href: '/admin/mobile-app', label: 'Mobile App', icon: Smartphone },
-];
-
-function navItemsFor(role: string, isAdmin?: boolean): NavItem[] {
-  return isAdmin ? ADMIN_NAV : OWNER_NAV;
+// Single-cafe build: only the owner/staff dashboard nav exists now.
+function navItemsFor(_role: string, _isAdmin?: boolean): NavItem[] {
+  return OWNER_NAV;
 }
 
 export function DashboardSidebar({ role, cafeName, isAdmin }: { role: string; cafeName?: string; isAdmin?: boolean }) {
@@ -50,7 +39,7 @@ export function DashboardSidebar({ role, cafeName, isAdmin }: { role: string; ca
 
   const limited = role === 'KITCHEN' ? ['/dashboard', '/dashboard/orders'] :
                   role === 'WAITER'  ? ['/dashboard', '/dashboard/orders', '/dashboard/orders/history', '/dashboard/tables'] :
-                  role === 'CASHIER' ? ['/dashboard', '/dashboard/orders', '/dashboard/orders/history', '/dashboard/payments', '/dashboard/billing'] : null;
+                  role === 'CASHIER' ? ['/dashboard', '/dashboard/orders', '/dashboard/orders/history', '/dashboard/payments'] : null;
 
   return (
     <aside className="hidden md:flex md:flex-col w-60 shrink-0 border-r border-coffee-100 bg-white sticky top-0 h-screen">
@@ -58,19 +47,14 @@ export function DashboardSidebar({ role, cafeName, isAdmin }: { role: string; ca
         <Link href="/dashboard" className="flex items-center gap-2">
           <span
             className="grid h-9 w-9 place-items-center rounded-xl bg-coffee-gradient text-cream-50 bg-cover bg-center"
-            {...(!isAdmin ? { 'data-brand-logo': '' } : {})}
+            data-brand-logo
           >
-            {isAdmin
-              ? <Shield className="h-5 w-5" />
-              : <Coffee className="h-5 w-5" data-brand-logo-icon />}
+            <Coffee className="h-5 w-5" data-brand-logo-icon />
           </span>
           <div className="min-w-0">
             <div className="font-display text-base font-bold text-coffee-900 truncate">
-              {isAdmin
-                ? 'Super Admin'
-                : <span data-brand-name>CafeQR Pro</span>}
+              {cafeName ?? 'Cafe'}
             </div>
-            {!isAdmin && cafeName && <div className="text-[11px] text-coffee-500 truncate">{cafeName}</div>}
           </div>
         </Link>
       </div>
@@ -251,10 +235,10 @@ function MobileNavDrawer({ isAdmin, onClose }: { isAdmin?: boolean; onClose: () 
         <div className="flex items-center justify-between px-4 py-3 border-b border-coffee-100 bg-white">
           <div className="flex items-center gap-2 min-w-0">
             <span className="grid h-8 w-8 place-items-center rounded-lg bg-coffee-gradient text-cream-50 shrink-0">
-              {isAdmin ? <Shield className="h-4 w-4" /> : <Coffee className="h-4 w-4" />}
+              <Coffee className="h-4 w-4" />
             </span>
             <div className="font-display text-base font-bold text-coffee-900 truncate">
-              {isAdmin ? 'Super Admin' : 'CafeQR Pro'}
+              Menu
             </div>
           </div>
           <button
@@ -295,17 +279,8 @@ function MobileNavDrawer({ isAdmin, onClose }: { isAdmin?: boolean; onClose: () 
             onClick={onClose}
             className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-coffee-700 hover:bg-cream-100"
           >
-            <Globe className="h-4 w-4" /> Public site
+            <Globe className="h-4 w-4" /> View cafe site
           </Link>
-          {!isAdmin && (
-            <Link
-              href="/admin"
-              onClick={onClose}
-              className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-coffee-700 hover:bg-cream-100"
-            >
-              <Shield className="h-4 w-4" /> Admin (super-admin only)
-            </Link>
-          )}
           <button
             type="button"
             onClick={() => signOut({ callbackUrl: '/' })}
