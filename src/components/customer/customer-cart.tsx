@@ -111,10 +111,16 @@ export function CustomerCart({
       const data = await r.json();
       if (!r.ok) throw new Error(data.error ?? 'Could not place order');
       onClear();
-      // Send to payment when the cafe collects online and the customer
-      // didn't choose cash/pay-at-table; otherwise straight to tracking.
-      const wantsOnline = (pay === 'upi' || pay === 'card') && cafe.settings?.paymentEnabled;
-      router.push(wantsOnline ? `/pay/${data.order.id}` : `/order/${data.order.id}?placed=1`);
+      // Only route to the online /pay screen for UPI on a prepaid cafe — that
+      // page is UPI-only (PayClient submits method 'upi'). Card / Cash / At
+      // Table are settled in person, and postpaid cafes send the pay link via
+      // WhatsApp after the order is SERVED (notifyCustomerStatus), so those all
+      // go straight to order tracking.
+      const payNowOnline =
+        pay === 'upi' &&
+        cafe.settings?.paymentEnabled &&
+        cafe.settings?.paymentTiming !== 'postpaid';
+      router.push(payNowOnline ? `/pay/${data.order.id}` : `/order/${data.order.id}?placed=1`);
     } catch (e: any) { toast.error('Order failed', e?.message); }
     finally { setSubmitting(false); }
   }
@@ -283,7 +289,7 @@ export function CustomerCart({
                   </button>
                 ))}
               </div>
-              <p className="text-[11px] text-cream-200/45 mt-2 flex items-center gap-1"><Info className="h-3 w-3" /> {(pay === 'upi' || pay === 'card') && cafe.settings?.paymentEnabled ? 'You\'ll complete payment on the next screen.' : 'Pay at the counter / table when your order is served.'}</p>
+              <p className="text-[11px] text-cream-200/45 mt-2 flex items-center gap-1"><Info className="h-3 w-3" /> {pay === 'upi' && cafe.settings?.paymentEnabled && cafe.settings?.paymentTiming !== 'postpaid' ? 'You\'ll complete UPI payment on the next screen.' : 'Pay at the counter / table when your order is served.'}</p>
             </div>
           </div>
         )}
