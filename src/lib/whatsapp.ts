@@ -160,12 +160,11 @@ export function generateReviewMessage(order: OrderForWA, cafe: WACafe, appUrl?: 
 
 export function generateMagicLinkMessage(url: string, cafeName?: string) {
   return [
-    `🔐 *${cafeName ?? 'CafeQR Pro'}* — one-tap login`,
+    `🔓 Tap to sign in to ${cafeName ?? 'CafeQR Pro'}`,
     '',
-    `Tap to log in:`,
     url,
     '',
-    `Link expires in 10 minutes. Don't share it with anyone.`,
+    `This link expires in 5 minutes and works only once. If you didn't request it, ignore this message.`,
   ].join('\n');
 }
 

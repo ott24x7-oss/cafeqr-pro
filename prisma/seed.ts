@@ -203,6 +203,18 @@ async function main() {
       }
     }
 
+    // Demo promo posters for the customer-app home carousel.
+    const posterCount = await prisma.poster.count({ where: { cafeId: cafe.id } });
+    if (posterCount === 0) {
+      const demoPosters = [
+        { badge: 'Limited Time Offer', title: '20% off', subtitle: 'on combo', caption: 'Great taste. Better together.', ctaLabel: 'Order Now', bgColor: 'linear-gradient(135deg,#2c3a2c,#16210f)', sortOrder: 0 },
+        { badge: 'Fresh Brew', title: 'Buy 1 Get 1', subtitle: 'on coffee', caption: 'Every weekday, 4–6 PM.', ctaLabel: 'Grab Deal', bgColor: 'linear-gradient(135deg,#7a4a2b,#3a2417)', sortOrder: 1 },
+      ];
+      for (const p of demoPosters) {
+        await prisma.poster.create({ data: { cafeId: cafe.id, isActive: true, linkType: 'none', ...p } });
+      }
+    }
+
     console.log(`   ✓ Demo cafe: ${cafe.name} (login: ${d.email} / Owner@123)`);
   }
 

@@ -15,6 +15,10 @@ export default async function CustomerMenuPage({ params }: { params: { slug: str
     where: { slug: params.slug },
     include: {
       settings: true,
+      posters: {
+        where: { isActive: true },
+        orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+      },
       categories: {
         where: { isActive: true },
         orderBy: { sortOrder: 'asc' },

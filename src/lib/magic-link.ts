@@ -4,7 +4,7 @@ import { prisma } from './prisma';
 import { configFromCafe, generateMagicLinkMessage, type WACafe } from './whatsapp';
 import { sendMessage } from './whatsapp-send';
 
-const TTL_MS = 10 * 60 * 1000;
+const TTL_MS = 5 * 60 * 1000;
 // How old a used/expired row has to be before issueMagicLink will sweep it.
 // Kept as a soft gate so abuse audits still have a window of recent rows.
 const SWEEP_AFTER_MS = 24 * 60 * 60 * 1000;

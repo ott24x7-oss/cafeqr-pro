@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import {
   LayoutDashboard, ListOrdered, Utensils, QrCode, CreditCard, Star, Users, Settings, BarChart3, Receipt,
-  Coffee, LogOut, Shield, Tag, History, Globe, Palette, Award, Smartphone, Menu, X,
+  Coffee, LogOut, Shield, Tag, History, Globe, Palette, Award, Smartphone, Menu, X, Images,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -17,6 +17,7 @@ const OWNER_NAV: NavItem[] = [
   { href: '/dashboard/orders', label: 'Live Orders', icon: ListOrdered },
   { href: '/dashboard/orders/history', label: 'Order History', icon: History },
   { href: '/dashboard/menu', label: 'Menu', icon: Utensils },
+  { href: '/dashboard/posters', label: 'Posters & Slides', icon: Images },
   { href: '/dashboard/tables', label: 'Tables & QR', icon: QrCode },
   { href: '/dashboard/payments', label: 'Payments', icon: CreditCard },
   { href: '/dashboard/reviews', label: 'Reviews', icon: Star },

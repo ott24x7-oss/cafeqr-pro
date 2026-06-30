@@ -193,6 +193,7 @@ model Cafe {
   subscriptions   Subscription[]
   loyaltyAccounts LoyaltyAccount[]
   magicLinks      WhatsAppMagicLink[]
+  posters         Poster[]
 
   @@index([ownerId])
 }
@@ -212,6 +213,9 @@ model CafeSettings {
   openingHours              Json? // { mon: {open: "09:00", close: "22:00", closed: false}, ... }
   primaryColor              String     @default("#6B4E3D")
   accentColor               String     @default("#D4A574")
+  // Customer-app colour theme. One of: coffee | maroon | midnight | forest | latte.
+  // Swaps the storefront's accent + background palette (see globals.css .cafe-app).
+  appTheme                  String     @default("coffee")
   whatsappProvider          WAProvider @default(manual)
   notifyOwnerWA             Boolean    @default(true)
   notifyCustomerWA          Boolean    @default(true)
@@ -735,4 +739,37 @@ model LoyaltyTransaction {
   @@unique([accountId, orderId, type]) // dedupe EARN per order
   @@index([accountId])
   @@index([orderId])
+}
+
+// ─── PROMO POSTERS / HOME SLIDES ────────────────────────────────────────────
+// Owner-managed home-screen carousel. These are the swipeable promo banners
+// the customer sees at the top of the storefront ("20% off on combo", etc.).
+// Distinct from MenuItem images — a poster is pure marketing: a background
+// image, a couple of lines of copy, an optional badge and a call-to-action
+// that can deep-link to a category, a single item, or any URL.
+model Poster {
+  id        String   @id @default(cuid())
+  cafeId    String
+  title     String? // big headline, e.g. "20% off"
+  subtitle  String? // supporting line, e.g. "on combo"
+  caption   String? // small line under the subtitle
+  badge     String? // pill in the corner, e.g. "Limited Time Offer"
+  imageUrl  String? // background image (data URL or hosted URL)
+  ctaLabel  String? // button text, e.g. "Order Now"
+  // Where the CTA points. `linkType` chooses how `linkValue` is read:
+  //   none     → no button
+  //   category → linkValue is a Category id; scroll the menu to it
+  //   item     → linkValue is a MenuItem id; open that item
+  //   url      → linkValue is an absolute/relative URL
+  linkType  String   @default("none")
+  linkValue String?
+  bgColor   String? // optional gradient/overlay tint, e.g. "#1c3a2e"
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cafe Cafe @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+
+  @@index([cafeId])
 }
